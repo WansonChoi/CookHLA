@@ -2,7 +2,7 @@
 
 import os, sys, re
 import argparse, textwrap
-
+from src.HLA_Imputation import HLA_Imputation
 
 ########## < Core Varialbes > ##########
 
@@ -108,36 +108,66 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
         print("- Using Genetic Map : {}.".format(_geneticMap))
 
 
+    MHC = _out+'.MHC' # Prefix for MHC data.
+
+
     idx_process = 1
 
 
     if EXTRACT_MHC:
 
+        print("[{}] Extracting SNPs from the MHC.".format(idx_process))
+
         idx_process += 1
 
     if FLIP:
+
+        print("[{}] Performing SNP quality control.".format(idx_process))
 
         idx_process += 1
 
 
     ############################################################
 
-    if CONVERT_IN:
+    # if CONVERT_IN:
+    #
+    #     print("[{}] Converting data to beagle format.".format(idx_process))
+    #     print("[{}] Converting data to reference_markers_Position.".format(idx_process))
+    #     print("[{}] Converting data to target_markers_Position and extract not_including snp.".format(idx_process))
+    #     print("[{}] Converting data to GC_change_beagle format.".format(idx_process))
+    #     print("[{}] Converting data to vcf_format.".format(idx_process))
+    #     print("[{}] Converting data to reference_phased.".format(idx_process))
+    #
+    #
+    #     idx_process += 1
+    #
+    # if IMPUTE:
+    #
+    #     print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(idx_process, _out))
+    #
+    #     idx_process += 1
+    #
+    # if CONVERT_OUT:
+    #
+    #     print("[{}] Converting imputation vcf to beagle.".format(idx_process))
+    #     print("[{}] Converting imputation GC_beagle to ori_beagle.".format(idx_process))
+    #     print("[{}] Converting imputation genotypes to PLINK .ped format.".format(idx_process))
+    #
+    #
+    #     idx_process += 1
 
-        idx_process += 1
 
-    if IMPUTE:
-
-        idx_process += 1
-
-    if CONVERT_OUT:
-
-        idx_process += 1
+    # This part will be taken by the instance of 'HLA_Imputation' class.
 
     ############################################################
 
 
     if CLEAN_UP:
+
+        print("[{}] Clean Up.".format(idx_process))
+
+
+        print("DONE!\n")
 
         idx_process += 1
 
