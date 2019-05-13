@@ -16,7 +16,8 @@ TOLERATED_DIFF = 0.15
 
 
 def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory='2g',
-            _p_src = "./src", _p_dependency = "./dependency", __save_intermediates=False):
+            _p_src="./src", _p_dependency="./dependency", __save_intermediates=False,
+            __use_Multiple_Markers=False):
 
 
     p_src = _p_src
@@ -32,7 +33,7 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
 
     # Intermediate path.
     if not _out:
-        print(std_ERROR_MAIN_PROCESS_NAME + 'The argument "{0}" has not given. Please check it again.\n'.format("--out"))
+        print(std_ERROR_MAIN_PROCESS_NAME + 'The argument "{0}" has not been given. Please check it again.\n'.format("--out"))
         sys.exit()
     else:
         _out = _out if not _out.endswith('/') else _out.rstrip('/')
@@ -98,6 +99,14 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
 
 
 
+    print(std_MAIN_PROCESS_NAME + "CookHLA : Performing HLA imputation for '{}'\n"
+                                  "- Java memory = {}(Mb)".format(_input, _java_memory))
+
+    if __use_Multiple_Markers:
+        print("- Using Multiple Markers.")
+    if _geneticMap:
+        print("- Using Genetic Map : {}.".format(_geneticMap))
+
 
     idx_process = 1
 
@@ -110,6 +119,9 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
 
         idx_process += 1
 
+
+    ############################################################
+
     if CONVERT_IN:
 
         idx_process += 1
@@ -121,6 +133,9 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
     if CONVERT_OUT:
 
         idx_process += 1
+
+    ############################################################
+
 
     if CLEAN_UP:
 
@@ -164,8 +179,16 @@ if __name__ == "__main__":
     parser.add_argument("--reference", "-ref", help="\nPrefix of Reference files.\n\n", required=True)
     parser.add_argument("--out", "-o", help="\nOutput file name prefix\n\n", required=True)
 
+
+    # For publish
+    # parser.add_argument("--genetic-map", "-gm", help="\nGenetic Map file.\n\n", required=True)
+    # parser.add_argument("--average-erate", "-ae", help="\nAverate error rate file.\n\n", required=True)
+
+
+    # For Testing
     parser.add_argument("--genetic-map", "-gm", help="\nGenetic Map file.\n\n")
     parser.add_argument("--average-erate", "-ae", help="\nAverate error rate file.\n\n")
+    parser.add_argument("--use-multiple-markers", "-ml", help="\nUsing multiple markers.\n\n", action='store_true')
 
 
 
@@ -186,6 +209,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
-
-
-    CookHLA(args.input, args.out, args.reference, args.genetic_map, args.average_erate, _java_memory=args.java_memory)
+    CookHLA(args.input, args.out, args.reference, args.genetic_map, args.average_erate, _java_memory=args.java_memory,
+            __use_Multiple_Markers=args.use_multiple_markers)
