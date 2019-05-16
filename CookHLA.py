@@ -91,8 +91,6 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
 
     MERGE = os.path.join(p_src, 'merge_tables.pl')
     PARSEDOSAGE = os.path.join(p_src, 'ParseDosage.csh')
-    # REFINE = os.path.join(p_src, 'redefineBPv1BH.py')
-    PANELSUBSET = os.path.join(p_src, 'Panel-subset.py')
     BGL2BED = os.path.join(p_src, 'Panel-BGL2BED.sh')
 
 
@@ -411,8 +409,27 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
 
 
 
-        # print("[{}] Converting data to GC_change_beagle format.".format(idx_process))
-        # print("[{}] Converting data to vcf_format.".format(idx_process))
+        ### Converting data to GC_change_beagle format.
+
+        from src.bgl2GC_trick_bgl import Bgl2GC
+
+        # target
+        [GCchangeBGL, GCchangeMarkers] = Bgl2GC(MHC+'.QC.refined.bgl.phased', MHC+'.QC.refined.markers', MHC+'.QC.GCchange.bgl', MHC+'.QC.GCchange.markers')
+        # print("<Target GCchanged bgl and marker file>\n"
+        #       "bgl : {}\n"
+        #       "markers : {}".format(GCchangeBGL, GCchangeMarkers))
+
+        # reference
+        p_out_ref = join(OUTPUT_dir, os.path.basename(_reference))
+        [GCchangeBGL_REF, GCchangeMarkers_REF] = Bgl2GC(_reference+'.bgl.phased', RefinedMarkers, p_out_ref+'.GCchange.bgl.phased', p_out_ref+'.GCchange.markers')
+        # print("<Reference GCchanged bgl and marker file>\n"
+        #       "bgl : {}\n"
+        #       "markers : {}".format(GCchangeBGL_REF, GCchangeMarkers_REF))
+
+
+
+        ### Converting data to vcf_format
+
         # print("[{}] Converting data to reference_phased.".format(idx_process))
 
 
