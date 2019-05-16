@@ -21,3 +21,4 @@ tests/
 *.sh
 
 plink.log
+.Rproj.user
