@@ -1,6 +1,7 @@
 #-*- coding: utf-8 -*-
 
 import os, sys, re
+from os.path import join
 import argparse, textwrap
 from src.HLA_Imputation import HLA_Imputation
 
@@ -66,6 +67,8 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
     JAVATMP = _out+'.javatmpdir'
     os.makedirs(JAVATMP, exist_ok=True)
 
+    OUTPUT_dir = os.path.dirname(_out)
+
 
     # Memory representation check.
 
@@ -88,7 +91,7 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
 
     MERGE = os.path.join(p_src, 'merge_tables.pl')
     PARSEDOSAGE = os.path.join(p_src, 'ParseDosage.csh')
-    REFINE = os.path.join(p_src, 'redefineBPv1BH.py')
+    # REFINE = os.path.join(p_src, 'redefineBPv1BH.py')
     PANELSUBSET = os.path.join(p_src, 'Panel-subset.py')
     BGL2BED = os.path.join(p_src, 'Panel-BGL2BED.sh')
 
@@ -332,13 +335,16 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
         # print(command)
         os.system(command)
 
-        command = ' '.join(['cut -f2', MHC+'.QC.map', '>', MHC+'.snps'])
+        # command = ' '.join(['cut -f2', MHC+'.QC.map', '>', MHC+'.snps'])
         # print(command)
-        os.system(command)
+        # os.system(command)
 
         command = ' '.join(["cut -d ' ' -f1-5,7-", MHC+'.QC.ped', '>', MHC+'.QC.nopheno.ped'])
         # print(command)
         os.system(command)
+
+        if not __save_intermediates:
+            os.system(' '.join(['rm', MHC+'.QC.{ped,map}']))
 
 
         idx_process += 1
@@ -346,18 +352,72 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
 
     ############################################################
 
-    # if CONVERT_IN:
-    #
-    #     print("[{}] Converting data to beagle format.".format(idx_process))
-    #     print("[{}] Converting data to reference_markers_Position.".format(idx_process))
-    #     print("[{}] Converting data to target_markers_Position and extract not_including snp.".format(idx_process))
-    #     print("[{}] Converting data to GC_change_beagle format.".format(idx_process))
-    #     print("[{}] Converting data to vcf_format.".format(idx_process))
-    #     print("[{}] Converting data to reference_phased.".format(idx_process))
-    #
-    #
-    #     idx_process += 1
-    #
+    if CONVERT_IN:
+
+        print("[{}] Converting data to beagle format.".format(idx_process))
+
+        command = ' '.join([LINKAGE2BEAGLE, 'pedigree={}'.format(MHC+'.QC.nopheno.ped'), 'data={}'.format(MHC+'.QC.dat'),
+                            'beagle={}'.format(MHC+'.QC.bgl'), 'standard=true', '>', _out+'.bgl.log'])  # Making '*.bgl' file.
+        # print(command)
+        os.system(command)
+
+        if not __save_intermediates:
+            os.system(' '.join(['rm', MHC+'.QC.nopheno.ped']))
+            os.system(' '.join(['rm', MHC+'.QC.dat']))
+            os.system(' '.join(['rm', _out+'.bgl.log']))
+
+
+
+        ### Converting data to reference_markers_Position
+        ### (Dispersing same genomic position of some markers.)
+
+        from src.redefineBPv1BH import redefineBP
+
+        RefinedMarkers = redefineBP(_reference+'.markers', os.path.join(OUTPUT_dir, os.path.basename(_reference)+'.refined.markers'))
+
+
+
+        ### Converting data to target_markers_Position and extract not_including snp.
+
+        command = ' '.join(['awk \'{print $2" "$4" "$5" "$6}\'', MHC+'.QC.bim', '>', MHC+'.QC.markers'])    # Making '*.markers' file.
+        # print(command)
+        os.system(command)
+
+        if not __save_intermediates:
+            os.system(' '.join(['rm', MHC+'.QC.{bed,bim,fam,log}']))
+
+        command = ' '.join(['Rscript src/excluding_snp_and_refine_target_position-v1COOK02222017.R',
+                            MHC+'.QC.markers', RefinedMarkers, MHC+'.QC.pre.markers'])
+        # print(command)
+        os.system(command)
+
+        if not __save_intermediates:
+            os.system(' '.join(['rm', MHC+'.QC.markers']))
+
+        command = ' '.join(['mv', MHC+'.QC.bgl', MHC+'.QC.pre.bgl.phased'])
+        # print(command)
+        os.system(command)
+
+        command = ' '.join(["awk '{print $1}'", MHC+'.QC.pre.markers', '>', os.path.join(OUTPUT_dir, 'selected_snp.txt')])
+        # print(command)
+        os.system(command)
+
+        from src.Panel_subset import Panel_Subset
+        qc_refined = Panel_Subset(MHC+'.QC.pre', 'all', join(OUTPUT_dir, 'selected_snp.txt'), MHC+'.QC.refined')
+        # print(qc_refined) # Refined Beagle files are generated here.
+
+        if not __save_intermediates:
+            os.system(' '.join(['rm', MHC+'.QC.pre.{bgl.phased,markers}']))
+
+
+
+        # print("[{}] Converting data to GC_change_beagle format.".format(idx_process))
+        # print("[{}] Converting data to vcf_format.".format(idx_process))
+        # print("[{}] Converting data to reference_phased.".format(idx_process))
+
+
+        idx_process += 1
+
     # if IMPUTE:
     #
     #     print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(idx_process, _out))
