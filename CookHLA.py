@@ -68,7 +68,7 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
     os.makedirs(JAVATMP, exist_ok=True)
 
     OUTPUT_dir = os.path.dirname(_out)
-
+    OUTPUT_dir_ref = join(OUTPUT_dir, os.path.basename(_reference))
 
     # Memory representation check.
 
@@ -406,6 +406,7 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
 
         if not __save_intermediates:
             os.system(' '.join(['rm', MHC+'.QC.pre.{bgl.phased,markers}']))
+            os.system(' '.join(['rm', join(OUTPUT_dir, 'selected_snp.txt')]))
 
 
 
@@ -420,17 +421,51 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
         #       "markers : {}".format(GCchangeBGL, GCchangeMarkers))
 
         # reference
-        p_out_ref = join(OUTPUT_dir, os.path.basename(_reference))
-        [GCchangeBGL_REF, GCchangeMarkers_REF] = Bgl2GC(_reference+'.bgl.phased', RefinedMarkers, p_out_ref+'.GCchange.bgl.phased', p_out_ref+'.GCchange.markers')
+        [GCchangeBGL_REF, GCchangeMarkers_REF] = Bgl2GC(_reference+'.bgl.phased', RefinedMarkers, OUTPUT_dir_ref+'.GCchange.bgl.phased', OUTPUT_dir_ref+'.GCchange.markers')
         # print("<Reference GCchanged bgl and marker file>\n"
         #       "bgl : {}\n"
         #       "markers : {}".format(GCchangeBGL_REF, GCchangeMarkers_REF))
+
+        if not __save_intermediates:
+            os.system(' '.join(['rm', MHC+'.QC.refined.{bgl.phased,markers}']))
+            os.system(' '.join(['rm', RefinedMarkers]))
 
 
 
         ### Converting data to vcf_format
 
-        # print("[{}] Converting data to reference_phased.".format(idx_process))
+        # target
+        command = ' '.join([BEAGLE2VCF, '6', GCchangeMarkers, GCchangeBGL, '0', '>', MHC+'.QC.vcf'])
+        # print(command)
+        os.system(command)
+
+        # reference
+        command = ' '.join([BEAGLE2VCF, '6', GCchangeMarkers_REF, GCchangeBGL_REF, '0', '>', OUTPUT_dir_ref+'.vcf'])
+        # print(command)
+        os.system(command)
+
+        reference_vcf = OUTPUT_dir_ref+'.vcf'
+
+
+
+        ### Converting data to reference_phased
+
+        command = ' '.join(['sed "s%/%|%g"', reference_vcf, '>', OUTPUT_dir_ref+'.phased.vcf'])
+        # print(command)
+        os.system(command)
+
+        if not __save_intermediates:
+            os.system(' '.join(['rm', reference_vcf]))
+            os.system(' '.join(['rm', '{} {} {} {}'.format(GCchangeBGL, GCchangeMarkers, GCchangeBGL_REF, GCchangeMarkers_REF)]))
+
+
+
+        """
+        So far, 
+        Input file(Samples/Targets in researcher's interest) => _out.MHC.QC.vcf
+        Reference file => _reference.phased.vcf
+        
+        """
 
 
         idx_process += 1
