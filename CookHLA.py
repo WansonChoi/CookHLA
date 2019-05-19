@@ -97,8 +97,8 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _hg, _java_me
 
     ###### < Control Flags > ######
 
-    EXTRACT_MHC = 0
-    FLIP = 0
+    EXTRACT_MHC = 1
+    FLIP = 1
     CONVERT_IN = 1
     IMPUTE = 1
     CONVERT_OUT = 1
@@ -369,7 +369,8 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _hg, _java_me
         ### Testing Multiple Reference
 
         from src.HLA_Imputation import HLA_Imputation
-        myImputation = HLA_Imputation(MHC, _reference, _out, _hg, LINKAGE2BEAGLE, PLINK)
+        myImputation = HLA_Imputation(MHC, _reference, _out, _hg, LINKAGE2BEAGLE, BEAGLE2VCF, PLINK, BEAGLE4,
+                                      __save_intermediates, idx_process)
 
 
 
