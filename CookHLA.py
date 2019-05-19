@@ -16,7 +16,7 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 TOLERATED_DIFF = 0.15
 
 
-def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory='2g',
+def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _hg, _java_memory='2g',
             _p_src="./src", _p_dependency="./dependency", __save_intermediates=False,
             __use_Multiple_Markers=False):
 
@@ -97,8 +97,8 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
 
     ###### < Control Flags > ######
 
-    EXTRACT_MHC = 1
-    FLIP = 1
+    EXTRACT_MHC = 0
+    FLIP = 0
     CONVERT_IN = 1
     IMPUTE = 1
     CONVERT_OUT = 1
@@ -354,118 +354,126 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _java_memory=
 
         print("[{}] Converting data to beagle format.".format(idx_process))
 
-        command = ' '.join([LINKAGE2BEAGLE, 'pedigree={}'.format(MHC+'.QC.nopheno.ped'), 'data={}'.format(MHC+'.QC.dat'),
-                            'beagle={}'.format(MHC+'.QC.bgl'), 'standard=true', '>', _out+'.bgl.log'])  # Making '*.bgl' file.
-        # print(command)
-        os.system(command)
-
-        if not __save_intermediates:
-            os.system(' '.join(['rm', MHC+'.QC.nopheno.ped']))
-            os.system(' '.join(['rm', MHC+'.QC.dat']))
-            os.system(' '.join(['rm', _out+'.bgl.log']))
-
-
-
-        ### Converting data to reference_markers_Position
-        ### (Dispersing same genomic position of some markers.)
-
-        from src.redefineBPv1BH import redefineBP
-
-        RefinedMarkers = redefineBP(_reference+'.markers', os.path.join(OUTPUT_dir, os.path.basename(_reference)+'.refined.markers'))
+        # command = ' '.join([LINKAGE2BEAGLE, 'pedigree={}'.format(MHC+'.QC.nopheno.ped'), 'data={}'.format(MHC+'.QC.dat'),
+        #                     'beagle={}'.format(MHC+'.QC.bgl'), 'standard=true', '>', _out+'.bgl.log'])  # Making '*.bgl' file.
+        # # print(command)
+        # os.system(command)
+        #
+        # if not __save_intermediates:
+        #     os.system(' '.join(['rm', MHC+'.QC.nopheno.ped']))
+        #     os.system(' '.join(['rm', MHC+'.QC.dat']))
+        #     os.system(' '.join(['rm', _out+'.bgl.log']))
 
 
 
-        ### Converting data to target_markers_Position and extract not_including snp.
+        ### Testing Multiple Reference
 
-        command = ' '.join(['awk \'{print $2" "$4" "$5" "$6}\'', MHC+'.QC.bim', '>', MHC+'.QC.markers'])    # Making '*.markers' file.
-        # print(command)
-        os.system(command)
-
-        if not __save_intermediates:
-            os.system(' '.join(['rm', MHC+'.QC.{bed,bim,fam,log}']))
-
-        command = ' '.join(['Rscript src/excluding_snp_and_refine_target_position-v1COOK02222017.R',
-                            MHC+'.QC.markers', RefinedMarkers, MHC+'.QC.pre.markers'])
-        # print(command)
-        os.system(command)
-
-        if not __save_intermediates:
-            os.system(' '.join(['rm', MHC+'.QC.markers']))
-
-        command = ' '.join(['mv', MHC+'.QC.bgl', MHC+'.QC.pre.bgl.phased'])
-        # print(command)
-        os.system(command)
-
-        command = ' '.join(["awk '{print $1}'", MHC+'.QC.pre.markers', '>', os.path.join(OUTPUT_dir, 'selected_snp.txt')])
-        # print(command)
-        os.system(command)
-
-        from src.Panel_subset import Panel_Subset
-        qc_refined = Panel_Subset(MHC+'.QC.pre', 'all', join(OUTPUT_dir, 'selected_snp.txt'), MHC+'.QC.refined')
-        # print(qc_refined) # Refined Beagle files are generated here.
-
-        if not __save_intermediates:
-            os.system(' '.join(['rm', MHC+'.QC.pre.{bgl.phased,markers}']))
-            os.system(' '.join(['rm', join(OUTPUT_dir, 'selected_snp.txt')]))
+        from src.HLA_Imputation import HLA_Imputation
+        myImputation = HLA_Imputation(MHC, _reference, _out, _hg, LINKAGE2BEAGLE, PLINK)
 
 
 
-        ### Converting data to GC_change_beagle format.
 
-        from src.bgl2GC_trick_bgl import Bgl2GC
-
-        # target
-        [GCchangeBGL, GCchangeMarkers] = Bgl2GC(MHC+'.QC.refined.bgl.phased', MHC+'.QC.refined.markers', MHC+'.QC.GCchange.bgl', MHC+'.QC.GCchange.markers')
-        # print("<Target GCchanged bgl and marker file>\n"
-        #       "bgl : {}\n"
-        #       "markers : {}".format(GCchangeBGL, GCchangeMarkers))
-
-        # reference
-        [GCchangeBGL_REF, GCchangeMarkers_REF] = Bgl2GC(_reference+'.bgl.phased', RefinedMarkers, OUTPUT_dir_ref+'.GCchange.bgl.phased', OUTPUT_dir_ref+'.GCchange.markers')
-        # print("<Reference GCchanged bgl and marker file>\n"
-        #       "bgl : {}\n"
-        #       "markers : {}".format(GCchangeBGL_REF, GCchangeMarkers_REF))
-
-        if not __save_intermediates:
-            os.system(' '.join(['rm', MHC+'.QC.refined.{bgl.phased,markers}']))
-            os.system(' '.join(['rm', RefinedMarkers]))
-
-
-
-        ### Converting data to vcf_format
-
-        # target
-        command = ' '.join([BEAGLE2VCF, '6', GCchangeMarkers, GCchangeBGL, '0', '>', MHC+'.QC.vcf'])
-        # print(command)
-        os.system(command)
-
-        # reference
-        command = ' '.join([BEAGLE2VCF, '6', GCchangeMarkers_REF, GCchangeBGL_REF, '0', '>', OUTPUT_dir_ref+'.vcf'])
-        # print(command)
-        os.system(command)
-
-        reference_vcf = OUTPUT_dir_ref+'.vcf'
-
-
-
-        ### Converting data to reference_phased
-
-        command = ' '.join(['sed "s%/%|%g"', reference_vcf, '>', OUTPUT_dir_ref+'.phased.vcf'])
-        # print(command)
-        os.system(command)
-
-        if not __save_intermediates:
-            os.system(' '.join(['rm', reference_vcf]))
-            os.system(' '.join(['rm', '{} {} {} {}'.format(GCchangeBGL, GCchangeMarkers, GCchangeBGL_REF, GCchangeMarkers_REF)]))
-
-
-
-        """
-        So far, 
-        Input file(Samples/Targets in researcher's interest) => _out.MHC.QC.vcf
-        Reference file => _reference.phased.vcf
-        
-        """
+        # ### Converting data to reference_markers_Position
+        # ### (Dispersing same genomic position of some markers.)
+        #
+        # from src.redefineBPv1BH import redefineBP
+        #
+        # RefinedMarkers = redefineBP(_reference+'.markers', os.path.join(OUTPUT_dir, os.path.basename(_reference)+'.refined.markers'))
+        #
+        #
+        #
+        # ### Converting data to target_markers_Position and extract not_including snp.
+        #
+        # command = ' '.join(['awk \'{print $2" "$4" "$5" "$6}\'', MHC+'.QC.bim', '>', MHC+'.QC.markers'])    # Making '*.markers' file.
+        # # print(command)
+        # os.system(command)
+        #
+        # if not __save_intermediates:
+        #     os.system(' '.join(['rm', MHC+'.QC.{bed,bim,fam,log}']))
+        #
+        # command = ' '.join(['Rscript src/excluding_snp_and_refine_target_position-v1COOK02222017.R',
+        #                     MHC+'.QC.markers', RefinedMarkers, MHC+'.QC.pre.markers'])
+        # # print(command)
+        # os.system(command)
+        #
+        # if not __save_intermediates:
+        #     os.system(' '.join(['rm', MHC+'.QC.markers']))
+        #
+        # command = ' '.join(['mv', MHC+'.QC.bgl', MHC+'.QC.pre.bgl.phased'])
+        # # print(command)
+        # os.system(command)
+        #
+        # command = ' '.join(["awk '{print $1}'", MHC+'.QC.pre.markers', '>', os.path.join(OUTPUT_dir, 'selected_snp.txt')])
+        # # print(command)
+        # os.system(command)
+        #
+        # from src.Panel_subset import Panel_Subset
+        # qc_refined = Panel_Subset(MHC+'.QC.pre', 'all', join(OUTPUT_dir, 'selected_snp.txt'), MHC+'.QC.refined')
+        # # print(qc_refined) # Refined Beagle files are generated here.
+        #
+        # if not __save_intermediates:
+        #     os.system(' '.join(['rm', MHC+'.QC.pre.{bgl.phased,markers}']))
+        #     os.system(' '.join(['rm', join(OUTPUT_dir, 'selected_snp.txt')]))
+        #
+        #
+        #
+        # ### Converting data to GC_change_beagle format.
+        #
+        # from src.bgl2GC_trick_bgl import Bgl2GC
+        #
+        # # target
+        # [GCchangeBGL, GCchangeMarkers] = Bgl2GC(MHC+'.QC.refined.bgl.phased', MHC+'.QC.refined.markers', MHC+'.QC.GCchange.bgl', MHC+'.QC.GCchange.markers')
+        # # print("<Target GCchanged bgl and marker file>\n"
+        # #       "bgl : {}\n"
+        # #       "markers : {}".format(GCchangeBGL, GCchangeMarkers))
+        #
+        # # reference
+        # [GCchangeBGL_REF, GCchangeMarkers_REF] = Bgl2GC(_reference+'.bgl.phased', RefinedMarkers, OUTPUT_dir_ref+'.GCchange.bgl.phased', OUTPUT_dir_ref+'.GCchange.markers')
+        # # print("<Reference GCchanged bgl and marker file>\n"
+        # #       "bgl : {}\n"
+        # #       "markers : {}".format(GCchangeBGL_REF, GCchangeMarkers_REF))
+        #
+        # if not __save_intermediates:
+        #     os.system(' '.join(['rm', MHC+'.QC.refined.{bgl.phased,markers}']))
+        #     os.system(' '.join(['rm', RefinedMarkers]))
+        #
+        #
+        #
+        # ### Converting data to vcf_format
+        #
+        # # target
+        # command = ' '.join([BEAGLE2VCF, '6', GCchangeMarkers, GCchangeBGL, '0', '>', MHC+'.QC.vcf'])
+        # # print(command)
+        # os.system(command)
+        #
+        # # reference
+        # command = ' '.join([BEAGLE2VCF, '6', GCchangeMarkers_REF, GCchangeBGL_REF, '0', '>', OUTPUT_dir_ref+'.vcf'])
+        # # print(command)
+        # os.system(command)
+        #
+        # reference_vcf = OUTPUT_dir_ref+'.vcf'
+        #
+        #
+        #
+        # ### Converting data to reference_phased
+        #
+        # command = ' '.join(['sed "s%/%|%g"', reference_vcf, '>', OUTPUT_dir_ref+'.phased.vcf'])
+        # # print(command)
+        # os.system(command)
+        #
+        # if not __save_intermediates:
+        #     os.system(' '.join(['rm', reference_vcf]))
+        #     os.system(' '.join(['rm', '{} {} {} {}'.format(GCchangeBGL, GCchangeMarkers, GCchangeBGL_REF, GCchangeMarkers_REF)]))
+        #
+        #
+        #
+        # """
+        # So far,
+        # Input file(Samples/Targets in researcher's interest) => _out.MHC.QC.vcf
+        # Reference file => _reference.phased.vcf
+        #
+        # """
 
 
         idx_process += 1
@@ -537,6 +545,8 @@ if __name__ == "__main__":
     parser.add_argument("--input", "-i", help="\nCommon prefix of input files.\n\n", required=True)
     parser.add_argument("--reference", "-ref", help="\nPrefix of Reference files.\n\n", required=True)
     parser.add_argument("--out", "-o", help="\nOutput file name prefix\n\n", required=True)
+    parser.add_argument("-hg", help="\nHuman Genome version(ex. 18, 19, 38)\n\n", choices=["18", "19", "38"],
+                        metavar="HG", default='18')
 
 
     # For publish
@@ -568,5 +578,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
-    CookHLA(args.input, args.out, args.reference, args.genetic_map, args.average_erate, _java_memory=args.java_memory,
-            __use_Multiple_Markers=args.use_multiple_markers)
+    CookHLA(args.input, args.out, args.reference, args.genetic_map, args.average_erate, args.hg,
+            _java_memory=args.java_memory, __use_Multiple_Markers=args.use_multiple_markers)
