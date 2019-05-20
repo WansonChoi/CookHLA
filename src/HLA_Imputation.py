@@ -62,8 +62,7 @@ class HLA_Imputation(object):
 
                 ### (1) CONVERT_IN
 
-                self.CONVERT_IN(MHC, _reference, _out, _hg, _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4,
-                                __save_intermediates)
+                [Doubled_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg, _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4, __save_intermediates)
 
 
 
@@ -203,11 +202,13 @@ class HLA_Imputation(object):
         ### Performing Phasing
 
         command = ' '.join([_BEAGLE4, 'gt={} ref={} out={} impute=false > {}'.format(MHC_QC_VCF, REF_PHASED_VCF, MHC+'.QC.phasing_out_not_double', MHC+'.QC.phasing_out_not_double.vcf.log')])
-        print(command)
+        # print(command)
 
         if not os.system(command):
             if not __save_intermediates:
                 os.system(' '.join(['rm', MHC_QC_VCF]))
+                os.system(' '.join(['rm', MHC+'.QC.phasing_out_not_double.vcf.log']))
+                os.system(' '.join(['rm', MHC+'.QC.phasing_out_not_double.log']))
         else:
             print(std_ERROR_MAIN_PROCESS_NAME + "Failed to Phasing.\n"
                                                 "Please check log file('{}')".format(MHC+'.QC.phasing_out_not_double.vcf.log'))
@@ -215,6 +216,47 @@ class HLA_Imputation(object):
 
 
         ### Target data doubling step.
+
+        PHASED_RESULT = MHC+'.QC.phasing_out_not_double'
+
+
+        command = 'gzip -d -f {}'.format(PHASED_RESULT+'.vcf.gz')
+        # print(command)
+        os.system(command)
+
+
+        command = 'grep ^## {} > {}'.format(PHASED_RESULT+'.vcf', PHASED_RESULT+'.vcf.header')
+        # print(command)
+        os.system(command)
+
+        command = 'grep -v ^## {} > {}'.format(PHASED_RESULT+'.vcf', PHASED_RESULT+'.vcf.body')
+        # print(command)
+        os.system(command)
+
+
+        from src.Doubling_vcf import Doubling_vcf
+
+        DOUBLED_VCF_body = Doubling_vcf(PHASED_RESULT+'.vcf.body', PHASED_RESULT+'.doubled.vcf.body')
+        # print(DOUBLED_VCF_body)
+
+
+        command = 'cat {} {} > {}'.format(PHASED_RESULT+'.vcf.header', DOUBLED_VCF_body, PHASED_RESULT+'.doubled.vcf')
+        # print(command)
+        os.system(command)
+
+
+        if not __save_intermediates:
+            os.system(' '.join(['rm', PHASED_RESULT+'.vcf']))
+            os.system(' '.join(['rm', PHASED_RESULT+'.vcf.gz']))
+            os.system(' '.join(['rm', PHASED_RESULT+'.vcf.header']))
+            os.system(' '.join(['rm', PHASED_RESULT+'.vcf.body']))
+            os.system(' '.join(['rm', PHASED_RESULT+'.doubled.vcf.body']))
+
+
+
+        __RETURN__ = [PHASED_RESULT+'.doubled.vcf', REF_PHASED_VCF]
+
+
 
 
     def getIDX_PROCESS(self):
