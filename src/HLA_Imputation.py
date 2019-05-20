@@ -23,7 +23,8 @@ class HLA_Imputation(object):
 
     def __init__(self, MHC, _reference, _out, _hg,
                  _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4,
-                 __save_intermediates, idx_process):
+                 __save_intermediates, idx_process,
+                 _aver_erate=None, _Genetic_Map=None):
 
 
         ### Class variables
@@ -65,8 +66,11 @@ class HLA_Imputation(object):
                 [Doubled_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg, _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4, __save_intermediates)
 
 
-
                 ### (2) IMPUTE
+
+                self.IMPUTE(_out, Doubled_VCF, REF_PHASED_VCF, _BEAGLE4, _aver_erate, _Genetic_Map)
+
+
                 ### (3) CONVERT_OUT
 
 
@@ -254,8 +258,22 @@ class HLA_Imputation(object):
 
 
 
+        self.idx_process += 1
         __RETURN__ = [PHASED_RESULT+'.doubled.vcf', REF_PHASED_VCF]
 
+        return __RETURN__
+
+
+
+
+    def IMPUTE(self, _out, _Doubled_VCF, _REF_PHASED_VCF, _BEAGLE4, _aver_erate=None, _Genetic_Map=None):
+
+        print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
+
+
+
+
+        return 0
 
 
 
