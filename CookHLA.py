@@ -357,7 +357,8 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _hg, _java_me
         from src.HLA_Imputation import HLA_Imputation
 
         myImputation = HLA_Imputation(MHC, _reference, _out, _hg, LINKAGE2BEAGLE, BEAGLE2VCF, PLINK, BEAGLE4,
-                                      __save_intermediates, idx_process)
+                                      __save_intermediates, idx_process, _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
+                                      f_useMultipleMarkers=__use_Multiple_Markers)
 
 
         idx_process = myImputation.getIDX_PROCESS()
