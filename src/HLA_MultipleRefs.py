@@ -15,8 +15,8 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 
 class HLA_MultipleRefs():
 
-    def __init__(self, __exonN__, _df_EXON_info, __REFERENCE__, _df_reference_bim,
-                 _out, _hg, _p_PLINK, *args, **kwargs):
+    def __init__(self, __exonN__, _df_EXON_info, __REFERENCE__, _df_reference_bim, _out, _hg,
+                 _PLINK, _LINKAGE2BEAGLE, *args, **kwargs):
 
         """
 
@@ -61,16 +61,56 @@ class HLA_MultipleRefs():
 
 
         __RETURN__ = os.path.join(OUTPUT_dir, os.path.basename(__REFERENCE__)+'.{}'.format(__exonN__))
-        command = ' '.join([_p_PLINK, '--make-bed --bfile {} --update-map {} --out {}'.format(__REFERENCE__, to_modify, __RETURN__)])
+        command = ' '.join([_PLINK, '--make-bed --bfile {} --update-map {} --out {}'.format(__REFERENCE__, to_modify, __RETURN__)])
         # print(command)
 
         if not os.system(command):
-            self.MODIFIED_REF = __RETURN__
             os.system(' '.join(['rm', to_modify]))
         else:
             print(std_ERROR_MAIN_PROCESS_NAME + "Failed to generate {} reference.".format(__exonN__))
             sys.exit()
 
+
+
+        ### Converting ExonN reference to Beagle format. (*.bgl.phased, *.markers)
+
+        # *.markers
+        command = ' '.join(['awk \'{print $2"\t"$4"\t"$5"\t"$6}\'', '{} > {}'.format(__RETURN__ + '.bim', __RETURN__ + '.markers')])
+        # print(command)
+        os.system(command)
+
+
+        # Plink bed to ped file.
+        command = '{} --bfile {} --recode --out {}'.format(_PLINK, __RETURN__, __RETURN__)
+        print(command)
+        if not os.system(command):
+            os.system('rm {}'.format(__RETURN__+'.{bed,bim,fam,log}'))
+
+
+        command = ' '.join(['awk \'{print "M " $2}\'', __RETURN__+'.map', '>', __RETURN__+'.dat'])
+        # print(command)
+        if not os.system(command):
+            os.system('rm {}'.format(__RETURN__ + '.map'))
+
+
+        command = ' '.join(["cut -d ' ' -f1-5,7-", __RETURN__+'.ped', '>', __RETURN__+'.nopheno.ped'])
+        # print(command)
+        if not os.system(command):
+            os.system('rm {}'.format(__RETURN__ + '.ped'))
+
+
+        ### Linkage2Beagle
+        command = '{} pedigree={} data={} beagle={} standard=true > {}'.format(_LINKAGE2BEAGLE, __RETURN__+'.nopheno.ped', __RETURN__+'.dat', __RETURN__+'.bgl', __RETURN__+'.bgl.log')
+        print(command)
+        if not os.system(command):
+            os.system('rm {}'.format(__RETURN__ + '.{dat,nopheno.ped,markers}'))
+            os.system('rm {}'.format(__RETURN__ + '.bgl.log'))
+
+
+
+
+
+        self.MODIFIED_REF = __RETURN__
 
     def getOUTPUT(self):
         return self.MODIFIED_REF
