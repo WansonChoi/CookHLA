@@ -48,15 +48,19 @@ def Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, plink):
 
 
 
-    # print("STEP2_EXON234_MARKERS")
-    #
+    print("STEP2_EXON234_MARKERS")
+
+    HLA2EXON234(OUTPUT_REF+".STEP1_SNP_4dit.markers",
+                infile + ".bgl.phased", OUTPUT_REF+".STEP2_exon234.bgl.phased",
+                infile + ".markers", OUTPUT_REF+".STEP2_exon234.markers")
+
     # os.system(' '.join(["python HLA2EXON234.py", infile + ".STEP1_SNP_4dit.markers", infile + ".bgl.phased",
     #                     infile + ".STEP2_exon234.bgl.phased", infile + ".markers", infile + ".STEP2_exon234.markers"]))
     #
     # command = 'python redefineBPv1BH.py ./data/HM_CEU_REF_temp.markers ./data/HM_CEU_REF_temp_refined.markers'
-    #
-    #
-    #
+
+
+
     # print("STEP3_SORT")
     #
     # os.system(
@@ -101,6 +105,128 @@ def Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, plink):
     #                     outfile + ".FRQ"]))
 
     return 0
+
+
+
+def HLA2EXON234(markerchoicefile, inbgl, outbgl, inmarker, outmarker):
+
+    """
+    Originally, this function was 'HLA2EXON234.py' source file.
+
+    """
+
+
+    selectMarkers = {}
+
+    HLA_EXON2_POSITION = [['HLA_A', '30018647'], ['HLA_C', '31347489'], ['HLA_B', '31432578'], ['HLA_DRB1', '32659998'], ['HLA_DQA1', '32717189'], ['HLA_DQB1', '32740687'], ['HLA_DPA1', '33145518'], ['HLA_DPB1', '33156558']]
+    HLA_EXON3_POSITION = [['HLA_A', '30019161'], ['HLA_C', '31346966'], ['HLA_B', '31432060'], ['HLA_DRB1', '32657452'], ['HLA_DQA1', '32717867'], ['HLA_DQB1', '32737862'], ['HLA_DPA1', '33144914'], ['HLA_DPB1', '33160845']]
+    HLA_EXON4_POSITION = [['HLA_A', '30020015'], ['HLA_C', '31346103'], ['HLA_B', '31431210']]
+
+
+
+    with open(markerchoicefile) as fin:
+        for l in fin:
+            c = l.split()
+            selectMarkers[c[0]] = True
+
+    with open(inbgl) as pf, open(outbgl, 'w') as of:
+        for l in pf:
+            c = l.split()
+            header = c[:2]
+            data = c[2:]
+            if header[0] == "M" and header[1] not in selectMarkers:
+                continue
+
+            if "HLA" in l:
+                header[1] = header[1] + '_exon2'
+                newdata = []
+                for j in range(len(data)):
+                    newdata.append(data[j])
+                of.write(' '.join(header + newdata) + '\n')
+                header[1] = (header[1].replace("_exon2", ""))
+                header[1] = header[1] + '_exon3'
+                newdata = []
+                for j in range(len(data)):
+                    newdata.append(data[j])
+                of.write(' '.join(header + newdata) + '\n')
+                header[1] = (header[1].replace("_exon3", ""))
+
+                if "DRB1" in l:
+                    continue
+                if "DQA1" in l:
+                    continue
+                if "DQB1" in l:
+                    continue
+                if "DPA1" in l:
+                    continue
+                if "DPB1" in l:
+                    continue
+
+                header[1] = header[1] + '_exon4'
+                newdata = []
+                for j in range(len(data)):
+                    newdata.append(data[j])
+                of.write(' '.join(header + newdata) + '\n')
+                header[1] = (header[1].replace("_exon4", ""))
+
+            if "HLA" in l:
+                continue
+
+            newdata = []
+            for j in range(len(data)):
+                newdata.append(data[j])
+            of.write(' '.join(header + newdata) + '\n')
+
+
+
+    with open(inmarker) as mf, open(outmarker, 'w') as of:
+        for l in mf:
+            c = l.split()
+            rsid_bp = c[:2]
+            allele = c[2:]
+
+            if rsid_bp[0] not in selectMarkers:
+                continue
+
+            if "HLA" in l:
+                rsid_bp[0] = rsid_bp[0] + '_exon2'
+                for i in range(8):
+                    if HLA_EXON2_POSITION[i][0] in rsid_bp[0]:
+                        rsid_bp[1] = HLA_EXON2_POSITION[i][1]
+                        of.write(' '.join(rsid_bp + allele) + '\n')
+                        rsid_bp[0] = (rsid_bp[0].replace("_exon2", ""))
+                    if HLA_EXON2_POSITION[i][0] in rsid_bp[0]:
+                        continue
+
+                rsid_bp[0] = rsid_bp[0] + '_exon3'
+                for i in range(8):
+                    if HLA_EXON3_POSITION[i][0] in rsid_bp[0]:
+                        rsid_bp[1] = HLA_EXON3_POSITION[i][1]
+                        of.write(' '.join(rsid_bp + allele) + '\n')
+                        rsid_bp[0] = (rsid_bp[0].replace("_exon3", ""))
+                    if HLA_EXON3_POSITION[i][0] in rsid_bp[0]:
+                        continue
+
+                rsid_bp[0] = rsid_bp[0] + '_exon4'
+
+                for i in range(3):
+                    if HLA_EXON4_POSITION[i][0] in rsid_bp[0]:
+                        rsid_bp[1] = HLA_EXON4_POSITION[i][1]
+
+                        of.write(' '.join(rsid_bp + allele) + '\n')
+                        rsid_bp[0] = (rsid_bp[0].replace("_exon4", ""))
+                    if HLA_EXON4_POSITION[i][0] in rsid_bp[0]:
+                        continue
+
+            if "HLA" in l:
+                continue
+
+            of.write(' '.join(rsid_bp + allele) + '\n')
+
+
+    return [outbgl, outmarker]
+
+
 
 
 
