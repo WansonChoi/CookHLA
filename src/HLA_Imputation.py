@@ -24,13 +24,43 @@ class HLA_Imputation(object):
     def __init__(self, MHC, _reference, _out, _hg,
                  _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4,
                  __save_intermediates, idx_process,
-                 _aver_erate=None, _Genetic_Map=None):
+                 _aver_erate=None, _Genetic_Map=None, f_useMultipleMarkers=False):
 
 
         ### Class variables
         self.idx_process = idx_process
+        self.__save_intermediates = __save_intermediates
         self.OUTPUT_dir = os.path.dirname(_out)
         self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
+        self.f_useGeneticMap = False
+        self.f_useMultipleMarkers = f_useMultipleMarkers
+
+
+
+        ###### < Setting Flag for using Genetic Map > ######
+
+        if _aver_erate and _Genetic_Map:
+
+            # Both '--average-erate(-ae)' and '--genetic-map(-gm)' are given. => To use genetic map in imputation.
+
+            if not os.path.exists(_aver_erate):
+                print(std_ERROR_MAIN_PROCESS_NAME + "The file ('{}') doesn't exist.\n"
+                                                    "Please check '--average-erate/-ae' argument again.".format(_aver_erate))
+                sys.exit()
+
+            if not os.path.exists(_Genetic_Map):
+                print(std_ERROR_MAIN_PROCESS_NAME + "The file ('{}') doesn't exist.\n"
+                                                    "Please check '--genetic-map/-gm' argument again.".format(_Genetic_Map))
+                sys.exit()
+
+            self.f_useGeneticMap = True
+
+        else:
+
+            if (_aver_erate and not _Genetic_Map) or (not _aver_erate and _Genetic_Map):
+                print(std_ERROR_MAIN_PROCESS_NAME + "Either arguments '--genetic-map(-gm)' or '--average-erate(-ae)' wasn't given.\n"
+                                                    "Please check whether both of them are given or not.")
+                sys.exit()
 
 
         ###### < Loading information related to Multiple markers > ######
@@ -46,14 +76,14 @@ class HLA_Imputation(object):
 
         ###### < 'CONVERT_IN', 'IMPUTE', 'CONVERT_OUT' with multiple markers. > ######
 
-        print(std_MAIN_PROCESS_NAME + "'CONVERT_IN', 'IMPUTE', 'CONVERT_OUT' with multiple markers.")
+        # print(std_MAIN_PROCESS_NAME + "'CONVERT_IN', 'IMPUTE', 'CONVERT_OUT' with multiple markers.")
 
         ### Main iteration
         # for _exonN_ in ['exon2', 'exon3', 'exon4']:
         for _exonN_ in ['exon2']:
 
             __ExonN_Refs__ = HLA_MultipleRefs(_exonN_, df_EXON_info.loc[_exonN_, :].reset_index(drop=True).set_index('HLA'),
-                                              _reference, df_reference_bim, _out, _hg, _PLINK)
+                                              _reference, df_reference_bim, _out, _hg, _PLINK, _LINKAGE2BEAGLE)
 
 
             for _overlap_ in __overlap__:
@@ -63,13 +93,17 @@ class HLA_Imputation(object):
 
                 ### (1) CONVERT_IN
 
-                [Doubled_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg, _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4, __save_intermediates)
+                # [Doubled_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, __ExonN_Refs__.getOUTPUT(), _out, _hg, _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4)
 
 
                 ### (2) IMPUTE
 
-                self.IMPUTE(_out, Doubled_VCF, REF_PHASED_VCF, _BEAGLE4, _aver_erate, _Genetic_Map)
+                # Temporary Hard coding
+                # Doubled_VCF = 'tests/_3_CookHLA/20190520/_3_HM_CEU_T1DGC_REF.MHC.QC.phasing_out_not_double.doubled.vcf'
+                # REF_PHASED_VCF = 'tests/_3_CookHLA/20190520/T1DGC_REF.phased.vcf'
 
+                # IMPUTED_RESULT_VCF = self.IMPUTE(_out, Doubled_VCF, REF_PHASED_VCF, _BEAGLE4, _aver_erate, _Genetic_Map)
+                # print('Imputation result : {}'.format(IMPUTED_RESULT_VCF))
 
                 ### (3) CONVERT_OUT
 
@@ -77,8 +111,7 @@ class HLA_Imputation(object):
 
 
 
-    def CONVERT_IN(self, MHC, _reference, _out, _hg, _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4,
-                 __save_intermediates):
+    def CONVERT_IN(self, MHC, _reference, _out, _hg, _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4):
 
 
 
@@ -90,7 +123,7 @@ class HLA_Imputation(object):
         # print(command)
         os.system(command)
 
-        if not __save_intermediates:
+        if not self.__save_intermediates:
             os.system(' '.join(['rm', MHC + '.QC.nopheno.ped']))
             os.system(' '.join(['rm', MHC + '.QC.dat']))
             os.system(' '.join(['rm', _out + '.bgl.log']))
@@ -111,7 +144,7 @@ class HLA_Imputation(object):
         # print(command)
         os.system(command)
 
-        if not __save_intermediates:
+        if not self.__save_intermediates:
             os.system(' '.join(['rm', MHC + '.QC.{bed,bim,fam,log}']))
 
         command = ' '.join(['Rscript src/excluding_snp_and_refine_target_position-v1COOK02222017.R',
@@ -119,7 +152,7 @@ class HLA_Imputation(object):
         # print(command)
         os.system(command)
 
-        if not __save_intermediates:
+        if not self.__save_intermediates:
             os.system(' '.join(['rm', MHC + '.QC.markers']))
 
         command = ' '.join(['mv', MHC + '.QC.bgl', MHC + '.QC.pre.bgl.phased'])
@@ -135,7 +168,7 @@ class HLA_Imputation(object):
         qc_refined = Panel_Subset(MHC + '.QC.pre', 'all', join(self.OUTPUT_dir, 'selected_snp.txt'), MHC + '.QC.refined')
         # print(qc_refined) # Refined Beagle files are generated here.
 
-        if not __save_intermediates:
+        if not self.__save_intermediates:
             os.system(' '.join(['rm', MHC + '.QC.pre.{bgl.phased,markers}']))
             os.system(' '.join(['rm', join(self.OUTPUT_dir, 'selected_snp.txt')]))
 
@@ -159,7 +192,7 @@ class HLA_Imputation(object):
         #       "bgl : {}\n"
         #       "markers : {}".format(GCchangeBGL_REF, GCchangeMarkers_REF))
 
-        if not __save_intermediates:
+        if not self.__save_intermediates:
             os.system(' '.join(['rm', MHC + '.QC.refined.{bgl.phased,markers}']))
             os.system(' '.join(['rm', RefinedMarkers]))
 
@@ -190,7 +223,7 @@ class HLA_Imputation(object):
 
         REF_PHASED_VCF = self.OUTPUT_dir_ref + '.phased.vcf'
 
-        if not __save_intermediates:
+        if not self.__save_intermediates:
             os.system(' '.join(['rm', reference_vcf]))
             os.system(' '.join(
                 ['rm', '{} {} {} {}'.format(GCchangeBGL, GCchangeMarkers, GCchangeBGL_REF, GCchangeMarkers_REF)]))
@@ -203,77 +236,120 @@ class HLA_Imputation(object):
         """
 
 
-        ### Performing Phasing
-
-        command = ' '.join([_BEAGLE4, 'gt={} ref={} out={} impute=false > {}'.format(MHC_QC_VCF, REF_PHASED_VCF, MHC+'.QC.phasing_out_not_double', MHC+'.QC.phasing_out_not_double.vcf.log')])
-        # print(command)
-
-        if not os.system(command):
-            if not __save_intermediates:
-                os.system(' '.join(['rm', MHC_QC_VCF]))
-                os.system(' '.join(['rm', MHC+'.QC.phasing_out_not_double.vcf.log']))
-                os.system(' '.join(['rm', MHC+'.QC.phasing_out_not_double.log']))
-        else:
-            print(std_ERROR_MAIN_PROCESS_NAME + "Failed to Phasing.\n"
-                                                "Please check log file('{}')".format(MHC+'.QC.phasing_out_not_double.vcf.log'))
-            sys.exit()
-
-
-        ### Target data doubling step.
-
-        PHASED_RESULT = MHC+'.QC.phasing_out_not_double'
-
-
-        command = 'gzip -d -f {}'.format(PHASED_RESULT+'.vcf.gz')
-        # print(command)
-        os.system(command)
-
-
-        command = 'grep ^## {} > {}'.format(PHASED_RESULT+'.vcf', PHASED_RESULT+'.vcf.header')
-        # print(command)
-        os.system(command)
-
-        command = 'grep -v ^## {} > {}'.format(PHASED_RESULT+'.vcf', PHASED_RESULT+'.vcf.body')
-        # print(command)
-        os.system(command)
-
-
-        from src.Doubling_vcf import Doubling_vcf
-
-        DOUBLED_VCF_body = Doubling_vcf(PHASED_RESULT+'.vcf.body', PHASED_RESULT+'.doubled.vcf.body')
-        # print(DOUBLED_VCF_body)
-
-
-        command = 'cat {} {} > {}'.format(PHASED_RESULT+'.vcf.header', DOUBLED_VCF_body, PHASED_RESULT+'.doubled.vcf')
-        # print(command)
-        os.system(command)
-
-
-        if not __save_intermediates:
-            os.system(' '.join(['rm', PHASED_RESULT+'.vcf']))
-            os.system(' '.join(['rm', PHASED_RESULT+'.vcf.gz']))
-            os.system(' '.join(['rm', PHASED_RESULT+'.vcf.header']))
-            os.system(' '.join(['rm', PHASED_RESULT+'.vcf.body']))
-            os.system(' '.join(['rm', PHASED_RESULT+'.doubled.vcf.body']))
-
-
-
-        self.idx_process += 1
-        __RETURN__ = [PHASED_RESULT+'.doubled.vcf', REF_PHASED_VCF]
-
-        return __RETURN__
+        # ### Performing Phasing
+        #
+        # command = ' '.join([_BEAGLE4, 'gt={} ref={} out={} impute=false > {}'.format(MHC_QC_VCF, REF_PHASED_VCF, MHC+'.QC.phasing_out_not_double', MHC+'.QC.phasing_out_not_double.vcf.log')])
+        # # print(command)
+        #
+        # if not os.system(command):
+        #     if not self.__save_intermediates:
+        #         os.system(' '.join(['rm', MHC_QC_VCF]))
+        #         os.system(' '.join(['rm', MHC+'.QC.phasing_out_not_double.vcf.log']))
+        #         os.system(' '.join(['rm', MHC+'.QC.phasing_out_not_double.log']))
+        # else:
+        #     print(std_ERROR_MAIN_PROCESS_NAME + "Failed to Phasing.\n"
+        #                                         "Please check log file('{}')".format(MHC+'.QC.phasing_out_not_double.vcf.log'))
+        #     sys.exit()
+        #
+        #
+        # ### Target data doubling step.
+        #
+        # PHASED_RESULT = MHC+'.QC.phasing_out_not_double'
+        #
+        #
+        # command = 'gzip -d -f {}'.format(PHASED_RESULT+'.vcf.gz')
+        # # print(command)
+        # os.system(command)
+        #
+        #
+        # command = 'grep ^## {} > {}'.format(PHASED_RESULT+'.vcf', PHASED_RESULT+'.vcf.header')
+        # # print(command)
+        # os.system(command)
+        #
+        # command = 'grep -v ^## {} > {}'.format(PHASED_RESULT+'.vcf', PHASED_RESULT+'.vcf.body')
+        # # print(command)
+        # os.system(command)
+        #
+        #
+        # from src.Doubling_vcf import Doubling_vcf
+        #
+        # DOUBLED_VCF_body = Doubling_vcf(PHASED_RESULT+'.vcf.body', PHASED_RESULT+'.doubled.vcf.body')
+        # # print(DOUBLED_VCF_body)
+        #
+        #
+        # command = 'cat {} {} > {}'.format(PHASED_RESULT+'.vcf.header', DOUBLED_VCF_body, PHASED_RESULT+'.doubled.vcf')
+        # # print(command)
+        # os.system(command)
+        #
+        #
+        # if not self.__save_intermediates:
+        #     os.system(' '.join(['rm', PHASED_RESULT+'.vcf']))
+        #     os.system(' '.join(['rm', PHASED_RESULT+'.vcf.gz']))
+        #     os.system(' '.join(['rm', PHASED_RESULT+'.vcf.header']))
+        #     os.system(' '.join(['rm', PHASED_RESULT+'.vcf.body']))
+        #     os.system(' '.join(['rm', PHASED_RESULT+'.doubled.vcf.body']))
+        #
+        #
+        #
+        # self.idx_process += 1
+        # __RETURN__ = [PHASED_RESULT+'.doubled.vcf', REF_PHASED_VCF]
+        #
+        # return __RETURN__
 
 
 
 
     def IMPUTE(self, _out, _Doubled_VCF, _REF_PHASED_VCF, _BEAGLE4, _aver_erate=None, _Genetic_Map=None):
 
+
         print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
 
 
+        OUT = _out+'.QC.doubled.imputation_out'
+
+        if self.f_useGeneticMap:
+
+            ### Using both 'Multiple Markers' and 'Adaptive Genetic Map'.
+
+            """
+            java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=5000 err=$aver_erate map=$geneticMap.refined.map
+            """
+
+        else:
+
+            if self.f_useMultipleMarkers:
+
+                ### Using Multiple Markers
+
+                """
+                java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true 
+                """
+
+                command = '{} gt={} ref={} out={} impute=true lowmem=true'.format(_BEAGLE4, _Doubled_VCF, _REF_PHASED_VCF, OUT)
+                # print(command)
+                if not os.system(command):
+                    if not self.__save_intermediates:
+                        os.system(' '.join(['rm', OUT+'.log']))
+                        os.system(' '.join(['rm', _Doubled_VCF]))
+                        os.system(' '.join(['rm', _REF_PHASED_VCF]))
+                else:
+                    print(std_ERROR_MAIN_PROCESS_NAME + "Failed to imputation on Multiple Markers")
+                    sys.exit()
+
+            else:
+
+                ### Using plain beagle4
+                pass
 
 
-        return 0
+        command = 'gzip -d -f {}.vcf.gz'.format(OUT)
+        # print(command)
+        os.system(command)
+
+        __RETURN__ = OUT+'.vcf'
+
+        return __RETURN__
+
 
 
 
