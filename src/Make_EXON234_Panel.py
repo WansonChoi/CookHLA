@@ -1,7 +1,8 @@
 #-*- coding: utf-8 -*-
 
 import os, sys, re
-
+from src.redefineBPv1BH import redefineBP
+from src.BGL2SortBGl import BGL2SortBGL
 
 ########## < Core Varialbes > ##########
 
@@ -50,29 +51,34 @@ def Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, plink):
 
     print("STEP2_EXON234_MARKERS")
 
-    HLA2EXON234(OUTPUT_REF+".STEP1_SNP_4dit.markers",
-                infile + ".bgl.phased", OUTPUT_REF+".STEP2_exon234.bgl.phased",
-                infile + ".markers", OUTPUT_REF+".STEP2_exon234.markers")
+    [outbgl, outmarker] = HLA2EXON234(OUTPUT_REF+".STEP1_SNP_4dit.markers",
+                                      infile + ".bgl.phased", OUTPUT_REF+".STEP2_exon234.bgl.phased",
+                                      infile + ".markers", OUTPUT_REF+".STEP2_exon234.markers")
 
-    # os.system(' '.join(["python HLA2EXON234.py", infile + ".STEP1_SNP_4dit.markers", infile + ".bgl.phased",
-    #                     infile + ".STEP2_exon234.bgl.phased", infile + ".markers", infile + ".STEP2_exon234.markers"]))
-    #
-    # command = 'python redefineBPv1BH.py ./data/HM_CEU_REF_temp.markers ./data/HM_CEU_REF_temp_refined.markers'
+    # Remove
+    os.system('rm {}'.format(OUTPUT_REF+".STEP1_SNP_4dit.markers"))
 
 
+    print("STEP3_SORT")
 
-    # print("STEP3_SORT")
-    #
-    # os.system(
-    #     ' '.join(["python redefineBPv1BH.py", infile + ".STEP2_exon234.markers", infile + ".STEP3_refined.markers"]))
-    #
-    # os.system(' '.join(["sort -gk 2", infile + ".STEP3_refined.markers", '>', outfile + ".markers"]))
-    #
+    refiend_outmarker = redefineBP(outmarker, OUTPUT_REF+".STEP3_refined.markers")
+    # print(refiend_outmarker)
+
+    command = 'sort -gk 2 {} > {}'.format(refiend_outmarker, outfile+'.markers')
+    # print(command)
+    if not os.system(command):
+        # Remove
+        os.system('rm {}'.format(outmarker))
+        os.system('rm {}'.format(refiend_outmarker))
+
+    # BGL2SortBGL(outfile+'.markers', outbgl, outfile + ".bgl.phased")
+
+
     # os.system(' '.join(
     #     ["python BGL2SortBGl.py", outfile + ".markers", infile + ".STEP2_exon234.bgl.phased", outfile + ".bgl.phased"]))
-    #
-    #
-    #
+
+
+
     # print("STEP_4_Make_plink_file")
     #
     # os.system(' '.join(["cat", outfile + ".bgl.phased", "|", "java -jar", BEAGLE2LINKAGE, outfile + ".STEP4_tmp"]))
