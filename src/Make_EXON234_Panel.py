@@ -12,8 +12,7 @@ std_WARNING_MAIN_PROCESS_NAME = "\n[%s::WARNING]: " % (os.path.basename(__file__
 
 
 
-def Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, plink,
-                       __save_intermediates=False):
+def Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, PLINK, __save_intermediates=False):
 
 
     REF_base = os.path.basename(infile)
@@ -92,39 +91,80 @@ def Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, plink,
 
 
 
+    print("STEP_4_Make_plink_file")
 
-    # print("STEP_4_Make_plink_file")
-    #
-    # os.system(' '.join(["cat", outfile + ".bgl.phased", "|", "java -jar", BEAGLE2LINKAGE, outfile + ".STEP4_tmp"]))
-    #
-    # os.system(' '.join(["cut -d \' \' -f-5", outfile + ".STEP4_tmp.ped", ">", outfile + ".STEP4_tmp.ped.left"]))
-    #
-    # os.system(' '.join(["cut -d \' \' -f6-", outfile + ".STEP4_tmp.ped", ">", outfile + ".STEP4_tmp.ped.right"]))
-    #
-    # os.system(' '.join(["paste -d \' -9 \' ", outfile + ".STEP4_tmp.ped.left", "/dev/null", "/dev/null", "/dev/null",
-    #                     outfile + ".STEP4_tmp.ped.right", ">", outfile + ".ped"]))
-    #
-    # os.system(' '.join(["cut -d \' \' -f1", outfile + ".markers", ">", outfile + ".STEP4_map.rsid"]))
-    #
-    # os.system(' '.join(["cut -d \' \' -f2", outfile + ".markers", ">", outfile + ".STEP4_map.bp"]))
-    #
-    # os.system(' '.join(["cut -d \' \' -f3", outfile + ".markers", ">", outfile + ".STEP4_map.allele1"]))
-    #
-    # os.system(' '.join(
-    #     ["paste -d \'6  0 \'", "/dev/null", "/dev/null", outfile + ".STEP4_map.rsid", "/dev/null", "/dev/null",
-    #      outfile + ".STEP4_map.bp", ">", outfile + ".map"]))
-    #
-    # os.system(' '.join(
-    #     ["paste -d \' \'", outfile + ".STEP4_map.rsid", outfile + ".STEP4_map.bp", ">", outfile + ".refallele"]))
-    #
-    # os.system(' '.join(
-    #     [plink, "--noweb --allow-no-sex", "--ped", outfile + ".ped", "--map", outfile + ".map", "--make-bed",
-    #      "--reference-allele", outfile + ".refallele", "--out", outfile]))
-    #
-    # os.system(' '.join([plink, "--noweb --allow-no-sex", "--bfile", outfile, " --keep-allele-order", "--freq", "--out",
-    #                     outfile + ".FRQ"]))
+    command = 'cat {} | {} {}'.format(sorted_outbgl, BEAGLE2LINKAGE, outfile + ".STEP4_tmp") # *.ped, *.dat (cf. 'java -jar' is included in 'BEAGLE2LINKAGE'.)
+    # print(command)
+    if not os.system(command):
+        # Remove
+        if not __save_intermediates:
+            os.system('rm {}'.format(outfile + ".STEP4_tmp.dat")) # *.dat file is unnecessary.
 
-    return 0
+
+    command = 'cut -d \' \' -f-5 {} > {}'.format(outfile + ".STEP4_tmp.ped", outfile + ".STEP4_tmp.ped.left") # ['FID', 'IID', 'PID', 'MID', 'Sex']
+    # print(command)
+    os.system(command)
+
+    command = 'cut -d \' \' -f6- {} > {}'.format(outfile + ".STEP4_tmp.ped", outfile + ".STEP4_tmp.ped.right") # genotype information part.
+    # print(command)
+    os.system(command)
+
+
+    command = 'paste -d \' -9 \' {} /dev/null /dev/null /dev/null {} > {}'.format(outfile + ".STEP4_tmp.ped.left", outfile + ".STEP4_tmp.ped.right", outfile + ".ped")
+    # print(command)
+    if not os.system(command):
+        # Remove
+        if not __save_intermediates:
+            os.system('rm {}'.format(outfile + ".STEP4_tmp.ped"))
+            os.system('rm {}'.format(outfile + ".STEP4_tmp.ped.left"))
+            os.system('rm {}'.format(outfile + ".STEP4_tmp.ped.right"))
+
+
+    # (1) rsid, (2) bp, (3) allele1
+    os.system(' '.join(["cut -d \' \' -f1", outfile + ".markers", ">", outfile + ".STEP4_map.rsid"]))
+
+    os.system(' '.join(["cut -d \' \' -f2", outfile + ".markers", ">", outfile + ".STEP4_map.bp"]))
+
+    os.system(' '.join(["cut -d \' \' -f3", outfile + ".markers", ">", outfile + ".STEP4_map.allele1"]))
+
+
+    os.system(' '.join(
+        ["paste -d \'6  0 \'", "/dev/null", "/dev/null", outfile + ".STEP4_map.rsid", "/dev/null", "/dev/null",
+         outfile + ".STEP4_map.bp", ">", outfile + ".map"]))
+
+    os.system(' '.join(
+        ["paste -d \' \'", outfile + ".STEP4_map.rsid", outfile + ".STEP4_map.bp", ">", outfile + ".refallele"]))
+
+
+    # bed, bim, fam files.
+    command = ' '.join([PLINK, '--ped {} --map {} --make-bed --reference-allele {} --out {}'.format(
+        outfile + ".ped",
+        outfile + ".map",
+        outfile + ".refallele",
+        outfile
+    )])
+    # print(command)
+    if not os.system(command):
+        # Remove
+        if not __save_intermediates:
+            os.system('rm {}'.format(outfile + ".STEP4_map.rsid"))
+            os.system('rm {}'.format(outfile + ".STEP4_map.bp"))
+            os.system('rm {}'.format(outfile + ".STEP4_map.allele1"))
+            os.system('rm {}'.format(outfile + ".{ped,map}"))
+            os.system('rm {}'.format(outfile + ".log"))
+            os.system('rm {}'.format(outfile + ".refallele"))
+
+
+    # Allele Frequency file(*.frq)
+    command = ' '.join([PLINK, '--bfile {} --keep-allele-order --freq --out {}'.format(outfile, outfile + ".FRQ")])
+    # print(command)
+    if not os.system(command):
+        # Remove
+        if not __save_intermediates:
+            os.system('rm {}'.format(outfile + ".FRQ.log"))
+
+
+    return outfile
 
 
 
@@ -262,13 +302,16 @@ if __name__ == '__main__':
     
     """
 
-    # [infile, outfile, BEAGLE2LINKAGE, plink] = sys.argv[1:5]
+    [infile, outfile, BEAGLE2LINKAGE, PLINK] = sys.argv[1:5]
 
-    ### Temporary Hardcoding
-    infile = '/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/data/HLA_PANEL/T1DGC/T1DGC_REF'
-    outfile = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190521_EXON234/Exon234_Panel_test'
-    BEAGLE2LINKAGE = '/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/dependency/beagle2linkage.jar'
-    plink = '/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/dependency/plink107/osx/plink'
+    # ### Temporary Hardcoding
+    # infile = '/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/data/HLA_PANEL/T1DGC/T1DGC_REF'
+    # outfile = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190521_EXON234/Exon234_Panel_test2'
+    #
+    # p_beagle2linkage = '/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/dependency/beagle2linkage.jar'
+    # BEAGLE2LINKAGE = 'java -jar '+p_beagle2linkage
+    #
+    # p_plink = '/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/dependency/plink107/osx/plink'
+    # PLINK = ' '.join([p_plink, '--noweb --allow-no-sex'])
 
-
-    Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, plink)
+    Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, PLINK)
