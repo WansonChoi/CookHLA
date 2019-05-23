@@ -2,7 +2,7 @@
 
 import os, sys, re
 from src.redefineBPv1BH import redefineBP
-from src.BGL2SortBGl import BGL2SortBGL
+from src.BGL2SortBGl import BGL2SortBGL_WS
 
 ########## < Core Varialbes > ##########
 
@@ -12,7 +12,8 @@ std_WARNING_MAIN_PROCESS_NAME = "\n[%s::WARNING]: " % (os.path.basename(__file__
 
 
 
-def Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, plink):
+def Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, plink,
+                       __save_intermediates=False):
 
 
     REF_base = os.path.basename(infile)
@@ -43,9 +44,10 @@ def Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, plink):
 
 
     # Remove
-    os.system('rm {}'.format(OUTPUT_REF+".STEP1_SNP.markers"))
-    os.system('rm {}'.format(OUTPUT_REF+".STEP1_class1_4dit.markers"))
-    os.system('rm {}'.format(OUTPUT_REF+".STEP1_class2_4dit.markers"))
+    if not __save_intermediates:
+        os.system('rm {}'.format(OUTPUT_REF+".STEP1_SNP.markers"))
+        os.system('rm {}'.format(OUTPUT_REF+".STEP1_class1_4dit.markers"))
+        os.system('rm {}'.format(OUTPUT_REF+".STEP1_class2_4dit.markers"))
 
 
 
@@ -56,26 +58,38 @@ def Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, plink):
                                       infile + ".markers", OUTPUT_REF+".STEP2_exon234.markers")
 
     # Remove
-    os.system('rm {}'.format(OUTPUT_REF+".STEP1_SNP_4dit.markers"))
+    if not __save_intermediates:
+        os.system('rm {}'.format(OUTPUT_REF+".STEP1_SNP_4dit.markers"))
 
 
     print("STEP3_SORT")
 
+    # Dispersing genomic positions of given marker file (*.markers)
     refiend_outmarker = redefineBP(outmarker, OUTPUT_REF+".STEP3_refined.markers")
     # print(refiend_outmarker)
 
+
+    # Sorting the dispersed marker file.
     command = 'sort -gk 2 {} > {}'.format(refiend_outmarker, outfile+'.markers')
     # print(command)
     if not os.system(command):
         # Remove
-        os.system('rm {}'.format(outmarker))
-        os.system('rm {}'.format(refiend_outmarker))
+        if not __save_intermediates:
+            os.system('rm {}'.format(outmarker))
+            os.system('rm {}'.format(refiend_outmarker))
 
-    # BGL2SortBGL(outfile+'.markers', outbgl, outfile + ".bgl.phased")
 
+    # Sorting beagle file to the oreder of the above sorted markers file
+    sorted_outbgl = BGL2SortBGL_WS(outfile+'.markers', outbgl, outfile + ".bgl.phased")
+    # print(sorted_outbgl)
+    if not os.path.exists(sorted_outbgl):
+        print(std_ERROR_MAIN_PROCESS_NAME + "Failed to generate '{}'.".format(sorted_outbgl))
+        sys.exit()
+    else:
+        # Remove
+        if not __save_intermediates:
+            os.system('rm {}'.format(outbgl))
 
-    # os.system(' '.join(
-    #     ["python BGL2SortBGl.py", outfile + ".markers", infile + ".STEP2_exon234.bgl.phased", outfile + ".bgl.phased"]))
 
 
 
