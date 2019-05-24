@@ -16,10 +16,11 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 TOLERATED_DIFF = 0.15
 
 
-def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _hg, _java_memory='2g',
-            _p_src="./src", _p_dependency="./dependency", __save_intermediates=False,
-            __use_Multiple_Markers=False):
+def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate=None, _java_memory='2g',
+            __save_intermediates=False, __use_Multiple_Markers=False,
+            _p_src="./src", _p_dependency="./dependency",):
 
+    f_useGeneticMap = False
 
     p_src = _p_src
     p_dependency = _p_dependency
@@ -109,10 +110,43 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _hg, _java_me
     print(std_MAIN_PROCESS_NAME + "CookHLA : Performing HLA imputation for '{}'\n"
                                   "- Java memory = {}(Mb)".format(_input, _java_memory))
 
+
+
+
+    ###### < Multiple Markers and Adaptive Genetic Map > ######
+
+    # Multiple Markers?
     if __use_Multiple_Markers:
         print("- Using Multiple Markers.")
-    if _geneticMap:
-        print("- Using Genetic Map : {}.".format(_geneticMap))
+
+    # Adaptive Genetic Map?
+    if _average_erate and _geneticMap:
+
+        if os.path.exists(_average_erate) and os.path.exists(_geneticMap):
+            f_useGeneticMap = True
+            print("- Using Genetic Map : {}.".format(_geneticMap))
+        else:
+            if not os.path.exists(_average_erate):
+                print(std_ERROR_MAIN_PROCESS_NAME + "The file ('{}') doesn't exist.\n"
+                                                    "Please check '--average-erate/-ae' argument again.".format(_average_erate))
+                sys.exit()
+
+            if not os.path.exists(_geneticMap):
+                print(std_ERROR_MAIN_PROCESS_NAME + "The file ('{}') doesn't exist.\n"
+                                                    "Please check '--genetic-map/-gm' argument again.".format(_geneticMap))
+                sys.exit()
+
+    elif not (_average_erate or _geneticMap):
+
+        f_useGeneticMap = False     # No using Adaptive Genetic Map.
+
+    else:
+        print(std_ERROR_MAIN_PROCESS_NAME + "Either arguments '--genetic-map(-gm)' or '--average-erate(-ae)' wasn't given.\n"
+                                            "Please check whether both of them are given or not.")
+        sys.exit()
+
+
+
 
 
     MHC = _out+'.MHC' # Prefix for MHC data.
@@ -350,36 +384,20 @@ def CookHLA(_input, _out, _reference, _geneticMap, _average_erate, _hg, _java_me
 
     ############################################################
 
-    if CONVERT_IN:
 
-        ### Testing Multiple Reference
+    ### Testing Multiple Reference
 
-        from src.HLA_Imputation import HLA_Imputation
+    from src.HLA_Imputation import HLA_Imputation
 
-        myImputation = HLA_Imputation(MHC, _reference, _out, _hg, LINKAGE2BEAGLE, BEAGLE2VCF, PLINK, BEAGLE4,
-                                      __save_intermediates, idx_process, _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
-                                      f_useMultipleMarkers=__use_Multiple_Markers)
-
-
-        idx_process = myImputation.getIDX_PROCESS()
-
-    # if IMPUTE:
-    #
-    #     print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(idx_process, _out))
-    #
-    #     idx_process += 1
-    #
-    # if CONVERT_OUT:
-    #
-    #     print("[{}] Converting imputation vcf to beagle.".format(idx_process))
-    #     print("[{}] Converting imputation GC_beagle to ori_beagle.".format(idx_process))
-    #     print("[{}] Converting imputation genotypes to PLINK .ped format.".format(idx_process))
-    #
-    #
-    #     idx_process += 1
+    myImputation = HLA_Imputation(MHC, _reference, _out, _hg, LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, PLINK, BEAGLE4,
+                                  __save_intermediates, idx_process, _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
+                                  f_useMultipleMarkers=__use_Multiple_Markers)
 
 
-    # This part will be taken by the instance of 'HLA_Imputation' class.
+    idx_process = myImputation.getIDX_PROCESS()
+
+
+
 
     ############################################################
 
@@ -463,5 +481,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
-    CookHLA(args.input, args.out, args.reference, args.genetic_map, args.average_erate, args.hg,
+    CookHLA(args.input, args.out, args.reference, args.hg, args.genetic_map, args.average_erate,
             _java_memory=args.java_memory, __use_Multiple_Markers=args.use_multiple_markers)
