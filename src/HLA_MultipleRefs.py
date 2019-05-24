@@ -1,7 +1,8 @@
 #-*- coding: utf-8 -*-
 
 import os, sys, re
-import pandas as pd
+from src.Make_EXON234_Panel import Make_EXON234_Panel
+
 
 ########## < Core Varialbes > ##########
 
@@ -15,8 +16,8 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 
 class HLA_MultipleRefs():
 
-    def __init__(self, __exonN__, _df_EXON_info, __REFERENCE__, _df_reference_bim, _out, _hg,
-                 _PLINK, _LINKAGE2BEAGLE, *args, **kwargs):
+    def __init__(self, __exonN__, __REFERENCE__, _out, _hg,
+                _BEAGLE2LINKAGE, _PLINK, *args, **kwargs):
 
         """
 
@@ -29,7 +30,32 @@ class HLA_MultipleRefs():
 
         """
 
+        # Output prefix
+        REF_base = os.path.basename(__REFERENCE__)
         OUTPUT_dir = os.path.dirname(_out)
+        OUTPUT_REF = os.path.join(OUTPUT_dir, REF_base+'.{}'.format(__exonN__))
+
+        self.ExonN_REF = Make_EXON234_Panel(__exonN__, __REFERENCE__, OUTPUT_REF, _BEAGLE2LINKAGE, _PLINK)
+
+
+
+    def getOUTPUT(self):
+        # Return the prefix of Exon N reference panel.
+        return self.ExonN_REF
+
+
+    def removeOUTPUT(self):
+        # Removing Exon N reference panel.
+        os.system(' '.join(['rm', self.ExonN_REF+'.{bed,bim,fam}']))
+        os.system(' '.join(['rm', self.ExonN_REF+'.{bgl.phased,markers}']))
+        os.system(' '.join(['rm', self.ExonN_REF+'.FRQ.frq']))
+
+        return 0
+
+
+
+"""
+(2019. 05. 23.) Back-up
 
         # print(std_MAIN_PROCESS_NAME + "Locating HLA markers in {}".format(__exonN__))
         # print("Given Exon information : \n{}".format(_df_EXON_info))
@@ -106,11 +132,4 @@ class HLA_MultipleRefs():
             os.system('rm {}'.format(__RETURN__ + '.{dat,nopheno.ped,markers}'))
             os.system('rm {}'.format(__RETURN__ + '.bgl.log'))
 
-
-
-
-
-        self.MODIFIED_REF = __RETURN__
-
-    def getOUTPUT(self):
-        return self.MODIFIED_REF
+"""
