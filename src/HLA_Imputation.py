@@ -21,94 +21,70 @@ __overlap__ = [3000]
 
 class HLA_Imputation(object):
 
-    def __init__(self, MHC, _reference, _out, _hg,
-                 _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4,
-                 __save_intermediates, idx_process,
-                 _aver_erate=None, _Genetic_Map=None, f_useMultipleMarkers=False):
+    def __init__(self, idx_process, MHC, _reference, _out, _hg,
+                 _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _PLINK, _BEAGLE4,
+                 __save_intermediates=False,
+                 _aver_erate=None, _Genetic_Map=None, f_useGeneticMap=False,
+                 f_useMultipleMarkers=False, _exonN_ = None):
 
 
         ### Class variables
         self.idx_process = idx_process
         self.__save_intermediates = __save_intermediates
-        self.OUTPUT_dir = os.path.dirname(_out)
-        self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
-        self.f_useGeneticMap = False
+
+        self.f_useGeneticMap = f_useGeneticMap
         self.f_useMultipleMarkers = f_useMultipleMarkers
 
+        self.OUTPUT_dir = os.path.dirname(_out)
+        self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
 
-
-        ###### < Setting Flag for using Genetic Map > ######
-
-        if _aver_erate and _Genetic_Map:
-
-            # Both '--average-erate(-ae)' and '--genetic-map(-gm)' are given. => To use genetic map in imputation.
-
-            if not os.path.exists(_aver_erate):
-                print(std_ERROR_MAIN_PROCESS_NAME + "The file ('{}') doesn't exist.\n"
-                                                    "Please check '--average-erate/-ae' argument again.".format(_aver_erate))
-                sys.exit()
-
-            if not os.path.exists(_Genetic_Map):
-                print(std_ERROR_MAIN_PROCESS_NAME + "The file ('{}') doesn't exist.\n"
-                                                    "Please check '--genetic-map/-gm' argument again.".format(_Genetic_Map))
-                sys.exit()
-
-            self.f_useGeneticMap = True
-
-        else:
-
-            if (_aver_erate and not _Genetic_Map) or (not _aver_erate and _Genetic_Map):
-                print(std_ERROR_MAIN_PROCESS_NAME + "Either arguments '--genetic-map(-gm)' or '--average-erate(-ae)' wasn't given.\n"
-                                                    "Please check whether both of them are given or not.")
-                sys.exit()
-
-
-        ###### < Loading information related to Multiple markers > ######
-
-        df_reference_bim = pd.read_csv(_reference + '.bim', sep='\s+', names=['Chr', 'Label', 'GD', 'POS', 'A1', 'A2'])
-        # print(std_MAIN_PROCESS_NAME + 'Loaded reference bim file : \n{}'.format(df_reference_bim.head()))
-
-        df_EXON_info = pd.read_csv('data/HLA_EACH_EXON_POSITIONS_hg{}.txt'.format(_hg), header=0, sep='\s+', usecols=[0, 1, 4], index_col=[1])
-        # print(std_MAIN_PROCESS_NAME + 'Loaded Exon information : \n{}'.format(df_EXON_info.loc['exon2', :]))
+        self.IMP_OUT = None
 
 
 
 
-        ###### < 'CONVERT_IN', 'IMPUTE', 'CONVERT_OUT' with multiple markers. > ######
 
-        # print(std_MAIN_PROCESS_NAME + "'CONVERT_IN', 'IMPUTE', 'CONVERT_OUT' with multiple markers.")
+        ###### < Main - 'CONVERT_IN', 'IMPUTE', 'CONVERT_OUT' > ######
 
-        ### Main iteration
-        # for _exonN_ in ['exon2', 'exon3', 'exon4']:
-        for _exonN_ in ['exon2']:
 
-            __ExonN_Refs__ = HLA_MultipleRefs(_exonN_, df_EXON_info.loc[_exonN_, :].reset_index(drop=True).set_index('HLA'),
-                                              _reference, df_reference_bim, _out, _hg, _PLINK, _LINKAGE2BEAGLE)
+        ### (1) CONVERT_IN
 
+        # [Doubled_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg, _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4)
+        # print("Convert_IN :\n{}\n{}".format(Doubled_VCF, REF_PHASED_VCF))
+
+
+        if f_useGeneticMap:
 
             for _overlap_ in __overlap__:
 
-                print(std_MAIN_PROCESS_NAME + "exonN: {} / Overlap: {}".format(_exonN_, _overlap_))
-
-
-                ### (1) CONVERT_IN
-
-                # [Doubled_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, __ExonN_Refs__.getOUTPUT(), _out, _hg, _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4)
-
+                if f_useMultipleMarkers:
+                    print(std_MAIN_PROCESS_NAME + "exonN: {} / Overlap: {}".format(_exonN_, _overlap_))
+                else:
+                    print(std_MAIN_PROCESS_NAME + "Overlap: {}".format(_overlap_))
 
                 ### (2) IMPUTE
 
                 # Temporary Hard coding
-                # Doubled_VCF = 'tests/_3_CookHLA/20190520/_3_HM_CEU_T1DGC_REF.MHC.QC.phasing_out_not_double.doubled.vcf'
-                # REF_PHASED_VCF = 'tests/_3_CookHLA/20190520/T1DGC_REF.phased.vcf'
+                # Doubled_VCF = 'tests/_3_CookHLA/20190523/_3_HM_CEU_T1DGC_REF.MHC.QC.phasing_out_not_double.doubled.vcf'
+                # REF_PHASED_VCF = 'tests/_3_CookHLA/20190523/T1DGC_REF.phased.vcf'
 
                 # IMPUTED_RESULT_VCF = self.IMPUTE(_out, Doubled_VCF, REF_PHASED_VCF, _BEAGLE4, _aver_erate, _Genetic_Map)
                 # print('Imputation result : {}'.format(IMPUTED_RESULT_VCF))
 
                 ### (3) CONVERT_OUT
 
+        else:
 
+            # Plain Single Implementation
 
+            if f_useMultipleMarkers:
+                print(std_MAIN_PROCESS_NAME + "Imputation ({})".format(_exonN_.capitalize()))
+
+            ### (2) IMPUTE
+
+            ### (3) CONVERT_OUT
+
+            print("Hello")
 
 
     def CONVERT_IN(self, MHC, _reference, _out, _hg, _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4):
@@ -236,65 +212,65 @@ class HLA_Imputation(object):
         """
 
 
-        # ### Performing Phasing
-        #
-        # command = ' '.join([_BEAGLE4, 'gt={} ref={} out={} impute=false > {}'.format(MHC_QC_VCF, REF_PHASED_VCF, MHC+'.QC.phasing_out_not_double', MHC+'.QC.phasing_out_not_double.vcf.log')])
-        # # print(command)
-        #
-        # if not os.system(command):
-        #     if not self.__save_intermediates:
-        #         os.system(' '.join(['rm', MHC_QC_VCF]))
-        #         os.system(' '.join(['rm', MHC+'.QC.phasing_out_not_double.vcf.log']))
-        #         os.system(' '.join(['rm', MHC+'.QC.phasing_out_not_double.log']))
-        # else:
-        #     print(std_ERROR_MAIN_PROCESS_NAME + "Failed to Phasing.\n"
-        #                                         "Please check log file('{}')".format(MHC+'.QC.phasing_out_not_double.vcf.log'))
-        #     sys.exit()
-        #
-        #
-        # ### Target data doubling step.
-        #
-        # PHASED_RESULT = MHC+'.QC.phasing_out_not_double'
-        #
-        #
-        # command = 'gzip -d -f {}'.format(PHASED_RESULT+'.vcf.gz')
-        # # print(command)
-        # os.system(command)
-        #
-        #
-        # command = 'grep ^## {} > {}'.format(PHASED_RESULT+'.vcf', PHASED_RESULT+'.vcf.header')
-        # # print(command)
-        # os.system(command)
-        #
-        # command = 'grep -v ^## {} > {}'.format(PHASED_RESULT+'.vcf', PHASED_RESULT+'.vcf.body')
-        # # print(command)
-        # os.system(command)
-        #
-        #
-        # from src.Doubling_vcf import Doubling_vcf
-        #
-        # DOUBLED_VCF_body = Doubling_vcf(PHASED_RESULT+'.vcf.body', PHASED_RESULT+'.doubled.vcf.body')
-        # # print(DOUBLED_VCF_body)
-        #
-        #
-        # command = 'cat {} {} > {}'.format(PHASED_RESULT+'.vcf.header', DOUBLED_VCF_body, PHASED_RESULT+'.doubled.vcf')
-        # # print(command)
-        # os.system(command)
-        #
-        #
-        # if not self.__save_intermediates:
-        #     os.system(' '.join(['rm', PHASED_RESULT+'.vcf']))
-        #     os.system(' '.join(['rm', PHASED_RESULT+'.vcf.gz']))
-        #     os.system(' '.join(['rm', PHASED_RESULT+'.vcf.header']))
-        #     os.system(' '.join(['rm', PHASED_RESULT+'.vcf.body']))
-        #     os.system(' '.join(['rm', PHASED_RESULT+'.doubled.vcf.body']))
-        #
-        #
-        #
-        # self.idx_process += 1
-        # __RETURN__ = [PHASED_RESULT+'.doubled.vcf', REF_PHASED_VCF]
-        #
-        # return __RETURN__
+        ### Performing Phasing
+
+        command = ' '.join([_BEAGLE4, 'gt={} ref={} out={} impute=false > {}'.format(MHC_QC_VCF, REF_PHASED_VCF, MHC+'.QC.phasing_out_not_double', MHC+'.QC.phasing_out_not_double.vcf.log')])
+        # print(command)
+
+        if not os.system(command):
+            if not self.__save_intermediates:
+                os.system(' '.join(['rm', MHC_QC_VCF]))
+                os.system(' '.join(['rm', MHC+'.QC.phasing_out_not_double.vcf.log']))
+                os.system(' '.join(['rm', MHC+'.QC.phasing_out_not_double.log']))
+        else:
+            print(std_ERROR_MAIN_PROCESS_NAME + "Failed to Phasing.\n"
+                                                "Please check log file('{}')".format(MHC+'.QC.phasing_out_not_double.vcf.log'))
+            sys.exit()
+
+
+        ### Target data doubling step.
+
+        PHASED_RESULT = MHC+'.QC.phasing_out_not_double'
+
+
+        command = 'gzip -d -f {}'.format(PHASED_RESULT+'.vcf.gz')
+        # print(command)
+        os.system(command)
+
+
+        command = 'grep ^## {} > {}'.format(PHASED_RESULT+'.vcf', PHASED_RESULT+'.vcf.header')
+        # print(command)
+        os.system(command)
+
+        command = 'grep -v ^## {} > {}'.format(PHASED_RESULT+'.vcf', PHASED_RESULT+'.vcf.body')
+        # print(command)
+        os.system(command)
+
+
+        from src.Doubling_vcf import Doubling_vcf
+
+        DOUBLED_VCF_body = Doubling_vcf(PHASED_RESULT+'.vcf.body', PHASED_RESULT+'.doubled.vcf.body')
+        # print(DOUBLED_VCF_body)
+
+
+        command = 'cat {} {} > {}'.format(PHASED_RESULT+'.vcf.header', DOUBLED_VCF_body, PHASED_RESULT+'.doubled.vcf')
+        # print(command)
+        os.system(command)
+
+
+        if not self.__save_intermediates:
+            os.system(' '.join(['rm', PHASED_RESULT+'.vcf']))
+            os.system(' '.join(['rm', PHASED_RESULT+'.vcf.gz']))
+            os.system(' '.join(['rm', PHASED_RESULT+'.vcf.header']))
+            os.system(' '.join(['rm', PHASED_RESULT+'.vcf.body']))
+            os.system(' '.join(['rm', PHASED_RESULT+'.doubled.vcf.body']))
+
+
+
+        self.idx_process += 1
+        __RETURN__ = [PHASED_RESULT+'.doubled.vcf', REF_PHASED_VCF]
+
+        return __RETURN__
 
 
 
@@ -330,8 +306,8 @@ class HLA_Imputation(object):
                 if not os.system(command):
                     if not self.__save_intermediates:
                         os.system(' '.join(['rm', OUT+'.log']))
-                        os.system(' '.join(['rm', _Doubled_VCF]))
-                        os.system(' '.join(['rm', _REF_PHASED_VCF]))
+                        # os.system(' '.join(['rm', _Doubled_VCF]))
+                        # os.system(' '.join(['rm', _REF_PHASED_VCF]))
                 else:
                     print(std_ERROR_MAIN_PROCESS_NAME + "Failed to imputation on Multiple Markers")
                     sys.exit()

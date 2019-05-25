@@ -412,7 +412,8 @@ def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate
                                           LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, PLINK, BEAGLE4,
                                           __save_intermediates,
                                           _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
-                                          f_useGeneticMap = f_useGeneticMap, f_useMultipleMarkers=__use_Multiple_Markers)
+                                          f_useGeneticMap = f_useGeneticMap, f_useMultipleMarkers=__use_Multiple_Markers,
+                                          _exonN_=_exonN_)
 
 
     else:
