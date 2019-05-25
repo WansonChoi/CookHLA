@@ -16,6 +16,12 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 TOLERATED_DIFF = 0.15
 
 
+# __ExonN__ = ['exon2', 'exon3', 'exon4']
+__ExonN__ = ['exon2']
+
+
+
+
 def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate=None, _java_memory='2g',
             __save_intermediates=False, __use_Multiple_Markers=False,
             _p_src="./src", _p_dependency="./dependency",):
@@ -388,16 +394,35 @@ def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate
     ### Testing Multiple Reference
 
     from src.HLA_Imputation import HLA_Imputation
+    from src.HLA_MultipleRefs import HLA_MultipleRefs
 
-    myImputation = HLA_Imputation(MHC, _reference, _out, _hg, LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, PLINK, BEAGLE4,
-                                  __save_intermediates, idx_process, _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
-                                  f_useMultipleMarkers=__use_Multiple_Markers)
-
-
-    idx_process = myImputation.getIDX_PROCESS()
+    # Container for Imputation result.
+    __IMPUTE_OUT__ = {}
 
 
+    if __use_Multiple_Markers:
 
+        for _exonN_ in __ExonN__:
+
+            # Reference Panel for exon N.
+            __ExonN_Refs__ = HLA_MultipleRefs(_exonN_, _reference, _out, _hg, BEAGLE2LINKAGE, PLINK)
+
+
+            myImputation = HLA_Imputation(idx_process, MHC, _reference, _out, _hg,
+                                          LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, PLINK, BEAGLE4,
+                                          __save_intermediates,
+                                          _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
+                                          f_useGeneticMap = f_useGeneticMap, f_useMultipleMarkers=__use_Multiple_Markers)
+
+
+    else:
+
+        # myImputation = HLA_Imputation(MHC, _reference, _out, _hg,
+        #                               LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, PLINK, BEAGLE4,
+        #                               __save_intermediates, idx_process, _aver_erate=_average_erate,
+        #                               _Genetic_Map=_geneticMap,
+        #                               f_useMultipleMarkers=__use_Multiple_Markers)
+        pass
 
     ############################################################
 
