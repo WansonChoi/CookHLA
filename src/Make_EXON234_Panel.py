@@ -31,8 +31,10 @@ def Make_EXON234_Panel(__exonN__, infile, outfile, BEAGLE2LINKAGE, PLINK, __save
     OUTPUT_REF = os.path.join(OUTPUT_dir, REF_base)
 
 
+    print(std_MAIN_PROCESS_NAME + "Generating Reference Panel for {}".format(__exonN__.capitalize()))
 
-    print("STEP1_Collect_SNP_HLA_DATA")
+
+    # print("STEP1_Collect_SNP_HLA_DATA")
 
     # In STEP1, New *.markers file will be used just next step.
     command = "grep rs {} > {}".format(infile + ".markers", OUTPUT_REF+".STEP1_SNP.markers")
@@ -61,7 +63,7 @@ def Make_EXON234_Panel(__exonN__, infile, outfile, BEAGLE2LINKAGE, PLINK, __save
 
 
 
-    print("STEP2_EXON234_MARKERS")
+    # print("STEP2_EXON234_MARKERS")
 
     # [outbgl, outmarker] = HLA2EXON234(OUTPUT_REF+".STEP1_SNP_4dit.markers",
     #                                   infile + ".bgl.phased", OUTPUT_REF+".STEP2_exon234.bgl.phased",
@@ -76,7 +78,7 @@ def Make_EXON234_Panel(__exonN__, infile, outfile, BEAGLE2LINKAGE, PLINK, __save
         os.system('rm {}'.format(OUTPUT_REF+".STEP1_SNP_4dit.markers"))
 
 
-    print("STEP3_SORT")
+    # print("STEP3_SORT")
 
     # Dispersing genomic positions of given marker file (*.markers)
     refiend_outmarker = redefineBP(outmarker, OUTPUT_REF+".STEP3_refined.markers")
@@ -106,7 +108,7 @@ def Make_EXON234_Panel(__exonN__, infile, outfile, BEAGLE2LINKAGE, PLINK, __save
 
 
 
-    print("STEP_4_Make_plink_file")
+    # print("STEP_4_Make_plink_file")
 
     command = 'cat {} | {} {}'.format(sorted_outbgl, BEAGLE2LINKAGE, outfile + ".STEP4_tmp") # *.ped, *.dat (cf. 'java -jar' is included in 'BEAGLE2LINKAGE'.)
     # print(command)
