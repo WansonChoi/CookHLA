@@ -35,6 +35,8 @@ class HLA_Imputation(object):
         self.f_useGeneticMap = f_useGeneticMap
         self.f_useMultipleMarkers = f_useMultipleMarkers
 
+        self.refined_Genetic_Map = None
+
         self.OUTPUT_dir = os.path.dirname(_out)
         self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
 
@@ -237,8 +239,30 @@ class HLA_Imputation(object):
             
             """
 
+            command = 'awk \'{print $1" "$2" "$3}\' %s > %s' % (_Genetic_Map, _Genetic_Map+'.first')
+            print(command)
+            os.system(command)
 
-            pass
+            command = 'awk \'{print $2}\' %s > %s' % (self.OUTPUT_dir_ref + '.GCchange.markers', _Genetic_Map+'.second')
+            print(command)
+            os.system(command)
+
+            command = 'paste -d " " {} {} > {}'.format(_Genetic_Map+'.first', _Genetic_Map+'.second', _Genetic_Map+'.refined.map')
+            print(command)
+            os.system(command)
+
+
+            if os.path.exists(_Genetic_Map+'.refined.map'):
+
+                self.refined_Genetic_Map = _Genetic_Map+'.refined.map'
+
+                if not self.__save_intermediates:
+                    os.system('rm {}'.format(_Genetic_Map+'.first'))
+                    os.system('rm {}'.format(_Genetic_Map+'.second'))
+
+            else:
+                print(std_ERROR_MAIN_PROCESS_NAME + "Failed to generate Refined Genetic Map.")
+                sys.exit()
 
 
 
@@ -270,7 +294,7 @@ class HLA_Imputation(object):
 
 
 
-    def IMPUTE(self, _out, _Doubled_VCF, _REF_PHASED_VCF, _BEAGLE4, _aver_erate=None, _Genetic_Map=None):
+    def IMPUTE(self, _out, _Doubled_VCF, _REF_PHASED_VCF, _BEAGLE4, _overlap=None, _aver_erate=None, _Genetic_Map=None):
 
 
         print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
@@ -284,8 +308,24 @@ class HLA_Imputation(object):
             ### Using both 'Multiple Markers' and 'Adaptive Genetic Map'.
 
             """
-            java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=5000 err=$aver_erate map=$geneticMap.refined.map
+            java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true 
+                                    gprobs=true ne=10000 overlap=5000 err=$aver_erate map=$geneticMap.refined.map
             """
+
+            with open(_aver_erate, 'r') as f:
+                aver_erate = f.readline().rstrip('\n')
+
+            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={}'.format(_BEAGLE4, _Doubled_VCF, _REF_PHASED_VCF, OUT, _overlap, aver_erate, self.refined_Genetic_Map)
+            print(command)
+            if not os.system(command):
+                if not self.__save_intermediates:
+                    os.system('rm {}'.format(OUT+'.log'))
+                    os.system('rm {}'.format(_Doubled_VCF))
+                    os.system('rm {}'.format(_REF_PHASED_VCF))
+            else:
+                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation with Geneticmap failed.")
+                sys.exit()
+
 
         else:
 
@@ -311,9 +351,17 @@ class HLA_Imputation(object):
         os.system(command)
 
         __RETURN__ = OUT + '.vcf'
+        self.idx_process += 1
 
         return __RETURN__
 
+
+
+    def CONVERT_OUT(self):
+
+
+
+        return 0
 
 
 
