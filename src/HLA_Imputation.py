@@ -82,9 +82,19 @@ class HLA_Imputation(object):
             if f_useMultipleMarkers:
                 print(std_MAIN_PROCESS_NAME + "Imputation ({})".format(_exonN_.capitalize()))
 
+
             ### (2) IMPUTE
 
+            # # Temporary Hard coding
+            # MHC_QC_VCF = 'tests/_3_CookHLA/20190523/_3_HM_CEU_T1DGC_REF.MHC.QC.phasing_out_not_double.doubled.vcf'
+            # REF_PHASED_VCF = 'tests/_3_CookHLA/20190523/T1DGC_REF.phased.vcf'
+
+            self.IMP_OUT = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
+
+
             ### (3) CONVERT_OUT
+
+
 
 
 
@@ -266,7 +276,8 @@ class HLA_Imputation(object):
         print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
 
 
-        self.IMP_OUT = _out+'.QC.doubled.imputation_out'
+        OUT = _out + '.QC.doubled.imputation_out'
+
 
         if self.f_useGeneticMap:
 
@@ -278,36 +289,28 @@ class HLA_Imputation(object):
 
         else:
 
-            if self.f_useMultipleMarkers:
+            """
+            java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true 
+            """
 
-                ### Using Multiple Markers
-
-                """
-                java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true 
-                """
-
-                command = '{} gt={} ref={} out={} impute=true lowmem=true'.format(_BEAGLE4, _Doubled_VCF, _REF_PHASED_VCF, self.IMP_OUT)
-                # print(command)
-                if not os.system(command):
-                    if not self.__save_intermediates:
-                        os.system(' '.join(['rm', self.IMP_OUT+'.log']))
-                        # os.system(' '.join(['rm', _Doubled_VCF]))
-                        # os.system(' '.join(['rm', _REF_PHASED_VCF]))
-                else:
-                    print(std_ERROR_MAIN_PROCESS_NAME + "Failed to imputation on Multiple Markers")
-                    sys.exit()
-
+            command = '{} gt={} ref={} out={} impute=true lowmem=true'.format(_BEAGLE4, _Doubled_VCF, _REF_PHASED_VCF, OUT)
+            # print(command)
+            if not os.system(command):
+                if not self.__save_intermediates:
+                    os.system(' '.join(['rm', OUT + '.log']))
+                    os.system(' '.join(['rm', _Doubled_VCF]))
+                    os.system(' '.join(['rm', _REF_PHASED_VCF]))
             else:
+                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation failed.")
+                sys.exit()
 
-                ### Using plain beagle4
-                pass
 
 
-        command = 'gzip -d -f {}.vcf.gz'.format(self.IMP_OUT)
+        command = 'gzip -d -f {}.vcf.gz'.format(OUT)
         # print(command)
         os.system(command)
 
-        __RETURN__ = self.IMP_OUT+'.vcf'
+        __RETURN__ = OUT + '.vcf'
 
         return __RETURN__
 
