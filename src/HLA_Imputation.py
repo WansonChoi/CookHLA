@@ -45,6 +45,7 @@ class HLA_Imputation(object):
         self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
 
         self.raw_IMP_Reuslt = None
+        self.IMP_Result_prefix = _out
         self.IMP_Result = None
 
 
@@ -70,8 +71,10 @@ class HLA_Imputation(object):
 
                 if f_useMultipleMarkers:
                     print(std_MAIN_PROCESS_NAME + "exonN: {} / Overlap: {}".format(_exonN_, _overlap_))
+                    self.IMP_Result_prefix = self.IMP_Result_prefix + '.{}.overlap{}'.format(_exonN_, _overlap_)
                 else:
                     print(std_MAIN_PROCESS_NAME + "Overlap: {}".format(_overlap_))
+                    self.IMP_Result_prefix = self.IMP_Result_prefix + '.overlap{}'.format(_overlap_)
 
 
                 # Temporary Hard coding
@@ -98,6 +101,10 @@ class HLA_Imputation(object):
         else:
 
             # Plain Single Implementation
+
+            if f_useMultipleMarkers:
+                # print(std_MAIN_PROCESS_NAME + "exonN: {} / Overlap: {}".format(_exonN_, _overlap_))
+                self.IMP_Result_prefix = self.IMP_Result_prefix + '.{}'.format(_exonN_)
 
 
             ### (2) IMPUTE
@@ -562,14 +569,14 @@ class HLA_Imputation(object):
 
             # Double2Single
 
-            command = 'Rscript src/Double_alleles_decoder.R {} {}'.format(DOUBLE_ALLELES, _out+'.imputed.alleles')
+            command = 'Rscript src/Double_alleles_decoder.R {} {}'.format(DOUBLE_ALLELES, self.IMP_Result_prefix+'.imputed.alleles')
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
                     os.system('rm {}'.format(DOUBLE_ALLELES))
 
 
-            __RETURN__ = _out+'.imputed.alleles'
+            __RETURN__ = self.IMP_Result_prefix+'.imputed.alleles'
 
 
         self.idx_process += 1
