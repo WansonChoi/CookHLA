@@ -1,28 +1,35 @@
-#!/usr/bin/env python
-
-## BGL file --> HLA allele converter.
-## Buhm Han, 12/3/14
-## Arguments:
-## 1. Beagle File
-## 2. Output File
-## 3~ . Genes (DPB1, A, ...)
-
 import sys, os, subprocess, re
-from os.path import join
 
-[bglfile, outfile] = sys.argv[1:3]
-genes = sys.argv[3:]
-if len(genes)==1 and genes[0] == "all":
-    genes="A B C DPA1 DPB1 DQA1 DQB1 DRB1".split()
 
-def main():
+def BGL2Alleles4Merge(bglfile, outfile, genes):
+
+    if isinstance(genes, list):
+        if len(genes) == 1 and genes[0] == "all":
+            genes = "A B C DPA1 DPB1 DQA1 DQB1 DRB1".split()
+    elif isinstance(genes, str):
+        if genes == 'all':
+            genes = "A B C DPA1 DPB1 DQA1 DQB1 DRB1".split()
+
+
+
     tmpfile="tmpfile"
 
     f = open(bglfile)
-    FID = f.next().split()[2:]
-    IID = f.next().split()[2:]
+
+    # (Python 2.x.x)
+    # FID = f.next().split()[2:]
+    # IID = f.next().split()[2:]
+
+    # (Python 3.x.x)
+    FID = f.readline().split()[2:]
+    IID = f.readline().split()[2:]
     f.close()
-    N=len(IID)/2
+
+    # (Python 2.x.x)
+    # N=len(IID)/2
+
+    # (Python 3.x.x)
+    N=int(len(IID)/2)
 
     alleles2d = {}
     alleles4d = {}
@@ -64,6 +71,12 @@ def main():
                  
     os.system('rm %s'%tmpfile)
 
+
+    return outfile
+
+
+
+
 ## Subroutin to read alleles
 def readAlleles(alleles, tmpfile):
   for l in open(tmpfile):
@@ -74,5 +87,25 @@ def readAlleles(alleles, tmpfile):
       if presence[i] == 'P':
           alleles[int(i/2)].append(allele)
 
+
+
+
+
 if __name__ == "__main__":
-    main()
+
+    """
+    
+    ## BGL file --> HLA allele converter.
+    ## Buhm Han, 12/3/14
+    ## Arguments:
+    ## 1. Beagle File
+    ## 2. Output File
+    ## 3~ . Genes (DPB1, A, ...)
+    
+    """
+
+    [bglfile, outfile] = sys.argv[1:3]
+
+    genes = sys.argv[3:]
+
+    BGL2Alleles4Merge(bglfile, outfile, genes)
