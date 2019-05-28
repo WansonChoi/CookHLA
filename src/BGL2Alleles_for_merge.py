@@ -1,5 +1,6 @@
-import sys, os, subprocess, re
+import sys, os, re
 
+p_HLA_exon = re.compile(r'^HLA_\w+_(\d+)_\w+$')
 
 def BGL2Alleles4Merge(bglfile, outfile, genes):
 
@@ -12,7 +13,7 @@ def BGL2Alleles4Merge(bglfile, outfile, genes):
 
 
 
-    tmpfile="tmpfile"
+    tmpfile=outfile+'.tmpfile'
 
     f = open(bglfile)
 
@@ -81,11 +82,17 @@ def BGL2Alleles4Merge(bglfile, outfile, genes):
 def readAlleles(alleles, tmpfile):
   for l in open(tmpfile):
     c = l.split()
-    allele = c[1][c[1].rfind('_')+1:]
-    presence = c[2:]
-    for i in range(2*len(alleles)):
-      if presence[i] == 'P':
-          alleles[int(i/2)].append(allele)
+
+    m = p_HLA_exon.match(string=c[1])
+
+    if m:
+        allele = m.group(1)
+        presence = c[2:]
+        for i in range(2*len(alleles)):
+          if presence[i] == 'P':
+              alleles[int(i/2)].append(allele)
+    else:
+        continue
 
 
 
@@ -101,6 +108,9 @@ if __name__ == "__main__":
     ## 1. Beagle File
     ## 2. Output File
     ## 3~ . Genes (DPB1, A, ...)
+    
+    
+    # (2019. 05. 28.) Slightly modified to work with Multiple Markers framework of CookHLA. (by W. Choi)
     
     """
 
