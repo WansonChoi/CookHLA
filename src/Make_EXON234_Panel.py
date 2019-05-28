@@ -26,7 +26,7 @@ def Make_EXON234_Panel(__exonN__, infile, outfile, BEAGLE2LINKAGE, PLINK, __save
         sys.exit()
 
 
-    REF_base = os.path.basename(infile)
+    REF_base = os.path.basename(outfile)
     OUTPUT_dir = os.path.dirname(outfile)
     OUTPUT_REF = os.path.join(OUTPUT_dir, REF_base)
 
