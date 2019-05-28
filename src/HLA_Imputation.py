@@ -41,6 +41,7 @@ class HLA_Imputation(object):
         # 'CONVERT_OUT'
         self.refined_REF_markers = None
 
+        # Result
         self.OUTPUT_dir = os.path.dirname(_out)
         self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
 
@@ -71,10 +72,10 @@ class HLA_Imputation(object):
 
                 if f_useMultipleMarkers:
                     print(std_MAIN_PROCESS_NAME + "exonN: {} / Overlap: {}".format(_exonN_, _overlap_))
-                    self.IMP_Result_prefix = self.IMP_Result_prefix + '.{}.overlap{}'.format(_exonN_, _overlap_)
                 else:
                     print(std_MAIN_PROCESS_NAME + "Overlap: {}".format(_overlap_))
-                    self.IMP_Result_prefix = self.IMP_Result_prefix + '.overlap{}'.format(_overlap_)
+
+                self.IMP_Result_prefix = self.IMP_Result_prefix + '.overlap{}'.format(_overlap_)
 
 
                 # Temporary Hard coding
@@ -103,8 +104,7 @@ class HLA_Imputation(object):
             # Plain Single Implementation
 
             if f_useMultipleMarkers:
-                # print(std_MAIN_PROCESS_NAME + "exonN: {} / Overlap: {}".format(_exonN_, _overlap_))
-                self.IMP_Result_prefix = self.IMP_Result_prefix + '.{}'.format(_exonN_)
+                print(std_MAIN_PROCESS_NAME + "exonN: {}".format(_exonN_))
 
 
             ### (2) IMPUTE
@@ -120,6 +120,7 @@ class HLA_Imputation(object):
             ### (3) CONVERT_OUT
 
             # Temporary Hard-coding
+            # print("Temporary Hard-coding for testing 'CONVERT_OUT'.")
             # self.raw_IMP_Reuslt = 'tests/_3_CookHLA/20190523/_3_HM_CEU_T1DGC_REF.QC.doubled.imputation_out.vcf'
             # self.refiend_REF_markers = 'tests/_3_CookHLA/20190523/T1DGC_REF.refined.markers'
 
@@ -216,7 +217,9 @@ class HLA_Imputation(object):
 
         if not self.__save_intermediates:
             os.system(' '.join(['rm', MHC + '.QC.refined.{bgl.phased,markers}']))
-            # os.system(' '.join(['rm', RefinedMarkers])) # => This will be used in 'CONVERT_OUT" block.
+
+            if self.f_useMultipleMarkers:
+                os.system(' '.join(['rm', RefinedMarkers])) # => This will be used in 'CONVERT_OUT" when not using Multiple Markers.
 
 
         ### Converting data to vcf_format
@@ -247,7 +250,11 @@ class HLA_Imputation(object):
 
         if not self.__save_intermediates:
             os.system(' '.join(['rm', reference_vcf]))
-            os.system(' '.join(['rm', '{} {} {}'.format(GCchangeMarkers, GCchangeBGL_REF, GCchangeMarkers_REF)])) # 'GCchangeBGL' will be used in 'CONVERT_OUT'
+            if self.f_useMultipleMarkers:
+                os.system(' '.join(['rm {}'.format(GCchangeBGL)])) # 'GCchangeBGL' will be used in 'CONVERT_OUT'
+            os.system(' '.join(['rm {}'.format(GCchangeMarkers)]))
+            os.system(' '.join(['rm {}'.format(GCchangeBGL_REF)]))
+            os.system(' '.join(['rm {}'.format(GCchangeMarkers_REF)]))
 
         """
         (1) MHC + '.QC.vcf', 
@@ -536,7 +543,7 @@ class HLA_Imputation(object):
 
             command = 'cat {} {} > {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl.header.txt',
                                               Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl',
-                                              Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header_with_fid.bgl')
+                                              Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header_with_fid.bgl') # (2019. 05. 28.) FID라고 적혀있는데 I행만 두 개 더 들어가는게 꺼림찍함.
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
@@ -569,7 +576,7 @@ class HLA_Imputation(object):
 
             # Double2Single
 
-            command = 'Rscript src/Double_alleles_decoder.R {} {}'.format(DOUBLE_ALLELES, self.IMP_Result_prefix+'.imputed.alleles')
+            command = 'Rscript src/Double_alleles_decoder.R {} {}'.format(DOUBLE_ALLELES, self.IMP_Result_prefix+'.imputed.alleles') # single
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
@@ -645,6 +652,17 @@ class HLA_Imputation(object):
 
 
         return PHASED_RESULT + '.doubled.vcf'
+
+
+
+
+    def getAccuracy(self, _alleles):
+
+
+
+
+
+        return 0
 
 
 
