@@ -1,28 +1,35 @@
-#!/usr/bin/env python
+import sys, os, re
 
-## BGL file --> HLA allele converter.
-## Buhm Han, 12/3/14
-## Arguments:
-## 1. Beagle File
-## 2. Output File
-## 3~ . Genes (DPB1, A, ...)
+p_HLA_exon = re.compile(r'^HLA_\w+_(\d+)_\w+$')
 
-import sys, os, subprocess, re
-from os.path import join
+def BGL2Alleles(bglfile, outfile, genes):
 
-[bglfile, outfile] = sys.argv[1:3]
-genes = sys.argv[3:]
-if len(genes)==1 and genes[0] == "all":
-    genes="A B C DRB1 DPA1 DPB1 DQA1 DQB1".split()
+    if isinstance(genes, list):
+        if len(genes) == 1 and genes[0] == "all":
+            genes = "A B C DRB1 DPA1 DPB1 DQA1 DQB1".split()
+    elif isinstance(genes, str):
+        if genes == 'all':
+            genes = "A B C DPA1 DPB1 DQA1 DQB1 DRB1".split()
 
-def main():
-    tmpfile="tmpfile"
+
+    tmpfile=outfile+'.tmpfile'
 
     f = open(bglfile)
-    FID = f.next().split()[2:]
-    IID = f.next().split()[2:]
+
+    # (Python 2.x.x)
+    # FID = f.next().split()[2:]
+    # IID = f.next().split()[2:]
+
+    # (Python 3.x.x)
+    FID = f.readline().split()[2:]
+    IID = f.readline().split()[2:]
     f.close()
-    N=len(IID)/2
+
+    # (Python 2.x.x)
+    # N=len(IID)/2
+
+    # (Python 3.x.x)
+    N=int(len(IID)/2)
 
     alleles2d = {}
     alleles4d = {}
@@ -64,15 +71,40 @@ def main():
                  
     os.system('rm %s'%tmpfile)
 
+
+    return outfile
+
+
 ## Subroutin to read alleles
 def readAlleles(alleles, tmpfile):
   for l in open(tmpfile):
     c = l.split()
-    allele = c[1][c[1].rfind('_')+1:]
-    presence = c[2:]
-    for i in range(2*len(alleles)):
-      if presence[i] == 'P':
-          alleles[int(i/2)].append(allele)
+
+    m = p_HLA_exon.match(string=c[1])
+
+    if m:
+        allele = c[1][c[1].rfind('_')+1:]
+        presence = c[2:]
+        for i in range(2*len(alleles)):
+          if presence[i] == 'P':
+              alleles[int(i/2)].append(allele)
+
+    else:
+        continue
+
+
+          
 
 if __name__ == "__main__":
-    main()
+
+    ## BGL file --> HLA allele converter.
+    ## Buhm Han, 12/3/14
+    ## Arguments:
+    ## 1. Beagle File
+    ## 2. Output File
+    ## 3~ . Genes (DPB1, A, ...)
+
+    [bglfile, outfile] = sys.argv[1:3]
+    genes = sys.argv[3:]
+
+    BGL2Alleles(bglfile, outfile, genes)
