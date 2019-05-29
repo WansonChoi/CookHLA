@@ -26,7 +26,7 @@ class HLA_Imputation(object):
                  _PLINK, _BEAGLE4,
                  __save_intermediates=False,
                  _aver_erate=None, _Genetic_Map=None, f_useGeneticMap=False,
-                 f_useMultipleMarkers=False, _exonN_ = None):
+                 f_useMultipleMarkers=False, _exonN_ = None, _answer=None):
 
 
         ### Class variables
@@ -35,6 +35,8 @@ class HLA_Imputation(object):
 
         self.f_useGeneticMap = f_useGeneticMap
         self.f_useMultipleMarkers = f_useMultipleMarkers
+
+        self.exonN = _exonN_
 
         self.refined_Genetic_Map = None
 
@@ -47,7 +49,11 @@ class HLA_Imputation(object):
 
         self.raw_IMP_Reuslt = None
         self.IMP_Result_prefix = _out
-        self.IMP_Result = None
+        self.IMP_Result = None  # '*.imputed.alleles'
+
+        self.accuracy = 0
+
+
 
 
 
@@ -61,6 +67,10 @@ class HLA_Imputation(object):
         [MHC_QC_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg,
                                                        _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4,
                                                        _aver_erate=_aver_erate, _Genetic_Map=_Genetic_Map)
+
+        # self.CONVERT_IN(MHC, _reference, _out, _hg, _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4,
+        #                 _aver_erate=_aver_erate, _Genetic_Map=_Genetic_Map)
+
         # print("Convert_IN :\n{}\n{}".format(MHC_QC_VCF, REF_PHASED_VCF))
 
 
@@ -94,7 +104,7 @@ class HLA_Imputation(object):
                 # self.raw_IMP_Reuslt = 'tests/_3_CookHLA/20190523/_3_HM_CEU_T1DGC_REF.QC.doubled.imputation_out.vcf'
                 # self.refiend_REF_markers = 'tests/_3_CookHLA/20190523/T1DGC_REF.refined.markers'
 
-                # self.CONVERT_OUT(MHC, _reference, _out, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)
+                # self.IMP_Result = self.CONVERT_OUT(MHC, _reference, _out, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)
 
 
 
@@ -110,23 +120,40 @@ class HLA_Imputation(object):
             ### (2) IMPUTE
 
             # Temporary Hard coding
-            # MHC_QC_VCF = 'tests/_3_CookHLA/20190523/_3_HM_CEU_T1DGC_REF.MHC.QC.phasing_out_not_double.doubled.vcf'
-            # REF_PHASED_VCF = 'tests/_3_CookHLA/20190523/T1DGC_REF.phased.vcf'
+            # MHC_QC_VCF = 'tests/_3_CookHLA/20190523/temp/CONVERT_IN/_3_HM_CEU_T1DGC_REF.MHC.exon2.QC.phasing_out_not_double.doubled.vcf'
+            # REF_PHASED_VCF = 'tests/_3_CookHLA/20190523/temp/CONVERT_IN/T1DGC_REF.exon2.phased.vcf'
 
             self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
-            # print("raw Imputed Reuslt : {}".format(self.raw_IMP_Reuslt))
+            print("raw Imputed Reuslt : {}".format(self.raw_IMP_Reuslt))
 
 
             ### (3) CONVERT_OUT
 
             # Temporary Hard-coding
             # print("Temporary Hard-coding for testing 'CONVERT_OUT'.")
-            # self.raw_IMP_Reuslt = 'tests/_3_CookHLA/20190523/_3_HM_CEU_T1DGC_REF.QC.doubled.imputation_out.vcf'
-            # self.refiend_REF_markers = 'tests/_3_CookHLA/20190523/T1DGC_REF.refined.markers'
+            # self.raw_IMP_Reuslt = 'tests/_3_CookHLA/20190523/_3_HM_CEU_T1DGC_REF.exon2.QC.doubled.imputation_out.vcf'
 
             self.IMP_Result = self.CONVERT_OUT(MHC, _reference, _out, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)
 
             print("\n\nImputation Result : {}".format(self.IMP_Result))
+
+
+
+        ###### < Get Accuracy > ######
+
+        if _answer:
+
+            if not os.path.exists(_answer):
+                print(std_WARNING_MAIN_PROCESS_NAME + "Given Answer file doesn't exist. Skipping calculating accuracy."
+                                                      "Please check '--answer' argument again.")
+
+
+            from src.measureAccuracy import measureAccuracy
+
+            if isinstance(self.IMP_Result, str):
+                self.accuracy = measureAccuracy(_answer, self.IMP_Result, 'all', outfile=_out+'.accuracy')
+            elif isinstance(self.IMP_Result, list):
+                self.accuracy = [measureAccuracy(_answer, item, 'all', outfile=_out+'.accuracy') for item in self.IMP_Result]
 
 
 
@@ -137,19 +164,20 @@ class HLA_Imputation(object):
                    _aver_erate=None, _Genetic_Map=None):
 
 
+        __MHC_exonN__ = MHC if not self.f_useMultipleMarkers else MHC+'.{}'.format(self.exonN)
 
         print("[{}] Converting data to beagle format.".format(self.idx_process))
 
         command = ' '.join(
             [_LINKAGE2BEAGLE, 'pedigree={}'.format(MHC + '.QC.nopheno.ped'), 'data={}'.format(MHC + '.QC.dat'),
-             'beagle={}'.format(MHC + '.QC.bgl'), 'standard=true', '>', _out + '.bgl.log'])  # Making '*.bgl' file.
+             'beagle={}'.format(__MHC_exonN__ + '.QC.bgl'), 'standard=true', '>', __MHC_exonN__ + '.QC.bgl.log'])  # Making '*.bgl' file.
         # print(command)
         os.system(command)
 
         if not self.__save_intermediates:
-            os.system(' '.join(['rm', MHC + '.QC.nopheno.ped']))
-            os.system(' '.join(['rm', MHC + '.QC.dat']))
-            os.system(' '.join(['rm', _out + '.bgl.log']))
+            # os.system(' '.join(['rm', MHC + '.QC.nopheno.ped']))
+            # os.system(' '.join(['rm', MHC + '.QC.dat']))
+            os.system('rm {}'.format(__MHC_exonN__ + '.QC.bgl.log'))
 
 
         ### Converting data to reference_markers_Position (Dispersing same genomic position of some markers.)
@@ -163,36 +191,36 @@ class HLA_Imputation(object):
         ### Converting data to target_markers_Position and extract not_including snp.
 
         command = ' '.join(['awk \'{print $2" "$4" "$5" "$6}\'', MHC + '.QC.bim', '>',
-                            MHC + '.QC.markers'])  # Making '*.markers' file.
+                            __MHC_exonN__ + '.QC.markers'])  # Making '*.markers' file.
         # print(command)
         os.system(command)
 
-        if not self.__save_intermediates:
-            os.system(' '.join(['rm', MHC + '.QC.{bed,bim,fam,log}']))
+        # if not self.__save_intermediates:
+        #     os.system(' '.join(['rm', MHC + '.QC.{bed,bim,fam,log}']))
 
         command = ' '.join(['Rscript src/excluding_snp_and_refine_target_position-v1COOK02222017.R',
-                            MHC + '.QC.markers', RefinedMarkers, MHC + '.QC.pre.markers'])
+                            __MHC_exonN__ + '.QC.markers', RefinedMarkers, __MHC_exonN__ + '.QC.pre.markers'])
         # print(command)
         os.system(command)
 
         if not self.__save_intermediates:
-            os.system(' '.join(['rm', MHC + '.QC.markers']))
+            os.system(' '.join(['rm', __MHC_exonN__ + '.QC.markers']))
 
-        command = ' '.join(['mv', MHC + '.QC.bgl', MHC + '.QC.pre.bgl.phased'])
+        command = ' '.join(['mv', __MHC_exonN__ + '.QC.bgl', __MHC_exonN__ + '.QC.pre.bgl.phased'])
         # print(command)
         os.system(command)
 
         command = ' '.join(
-            ["awk '{print $1}'", MHC + '.QC.pre.markers', '>', os.path.join(self.OUTPUT_dir, 'selected_snp.txt')])
+            ["awk '{print $1}'", __MHC_exonN__ + '.QC.pre.markers', '>', os.path.join(self.OUTPUT_dir, 'selected_snp.txt')])
         # print(command)
         os.system(command)
 
         from src.Panel_subset import Panel_Subset
-        qc_refined = Panel_Subset(MHC + '.QC.pre', 'all', join(self.OUTPUT_dir, 'selected_snp.txt'), MHC + '.QC.refined')
+        qc_refined = Panel_Subset(__MHC_exonN__ + '.QC.pre', 'all', join(self.OUTPUT_dir, 'selected_snp.txt'), __MHC_exonN__ + '.QC.refined')
         # print(qc_refined) # Refined Beagle files are generated here.
 
         if not self.__save_intermediates:
-            os.system(' '.join(['rm', MHC + '.QC.pre.{bgl.phased,markers}']))
+            os.system(' '.join(['rm', __MHC_exonN__ + '.QC.pre.{bgl.phased,markers}']))
             os.system(' '.join(['rm', join(self.OUTPUT_dir, 'selected_snp.txt')]))
 
 
@@ -201,8 +229,8 @@ class HLA_Imputation(object):
         from src.bgl2GC_trick_bgl import Bgl2GC
 
         # target
-        [GCchangeBGL, GCchangeMarkers] = Bgl2GC(MHC + '.QC.refined.bgl.phased', MHC + '.QC.refined.markers',
-                                                MHC + '.QC.GCchange.bgl', MHC + '.QC.GCchange.markers')
+        [GCchangeBGL, GCchangeMarkers] = Bgl2GC(__MHC_exonN__ + '.QC.refined.bgl.phased', __MHC_exonN__ + '.QC.refined.markers',
+                                                __MHC_exonN__ + '.QC.GCchange.bgl', __MHC_exonN__ + '.QC.GCchange.markers')
         # print("<Target GCchanged bgl and marker file>\n"
         #       "bgl : {}\n"
         #       "markers : {}".format(GCchangeBGL, GCchangeMarkers))
@@ -216,7 +244,7 @@ class HLA_Imputation(object):
         #       "markers : {}".format(GCchangeBGL_REF, GCchangeMarkers_REF))
 
         if not self.__save_intermediates:
-            os.system(' '.join(['rm', MHC + '.QC.refined.{bgl.phased,markers}']))
+            os.system(' '.join(['rm', __MHC_exonN__ + '.QC.refined.{bgl.phased,markers}']))
 
             if self.f_useMultipleMarkers:
                 os.system(' '.join(['rm', RefinedMarkers])) # => This will be used in 'CONVERT_OUT" when not using Multiple Markers.
@@ -225,11 +253,11 @@ class HLA_Imputation(object):
         ### Converting data to vcf_format
 
         # target
-        command = ' '.join([_BEAGLE2VCF, '6', GCchangeMarkers, GCchangeBGL, '0', '>', MHC + '.QC.vcf'])
+        command = ' '.join([_BEAGLE2VCF, '6', GCchangeMarkers, GCchangeBGL, '0', '>', __MHC_exonN__ + '.QC.vcf'])
         # print(command)
         os.system(command)
 
-        MHC_QC_VCF = MHC + '.QC.vcf'
+        MHC_QC_VCF = __MHC_exonN__ + '.QC.vcf'
 
 
         # reference
@@ -257,9 +285,9 @@ class HLA_Imputation(object):
             os.system(' '.join(['rm {}'.format(GCchangeMarkers_REF)]))
 
         """
-        (1) MHC + '.QC.vcf', 
+        (1) MHC + '.QC.vcf',
         (2) self.OUTPUT_dir_ref + '.phased.vcf'
-        
+
         These two files are to be passed into Beagle phasing;
         """
 
@@ -271,10 +299,10 @@ class HLA_Imputation(object):
             awk '{print $1" "$2" "$3}' $geneticMap > $geneticMap.first
             awk '{print $2}' $REFERENCE.GCchange.markers > $geneticMap.second
             paste -d " " $geneticMap.first $geneticMap.second > $geneticMap.refined.map
-            
+
             rm $geneticMap.first
             rm $geneticMap.second
-            
+
             """
 
             command = 'awk \'{print $1" "$2" "$3}\' %s > %s' % (_Genetic_Map, _Genetic_Map+'.first')
@@ -316,7 +344,7 @@ class HLA_Imputation(object):
             ### Phasing & Doubling (only on Target Sample.)
 
             # Phasing
-            PHASED_RESULT = self.Phasing(MHC, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
+            PHASED_RESULT = self.Phasing(__MHC_exonN__, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
 
             # Doubling
             DOUBLED_PHASED_RESULT = self.Doubling(PHASED_RESULT)
@@ -395,20 +423,22 @@ class HLA_Imputation(object):
 
 
 
-    def CONVERT_OUT(self, _MHC, _reference, _out, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK):
+    def CONVERT_OUT(self, MHC, _reference, _out, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK):
 
 
         if not self.f_useMultipleMarkers:
 
+            __MHC_exonN__ = MHC+'.{}'.format(self.exonN) if self.f_useMultipleMarkers else MHC
+
             ### Converting imputation result in vcf file to beagle format.
 
-            command = 'cat {} | {} 0 {}'.format(self.raw_IMP_Reuslt, _VCF2BEAGLE, _MHC + '.QC.imputation_GCchange')
+            command = 'cat {} | {} 0 {}'.format(self.raw_IMP_Reuslt, _VCF2BEAGLE, __MHC_exonN__ + '.QC.imputation_GCchange')
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
-                    os.system('rm {}'.format(_MHC + '.QC.imputation_GCchange.int'))
+                    os.system('rm {}'.format(__MHC_exonN__ + '.QC.imputation_GCchange.int'))
 
-            command = 'gzip -d -f {}'.format(_MHC+'.QC.imputation_GCchange.bgl.gz')
+            command = 'gzip -d -f {}'.format(__MHC_exonN__ + '.QC.imputation_GCchange.bgl.gz')
             # print(command)
             os.system(command)
 
@@ -416,33 +446,61 @@ class HLA_Imputation(object):
             ### Decoding GC-encoded values in beagle file to original values.
 
             # Decoding GC-encoding
-            GC_decodedBGL = GCtricedBGL2OriginalBGL(_MHC +'.QC.imputation_GCchange.bgl', self.refined_REF_markers, _MHC + '.QC.imputation_ori.bgl')
+            GC_decodedBGL = GCtricedBGL2OriginalBGL(__MHC_exonN__ + '.QC.imputation_GCchange.bgl', self.refined_REF_markers, __MHC_exonN__ + '.QC.imputation_ori.bgl')
             # print('GC_decodedBGL : {}'.format(GC_decodedBGL))
 
             if not self.__save_intermediates:
                 os.system('rm {}'.format(self.refined_REF_markers))
 
             #
-            HLA_IMPUTED_Result = os.path.join(self.OUTPUT_dir, 'HLA_IMPUTED_Result.{}'.format(os.path.basename(_MHC)))
+            HLA_IMPUTED_Result = os.path.join(self.OUTPUT_dir, 'HLA_IMPUTED_Result.{}'.format(os.path.basename(__MHC_exonN__)))
 
-            command = 'Rscript src/complete_header.R {} {} {}'.format(_MHC+'.QC.GCchange.bgl', GC_decodedBGL, HLA_IMPUTED_Result+'.bgl.phased')
+            command = 'Rscript src/complete_header.R {} {} {}'.format(__MHC_exonN__ + '.QC.GCchange.bgl', GC_decodedBGL, HLA_IMPUTED_Result + '.bgl.phased')
             print(command)
             os.system(command)
 
 
             ### Converting decoded beagle file to PLINK file.
 
-            command = 'cat {} | {} {}'.format(HLA_IMPUTED_Result, _BEAGLE2LINKAGE, _out+'.tmp')
-            command = "cut -d ' ' -f6- {} > {}".format(_out+'.tmp.ped', _out+'.tmp')
-            command = "paste -d ' ' {} {} | tr -d '\015' > {}".format(_MHC+'.fam', _out+'.tmp', HLA_IMPUTED_Result+'.ped') # *.ped
-            command = 'cut -f1-4 {} > {}'.format(_reference+'.bim', HLA_IMPUTED_Result+'.map') # *.map
-            command = 'cp {} {}'.format(_MHC+'.fam', HLA_IMPUTED_Result+'.fam')
-
+            # command = 'cat {} | {} {}'.format(HLA_IMPUTED_Result, _BEAGLE2LINKAGE, _out+'.tmp')
+            # print(command)
+            # os.system(command)
+            #
+            # command = "cut -d ' ' -f6- {} > {}".format(_out+'.tmp.ped', _out+'.tmp')
+            # print(command)
+            # os.system(command)
+            #
+            # command = "paste -d ' ' {} {} | tr -d '\015' > {}".format(__MHC_exonN__ + '.fam', _out + '.tmp', HLA_IMPUTED_Result + '.ped') # *.ped
+            # print(command)
+            # os.system(command)
+            #
+            # command = 'cut -f1-4 {} > {}'.format(_reference+'.bim', HLA_IMPUTED_Result+'.map') # *.map
+            # print(command)
+            # os.system(command)
+            #
+            # command = 'cp {} {}'.format(__MHC_exonN__ + '.fam', HLA_IMPUTED_Result + '.fam')
+            # print(command)
+            # os.system(command)
+            #
             # # Create PLINK bed format
             # command = '{} --ped {} --map {} --make-bed --out {}'.format(_PLINK, HLA_IMPUTED_Result+'.ped', HLA_IMPUTED_Result+'.map', HLA_IMPUTED_Result)
+            # print(command)
+            # os.system(command)
+            #
+            # command = 'rm {}'.format(HLA_IMPUTED_Result + '.fam')
+            # print(command)
+            # os.system(command)
+            #
+            # command = 'cp {} {}'.format(_reference+'.bim', HLA_IMPUTED_Result+'.bim')
+            # print(command)
+            # os.system(command)
 
 
-            __RETURN__ = None
+            # BGL2Allele.py
+
+            from src.BGL2Alleles import BGL2Alleles
+
+            __RETURN__ = BGL2Alleles(HLA_IMPUTED_Result + '.bgl.phased', self.IMP_Result_prefix+'.imputed.alleles', 'all')
 
 
 
@@ -473,15 +531,15 @@ class HLA_Imputation(object):
                                                                             Prefix_raw_IMP_Result+'.EXON_VCF_DP_MIN_VCF_HLA_{}.txt'.format(_hla))
                     # print(command)
                     if not os.system(command):
-
-                        # Removing '*.EXON_VCF_HLA_{}.txt'
-                        os.system('rm {}'.format(Prefix_raw_IMP_Result+'.EXON_VCF_HLA_{}.txt'.format(_hla)))
-
                         vcf2HLAVCF[_hla] = Prefix_raw_IMP_Result+'.EXON_VCF_DP_MIN_VCF_HLA_{}.txt'.format(_hla)
                         # Replacing('*.EXON_VCF_HLA{}.txt' -> '*.EXON_VCF_DP_MIN_VCF_HLA_{}.txt')
 
                 else:
                     print('No HLA_{} alleles. DP_min_seleciton for HLA_{} will be skipped.'.format(_hla, _hla))
+
+                # Removing '*.EXON_VCF_HLA_{}.txt'
+                os.system('rm {}'.format(Prefix_raw_IMP_Result + '.EXON_VCF_HLA_{}.txt'.format(_hla)))
+
 
 
             # Set aside vcf header
@@ -490,7 +548,13 @@ class HLA_Imputation(object):
             os.system(command)
 
             # Concatenate body part in the genomic position order.
-            to_cat = ' '.join([vcf2HLAVCF[_hla_g] for _hla_g in HLA_names_gen])
+            to_cat = []
+            for _hla in HLA_names_gen:
+                if vcf2HLAVCF[_hla]:
+                    to_cat.append(vcf2HLAVCF[_hla])
+
+            to_cat = ' '.join(to_cat)
+
             command = 'cat {} > {}'.format(to_cat, Prefix_raw_IMP_Result+'.DP_MIN_VCF_HLA_all.txt')
             # print(command)
             if not os.system(command):
@@ -652,17 +716,6 @@ class HLA_Imputation(object):
 
 
         return PHASED_RESULT + '.doubled.vcf'
-
-
-
-
-    def getAccuracy(self, _alleles):
-
-
-
-
-
-        return 0
 
 
 

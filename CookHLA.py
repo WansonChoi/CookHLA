@@ -5,6 +5,7 @@ from os.path import join
 import argparse, textwrap
 from src.HLA_Imputation import HLA_Imputation
 from src.HLA_MultipleRefs import HLA_MultipleRefs
+from statistics import mean
 
 ########## < Core Varialbes > ##########
 
@@ -19,11 +20,12 @@ TOLERATED_DIFF = 0.15
 
 __ExonN__ = ['exon2', 'exon3', 'exon4']
 # __ExonN__ = ['exon2']
+# __ExonN__ = ['exon4']
 
 
 
 
-def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate=None, _java_memory='2g', _MultP=1,
+def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate=None, _java_memory='2g', _MultP=1, _answer=None,
             __save_intermediates=False, __use_Multiple_Markers=False,
             _p_src="./src", _p_dependency="./dependency",):
 
@@ -105,8 +107,8 @@ def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate
 
     ###### < Control Flags > ######
 
-    EXTRACT_MHC = 0
-    FLIP = 0
+    EXTRACT_MHC = 1
+    FLIP = 1
     CLEAN_UP = 0
 
 
@@ -408,35 +410,18 @@ def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate
             dict_Pool = {_exonN_: pool.apply_async(Main_Imputation, (idx_process, MHC, _reference, _out+'.{}'.format(_exonN_), _hg,
                                               LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
                                               __save_intermediates,
-                                              _average_erate, _geneticMap,
-                                              f_useGeneticMap, __use_Multiple_Markers, _exonN_)) for _exonN_ in __ExonN__}
+                                              _average_erate, _geneticMap, f_useGeneticMap, __use_Multiple_Markers,
+                                              _exonN_, _answer)) for _exonN_ in __ExonN__}
 
             pool.close()
             pool.join()
 
-            # for _exonN_ in __ExonN__:
-            #
-            #     # Reference Panel for exon N.
-            #     # __ExonN_Refs__ = HLA_MultipleRefs(_exonN_, _reference, _out, _hg, BEAGLE2LINKAGE, PLINK)
-            #     __ExonN_Refs__ = 'tests/_3_CookHLA/20190523/T1DGC_REF.exon2'
-            #
-            #
-            #     myImputation = HLA_Imputation(idx_process, MHC, __ExonN_Refs__.getOUTPUT(), _out+'.{}'.format(_exonN_), _hg,
-            #                                   LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE,
-            #                                   PLINK, BEAGLE4,
-            #                                   __save_intermediates,
-            #                                   _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
-            #                                   f_useGeneticMap = f_useGeneticMap, f_useMultipleMarkers=__use_Multiple_Markers,
-            #                                   _exonN_=_exonN_)
-            #
-            #     # Hardcoding for partial testing.
-            #     myImputation = HLA_Imputation(idx_process, MHC, 'tests/_3_CookHLA/20190523/T1DGC_REF.exon2', _out+'.exon2', _hg,
-            #                                   LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE,
-            #                                   PLINK, BEAGLE4,
-            #                                   __save_intermediates,
-            #                                   _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
-            #                                   f_useGeneticMap = f_useGeneticMap, f_useMultipleMarkers=__use_Multiple_Markers,
-            #                                   _exonN_=_exonN_)
+
+            __IMPUTE_OUT__ = {_exonN_: _OUT.get() for _exonN_, _OUT in dict_Pool.items()}
+
+            # checking result
+            # for k,v in __IMPUTE_OUT__.items():
+            #     print("{} : {}".format(k, v))
 
 
 
@@ -444,31 +429,30 @@ def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate
             ### No Multiprocessing
 
             for _exonN_ in __ExonN__:
-                # Reference Panel for exon N.
-                # __ExonN_Refs__ = HLA_MultipleRefs(_exonN_, _reference, _out, _hg, BEAGLE2LINKAGE, PLINK)
-                __ExonN_Refs__ = 'tests/_3_CookHLA/20190523/T1DGC_REF.exon2'
 
-                # myImputation = HLA_Imputation(idx_process, MHC, __ExonN_Refs__.getOUTPUT(), _out+'.{}'.format(_exonN_), _hg,
-                #                               LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE,
-                #                               PLINK, BEAGLE4,
-                #                               __save_intermediates,
-                #                               _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
-                #                               f_useGeneticMap = f_useGeneticMap, f_useMultipleMarkers=__use_Multiple_Markers,
-                #                               _exonN_=_exonN_)
+                ### Reference Panel for exon N.
+                __ExonN_Refs__ = HLA_MultipleRefs(_exonN_, _reference, _out, _hg, BEAGLE2LINKAGE, PLINK)
 
-                # Hardcoding for partial testing.
-                myImputation = HLA_Imputation(idx_process, MHC, 'tests/_3_CookHLA/20190523/T1DGC_REF.exon2',
-                                              _out + '.exon2', _hg,
+                myImputation = HLA_Imputation(idx_process, MHC, __ExonN_Refs__.getOUTPUT(), _out+'.{}'.format(_exonN_), _hg,
                                               LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE,
                                               PLINK, BEAGLE4,
                                               __save_intermediates,
                                               _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
-                                              f_useGeneticMap=f_useGeneticMap,
-                                              f_useMultipleMarkers=__use_Multiple_Markers,
-                                              _exonN_=_exonN_)
+                                              f_useGeneticMap = f_useGeneticMap, f_useMultipleMarkers=__use_Multiple_Markers,
+                                              _exonN_=_exonN_, _answer=_answer)
 
+                # Hardcoding for partial testing.
+                # myImputation = HLA_Imputation(idx_process, MHC, 'tests/_3_CookHLA/20190523/T1DGC_REF.exon2',
+                #                               _out + '.exon2', _hg,
+                #                               LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE,
+                #                               PLINK, BEAGLE4,
+                #                               __save_intermediates,
+                #                               _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
+                #                               f_useGeneticMap=f_useGeneticMap,
+                #                               f_useMultipleMarkers=__use_Multiple_Markers,
+                #                               _exonN_=_exonN_, _answer=_answer)
 
-
+                __IMPUTE_OUT__ = {_exonN_: myImputation}
 
     else:
 
@@ -482,9 +466,23 @@ def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate
     ############################################################
 
 
+
+
+    __MeanAccuracy__ = getMeanAccuracy(__IMPUTE_OUT__, __use_Multiple_Markers, f_useGeneticMap)
+
+
+
     if CLEAN_UP:
 
         print("[{}] Clean Up.".format(idx_process))
+
+
+        if not __save_intermediates:
+            os.system(' '.join(['rm', MHC + '.QC.nopheno.ped']))
+            os.system(' '.join(['rm', MHC + '.QC.dat']))
+            os.system(' '.join(['rm', MHC + '.QC.{bed,bim,fam,log}']))
+            os.system(' '.join(['rm', _out + '.bgl.log']))
+
 
 
         print("DONE!\n")
@@ -503,7 +501,7 @@ def Main_Imputation(idx_process, MHC, _reference, _out, _hg,
                     LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
                     __save_intermediates=False,
                     _average_erate=None, _geneticMap=None, f_useGeneticMap=False,
-                    __use_Multiple_Markers=False, _exonN_=None):
+                    __use_Multiple_Markers=False, _exonN_=None, _answer=None):
 
     """
     Wrapper function for multiprocessing
@@ -516,26 +514,61 @@ def Main_Imputation(idx_process, MHC, _reference, _out, _hg,
     # print(__ExonN_Refs__.getOUTPUT())
 
 
-    # myImputation = HLA_Imputation(idx_process, MHC, __ExonN_Refs__.getOUTPUT(), _out+'.{}'.format(_exonN_), _hg,
-    #                               LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
-    #                               __save_intermediates,
-    #                               _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
-    #                               f_useGeneticMap = f_useGeneticMap, f_useMultipleMarkers=__use_Multiple_Markers,
-    #                               _exonN_=_exonN_)
+    myImputation = HLA_Imputation(idx_process, MHC, __ExonN_Refs__.getOUTPUT(), _out, _hg,
+                                  LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
+                                  __save_intermediates,
+                                  _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
+                                  f_useGeneticMap = f_useGeneticMap, f_useMultipleMarkers=__use_Multiple_Markers,
+                                  _exonN_=_exonN_, _answer=_answer)
 
     # Hardcoding for partial testing.
-    # myImputation = HLA_Imputation(idx_process, MHC, 'tests/_3_CookHLA/20190523/T1DGC_REF.exon2', _out + '.exon2', _hg,
+    # myImputation = HLA_Imputation(idx_process, MHC, 'tests/_3_CookHLA/20190523/T1DGC_REF.exon2', _out, _hg,
     #                               LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE,
     #                               PLINK, BEAGLE4,
     #                               __save_intermediates,
     #                               _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
     #                               f_useGeneticMap=f_useGeneticMap, f_useMultipleMarkers=__use_Multiple_Markers,
-    #                               _exonN_=_exonN_)
+    #                               _exonN_=_exonN_, _answer=_answer)
 
 
 
-    # return myImputation.getImputationResult()
+    return myImputation
 
+
+
+def getMeanAccuracy(__IMPUTE_OUT__, __f_Multiple_Markers, __f_useGeneticMap):
+
+
+    __RETURN__ = {_hla: None for _hla in HLA_names}
+
+
+
+    if __f_useGeneticMap:
+
+        if __f_Multiple_Markers:
+            for _hla in HLA_names:
+                __RETURN__[_hla] = mean([t_dict['4D'][_hla] for exonN in __ExonN__ for t_dict in __IMPUTE_OUT__[exonN].accuracy])
+        else:
+
+            for _hla in HLA_names:
+                __RETURN__[_hla] = mean([t_dict['4D'][_hla] for t_dict in __IMPUTE_OUT__.accuracy])
+
+
+    else:
+
+        if __f_Multiple_Markers:
+
+            for _hla in HLA_names:
+
+                __RETURN__[_hla] = mean([__IMPUTE_OUT__[exonN].accuracy['4D'][_hla] for exonN in __ExonN__])
+
+        else:
+            # Neither Adaptive Genetic map and Multiple Map
+            __RETURN__ = __IMPUTE_OUT__.accuracy['4D']
+
+    print(__RETURN__)
+
+    return __RETURN__
 
 
 
@@ -581,7 +614,9 @@ if __name__ == "__main__":
     parser.add_argument("--average-erate", "-ae", help="\nAverate error rate file.\n\n")
     parser.add_argument("--use-multiple-markers", "-ml", help="\nUsing multiple markers.\n\n", action='store_true')
 
-    parser.add_argument("--multiprocess", "-mp", help="\nSetting off parallel multiprocessing.\n\n", type=int, choices=[2,3], nargs='?', default=1, const=3)
+    parser.add_argument("--answer", "-an", help="\nAnswer file to calculate imputation accuracy.\n\n")
+
+    parser.add_argument("--multiprocess", "-mp", help="\nSetting parallel multiprocessing.\n\n", type=int, choices=[2,3], nargs='?', default=1, const=3)
 
     parser.add_argument("--java-memory", "-mem", help="\nMemory requried for beagle(ex. 12g).\n\n", default="2g")
 
@@ -604,4 +639,5 @@ if __name__ == "__main__":
     print(args)
 
     CookHLA(args.input, args.out, args.reference, args.hg, args.genetic_map, args.average_erate,
-            _java_memory=args.java_memory, __use_Multiple_Markers=args.use_multiple_markers, _MultP=args.multiprocess)
+            _java_memory=args.java_memory, __use_Multiple_Markers=args.use_multiple_markers, _MultP=args.multiprocess,
+            _answer=args.answer)
