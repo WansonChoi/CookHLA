@@ -1,6 +1,7 @@
 #-*- coding: utf-8 -*-
 import sys, os
 
+HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 
 def measureAccuracy(answerfile, predictfile, genes, outfile=None, __asSTDOUT = False):
 
@@ -13,7 +14,13 @@ def measureAccuracy(answerfile, predictfile, genes, outfile=None, __asSTDOUT = F
             genes = "A B C DPA1 DPB1 DQA1 DQB1 DRB1".split()
 
 
-    if not __asSTDOUT:
+    # Accuracy dictionary
+    __RETURN__ = {'2D' : {_hla: None for _hla in HLA_names},
+                  '4D' : {_hla: None for _hla in HLA_names}}
+
+    __asFileWrite = outfile and not __asSTDOUT
+
+    if __asFileWrite:
         fo = open(outfile, 'w')
 
 
@@ -50,15 +57,25 @@ def measureAccuracy(answerfile, predictfile, genes, outfile=None, __asSTDOUT = F
                         correct4d+=correct
                         total4d+=total
 
+
+        __RETURN__['2D'][gene] = float(correct2d)/total2d
+        __RETURN__['4D'][gene] = float(correct4d)/total4d
+
+
         if __asSTDOUT:
             sys.stdout.write("%s\t2D\t%.5f\n"%(gene, float(correct2d)/total2d))
             sys.stdout.write("%s\t4D\t%.5f\n"%(gene, float(correct4d)/total4d))
-        else:
+
+        if __asFileWrite:
             fo.write("%s\t2D\t%.5f\n"%(gene, float(correct2d)/total2d))
             fo.write("%s\t4D\t%.5f\n"%(gene, float(correct4d)/total4d))
 
-    if not __asSTDOUT:
+    if __asFileWrite:
         fo.close()
+
+
+    return __RETURN__
+
 
 
 
