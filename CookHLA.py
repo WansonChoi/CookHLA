@@ -456,19 +456,20 @@ def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate
 
     else:
 
-        # myImputation = HLA_Imputation(MHC, _reference, _out, _hg,
-        #                               LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, PLINK, BEAGLE4,
-        #                               __save_intermediates, idx_process, _aver_erate=_average_erate,
-        #                               _Genetic_Map=_geneticMap,
-        #                               f_useMultipleMarkers=__use_Multiple_Markers)
-        pass
+        myImputation = HLA_Imputation(idx_process, MHC, _reference, _out, _hg,
+                                      LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
+                                      __save_intermediates,
+                                      _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
+                                      f_useGeneticMap = f_useGeneticMap, f_useMultipleMarkers=__use_Multiple_Markers,
+                                      _answer=_answer)
+
 
     ############################################################
 
 
 
 
-    __MeanAccuracy__ = getMeanAccuracy(__IMPUTE_OUT__, __use_Multiple_Markers, f_useGeneticMap)
+    # __MeanAccuracy__ = getMeanAccuracy(__IMPUTE_OUT__, __use_Multiple_Markers, f_useGeneticMap)
 
 
 
