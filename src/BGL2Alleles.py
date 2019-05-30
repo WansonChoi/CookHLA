@@ -1,6 +1,6 @@
 import sys, os, re
 
-p_HLA_exon = re.compile(r'^HLA_\w+_(\d+)_\w+$')
+p_HLA_exon = re.compile(r'^HLA_\w+_(\d+)(_\w+)?$')
 
 def BGL2Alleles(bglfile, outfile, genes):
 
@@ -83,7 +83,7 @@ def readAlleles(alleles, tmpfile):
     m = p_HLA_exon.match(string=c[1])
 
     if m:
-        allele = c[1][c[1].rfind('_')+1:]
+        allele = m.group(1)
         presence = c[2:]
         for i in range(2*len(alleles)):
           if presence[i] == 'P':
