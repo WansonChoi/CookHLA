@@ -15,10 +15,12 @@ isClassI = {"A": True, "B": True, "C": True, "DPA1": False, "DPB1": False, "DQA1
 
 # Patterns to use.
 p_HLA_2field = re.compile(r'^HLA_(\w+)_\d{4}')
-p = re.compile(r'^([A-Za-z0-9_-]+)\s+(\w+)') # Frist two columns (ex. 'P pedigree' or 'rs969931 29602876', ... )
+# p = re.compile(r'^([A-Za-z0-9_-]+)\s+(\w+)') # Frist two columns (ex. 'P pedigree' or 'rs969931 29602876', ... )
+p = re.compile(r'^(\S+)\s+(\S+)\s+') # Frist two columns (ex. 'P pedigree' or 'rs969931 29602876', ... )
 
 
-def Make_EXON234_Panel(__exonN__, infile, outfile, BEAGLE2LINKAGE, PLINK, __save_intermediates=False):
+def Make_EXON234_Panel(__exonN__, infile, outfile, BEAGLE2LINKAGE, PLINK, __save_intermediates=False,
+                       f_only_HLA=True):
 
 
     if __exonN__ not in ['exon2', 'exon3', 'exon4']:
@@ -33,33 +35,42 @@ def Make_EXON234_Panel(__exonN__, infile, outfile, BEAGLE2LINKAGE, PLINK, __save
 
     print(std_MAIN_PROCESS_NAME + "Generating Reference Panel for {}".format(__exonN__.capitalize()))
 
+    if f_only_HLA:
 
-    # print("STEP1_Collect_SNP_HLA_DATA")
+        # print("STEP1_Collect_SNP_HLA_DATA")
 
-    # In STEP1, New *.markers file will be used just next step.
-    command = "grep rs {} > {}".format(infile + ".markers", OUTPUT_REF+".STEP1_SNP.markers")
-    # print(command)
-    os.system(command)
+        # In STEP1, New *.markers file will be used just next step.
+        command = "grep rs {} > {}".format(infile + ".markers", OUTPUT_REF+".STEP1_SNP.markers")
+        # print(command)
+        os.system(command)
 
-    command = "grep \'HLA_[A-Z]_[0-9][0-9][0-9][0-9]\' {} > {}".format(infile + ".markers", OUTPUT_REF+".STEP1_class1_4dit.markers")
-    # print(command)
-    os.system(command)
+        command = "grep \'HLA_[A-Z]_[0-9][0-9][0-9][0-9]\' {} > {}".format(infile + ".markers", OUTPUT_REF+".STEP1_class1_4dit.markers")
+        # print(command)
+        os.system(command)
 
-    command = "grep \'HLA_[A-Z][A-Z][A-Z][0-9]_[0-9][0-9][0-9][0-9]\' {} > {}".format(infile + ".markers", OUTPUT_REF+".STEP1_class2_4dit.markers")
-    # print(command)
-    os.system(command)
+        command = "grep \'HLA_[A-Z][A-Z][A-Z][0-9]_[0-9][0-9][0-9][0-9]\' {} > {}".format(infile + ".markers", OUTPUT_REF+".STEP1_class2_4dit.markers")
+        # print(command)
+        os.system(command)
 
-    command = 'cat {} {} {} > {}'.format(OUTPUT_REF+".STEP1_SNP.markers", OUTPUT_REF+".STEP1_class1_4dit.markers",
-                                         OUTPUT_REF+".STEP1_class2_4dit.markers", OUTPUT_REF+".STEP1_SNP_4dit.markers")
-    # print(command)
-    os.system(command)
+        command = 'cat {} {} {} > {}'.format(OUTPUT_REF+".STEP1_SNP.markers", OUTPUT_REF+".STEP1_class1_4dit.markers",
+                                             OUTPUT_REF+".STEP1_class2_4dit.markers", OUTPUT_REF+".STEP1_SNP_4dit.markers")
+        # print(command)
+        os.system(command)
 
 
-    # Remove
-    if not __save_intermediates:
-        os.system('rm {}'.format(OUTPUT_REF+".STEP1_SNP.markers"))
-        os.system('rm {}'.format(OUTPUT_REF+".STEP1_class1_4dit.markers"))
-        os.system('rm {}'.format(OUTPUT_REF+".STEP1_class2_4dit.markers"))
+        # Remove
+        if not __save_intermediates:
+            os.system('rm {}'.format(OUTPUT_REF+".STEP1_SNP.markers"))
+            os.system('rm {}'.format(OUTPUT_REF+".STEP1_class1_4dit.markers"))
+            os.system('rm {}'.format(OUTPUT_REF+".STEP1_class2_4dit.markers"))
+
+    else:
+
+        # In case there is no need to filter out only rs_id alleles and HLA alleles.
+
+        command = 'cp {} {}'.format(infile + ".markers", OUTPUT_REF+".STEP1_SNP_4dit.markers")
+        print(command)
+        os.system(command)
 
 
 

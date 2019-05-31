@@ -16,8 +16,8 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 
 class HLA_MultipleRefs():
 
-    def __init__(self, __exonN__, __REFERENCE__, _out, _hg,
-                _BEAGLE2LINKAGE, _PLINK, *args, **kwargs):
+    def __init__(self, __exonN__, __REFERENCE__, _out, _hg, _BEAGLE2LINKAGE, _PLINK,
+                 f_only_HLA=True):
 
         """
 
@@ -35,7 +35,7 @@ class HLA_MultipleRefs():
         OUTPUT_dir = os.path.dirname(_out)
         OUTPUT_REF = os.path.join(OUTPUT_dir, REF_base+'.{}'.format(__exonN__))
 
-        self.ExonN_REF = Make_EXON234_Panel(__exonN__, __REFERENCE__, OUTPUT_REF, _BEAGLE2LINKAGE, _PLINK)
+        self.ExonN_REF = Make_EXON234_Panel(__exonN__, __REFERENCE__, OUTPUT_REF, _BEAGLE2LINKAGE, _PLINK, f_only_HLA=f_only_HLA)
 
 
 
