@@ -1,7 +1,9 @@
 import sys, os, re
 import time
 
-p = re.compile(r'^(\w+)\s+(\w+)') # Frist two columns (ex. 'P pedigree' or 'rs969931 29602876', ... )
+# p = re.compile(r'^(\w+)\s+(\w+)') # Frist two columns (ex. 'P pedigree' or 'rs969931 29602876', ... )
+# p = re.compile(r'^([A-Za-z0-9_-]+)\s+(\w+)') # Frist two columns (ex. 'P pedigree' or 'rs969931 29602876', ... )
+p = re.compile(r'^(\S+)\s+(\S+)\s+') # Frist two columns (ex. 'P pedigree' or 'rs969931 29602876', ... )
 
 
 def BGL2SortBGL(sort_markers, inbgl, outbgl):
@@ -100,12 +102,27 @@ def BGL2SortBGL_WS(sort_markers, inbgl, outbgl):
         # Writing Body
         # print("Writing Body")
         of.writelines((IN_BGL_body[item] for item in selectMarkers))
+        # of.writelines(func1(IN_BGL_body, selectMarkers))
 
 
     return outbgl
 
 
 
+# def func1(_IN_BGL_body, _selectMarkers):
+#
+#     __LINE__ = None
+#
+#     for item in _selectMarkers:
+#
+#         try:
+#             __LINE__ = _IN_BGL_body[item]
+#         except KeyError:
+#             continue
+#
+#         yield __LINE__
+#
+#
 
 
 if __name__ == '__main__':
