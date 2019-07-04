@@ -2,6 +2,7 @@
 
 import os, sys, re
 from os.path import join
+import pandas as pd
 
 from src.GC_tricked_bgl2ori_bgl import GCtricedBGL2OriginalBGL
 
@@ -15,8 +16,8 @@ std_WARNING_MAIN_PROCESS_NAME = "\n[%s::WARNING]: " % (os.path.basename(__file__
 HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 HLA_names_gen = ["A", "C", "B", "DRB1", "DQA1", "DQB1", "DPA1", "DPB1"]
 
-__overlap__ = [3000, 4000, 5000]
-# __overlap__ = [3000]
+# __overlap__ = [3000, 4000, 5000]
+__overlap__ = [3000]
 
 
 class HLA_Imputation(object):
@@ -47,13 +48,13 @@ class HLA_Imputation(object):
         # Result
         self.OUTPUT_dir = os.path.dirname(_out)
         self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
-        self.OUTPUT_dir_GM = join(self.OUTPUT_dir, os.path.basename(_Genetic_Map))
+        self.OUTPUT_dir_GM = join(self.OUTPUT_dir, os.path.basename(_Genetic_Map)) if f_useGeneticMap else None
 
         self.raw_IMP_Reuslt = None
         self.IMP_Result_prefix = _out # when using only multiple markers.
         self.IMP_Result = None  # '*.imputed.alleles'
 
-        self.accuracy = 0
+        self.accuracy = None
 
 
 
@@ -62,6 +63,12 @@ class HLA_Imputation(object):
 
 
         ###### < Main - 'CONVERT_IN', 'IMPUTE', 'CONVERT_OUT' > ######
+
+
+        """
+        앞서 언급한 Multiple Marker와 Adaptive Genetic Map을 모두 활용하는 경우, 사실상 exonN에 대한 Genetic Map을 새로 떠야하는
+        상황이기 때문에 CONVERT_IN() 함수 들어가기 전에 이쯤에서 Genetic Map을 만들어야 할 듯.
+        """
 
 
         ### (1) CONVERT_IN
@@ -80,21 +87,21 @@ class HLA_Imputation(object):
 
         if self.f_useGeneticMap:
 
+
+            self.IMP_Result = {_overlap_: None for _overlap_ in __overlap__}    # Imputation Results.
+
             if self.f_useMultipleMarkers:
 
                 ### Imputation with both 'Adaptive Genetic Map' and 'Multiple Markers' (Main CookHLA).
-                # No multiprocessing
-
-                self.IMP_Result = []    # 3 imputations results will be contained in list.
+                # No multiprocessing (Sequentially)
 
                 for _overlap_ in __overlap__:
 
                     t = self.IMPUTE_GM(_overlap_, _out, MHC_QC_VCF, REF_PHASED_VCF, MHC, _reference, _aver_erate, _Genetic_Map,
-                                   _BEAGLE4, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)
+                                       _BEAGLE4, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)
 
-                    self.IMP_Result.append(t)
+                    self.IMP_Result[_overlap_] = t
 
-                print(self.IMP_Result)
 
             else:
                 ### Imputation with only 'Adaptive Genetic Map'.
@@ -105,11 +112,13 @@ class HLA_Imputation(object):
                 pool = mp.Pool(processes=3)
 
                 dict_Pool = {_overlap_: pool.apply_async(self.IMPUTE_GM, (_overlap_, _out, MHC_QC_VCF, REF_PHASED_VCF, MHC, _reference, _aver_erate, _Genetic_Map,
-                                   _BEAGLE4, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)) for _overlap_ in __overlap__}
+                                                                          _BEAGLE4, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)) for _overlap_ in __overlap__}
 
                 self.IMP_Result = {_overlap_: _OUT.get() for _overlap_, _OUT in dict_Pool.items()}
 
-                print(self.IMP_Result)
+
+
+            print(self.IMP_Result)
 
 
         else:
@@ -156,7 +165,7 @@ class HLA_Imputation(object):
             if isinstance(self.IMP_Result, str):
                 self.accuracy = measureAccuracy(_answer, self.IMP_Result, 'all', outfile=_out+'.accuracy')
             elif isinstance(self.IMP_Result, dict):
-                self.accuracy = {k: measureAccuracy(_answer, v, 'all', outfile=_out+'.accuracy') for k, v in self.IMP_Result.items()}
+                self.accuracy = {k: measureAccuracy(_answer, v, 'all') for k, v in self.IMP_Result.items()}
 
 
 
@@ -297,11 +306,12 @@ class HLA_Imputation(object):
 
         if not self.__save_intermediates:
             os.system(' '.join(['rm', reference_vcf]))
-            if self.f_useMultipleMarkers:
+            # if self.f_useMultipleMarkers:
+            if not self.f_useGeneticMap:
                 os.system(' '.join(['rm {}'.format(GCchangeBGL)])) # 'GCchangeBGL' will be used in 'CONVERT_OUT'
                 os.system(' '.join(['rm {}'.format(GCchangeMarkers_REF)]))  # 'GCchangeMarkers_REF' will be used in 'CONVERT_OUT'
-            os.system(' '.join(['rm {}'.format(GCchangeMarkers)]))
-            os.system(' '.join(['rm {}'.format(GCchangeBGL_REF)]))
+                os.system(' '.join(['rm {}'.format(GCchangeMarkers)]))
+                os.system(' '.join(['rm {}'.format(GCchangeBGL_REF)]))
 
         """
         (1) MHC + '.QC.vcf',
@@ -324,27 +334,61 @@ class HLA_Imputation(object):
 
             """
 
+            REFINED_GENTIC_MAP = self.OUTPUT_dir_GM + ('.{}.refined.map'.format(self.exonN) if self.f_useMultipleMarkers else '.refined.map')
+
+            # if self.f_useMultipleMarkers:
+            #     # When using both 'Adaptive Genetic Map' and 'Multiple Markers'.
+            #     # 'Adaptive Genetic Map' and 'ExonN reference markers file' have different number of rows.
+            #     # This block leaves markers which 'Adaptive Genetic Map' and 'ExonN Reference' both have.
+            #
+            #     from src.ManualInnerJoin import ManualInnerJoin
+            #
+            #     ManualInnerJoin(self.exonN, _Genetic_Map, GCchangeMarkers_REF, REFINED_GENTIC_MAP)
+            #
+            # else:
+
             command = 'awk \'{print $1" "$2" "$3}\' %s > %s' % (_Genetic_Map, self.OUTPUT_dir_GM+'.first')
             # print(command)
             os.system(command)
 
-            command = 'awk \'{print $2}\' %s > %s' % (self.OUTPUT_dir_ref + '.GCchange.markers', self.OUTPUT_dir_GM+'.second')
+            command = 'awk \'{print $2}\' %s > %s' % (GCchangeMarkers_REF, self.OUTPUT_dir_GM+'.second')
             # print(command)
             os.system(command)
 
-            command = 'paste -d " " {} {} > {}'.format(self.OUTPUT_dir_GM+'.first', self.OUTPUT_dir_GM+'.second', self.OUTPUT_dir_GM+'.refined.map')
+            command = 'paste -d " " {} {} > {}'.format(self.OUTPUT_dir_GM+'.first', self.OUTPUT_dir_GM+'.second', REFINED_GENTIC_MAP)   # 이렇게 column bind시키는데는 당연히 *.first, *.second 파일의 row수가 같을 거라고 가정하는 상황.
             # print(command)
             os.system(command)
 
 
-            if os.path.exists(self.OUTPUT_dir_GM+'.refined.map'):
+            """
+            그냥 Adaptive Genetic Map만 활용할때는, _reference에 진짜 reference가 들어오고 Genetic Map또한 진짜 reference를 기반으로
+            만들어졌기 때문에 위 3줄의 Refined Genetic Map을 만드는데 문제가 없음.
+            
+            그러나, Multiple Marker를 Adaptive Genetic Map과 같이 활용하는 경우, Multiple Marker를 활용하는 경우 _reference에 
+            HLA만 남긴 전처리된 다른 reference를 활용하기 때문에(HLA_MultipleRefs.py), 진짜 reference를 바탕으로 만들어진 Genetic Map과
+            row수부터가 달라서 저 위 3줄로 Refined Genetic Map을 만들기가 어려워짐.
+            
+            보아하니 GM컬럼의 값 또한 ascending order로 주어져야하고, 그 와중에 BP 또한 ascending order로 주어져야 하니 GCchangeMarkers는
+            redefineMap을 거치고 온 상태이기 때문에 같이 쓰기는 힘듬(한쪽이 ascending 시키면 다른게 ascending형태로 준비되어질 수 없음.)
+            
+            그래서 MakeEXON234_Panel.py부터 다시 손봐야 할 것 같음.
+            
+            
+            참고로 GM에서 HLA~, rs~하는 애들만 남겨도 ("GM", "BP")모두가 ascending되게 할 수는 없기 때문에 소용없음. 
+            => 생각해보면 Make_EXON234_Panel.py 건든다고 이 부분이 해결 안되는거 아닌가? rs~, HLA~이런 마커들만 남긴 reference panel에 대해
+                Genetic Map을 새로 만들어야 할 거 같은데.
+            """
 
-                self.refined_Genetic_Map = self.OUTPUT_dir_GM+'.refined.map'
 
-                if not self.__save_intermediates:
-                    os.system('rm {}'.format(self.OUTPUT_dir_GM+'.first'))
-                    os.system('rm {}'.format(self.OUTPUT_dir_GM+'.second'))
-                    os.system('rm {}'.format(self.OUTPUT_dir_ref + '.GCchange.markers')) # (Genetic Map) *.GCchange.markers is removed here.
+
+            if os.path.exists(REFINED_GENTIC_MAP):
+
+                self.refined_Genetic_Map = REFINED_GENTIC_MAP
+
+                # if not self.__save_intermediates:
+                #     os.system('rm {}'.format(self.OUTPUT_dir_GM+'.first'))
+                #     os.system('rm {}'.format(self.OUTPUT_dir_GM+'.second'))
+                #     os.system('rm {}'.format(GCchangeMarkers_REF)) # (Genetic Map) *.GCchange.markers is removed here.
 
             else:
                 print(std_ERROR_MAIN_PROCESS_NAME + "Failed to generate Refined Genetic Map.")
@@ -789,3 +833,11 @@ class HLA_Imputation(object):
 
 
         return t_IMP_Result
+
+
+
+    def ManualInnerJoin(self, _left, _right, _out):
+
+
+
+        return 0

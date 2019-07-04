@@ -16,7 +16,7 @@ isClassI = {"A": True, "B": True, "C": True, "DPA1": False, "DPB1": False, "DQA1
 # Patterns to use.
 p_HLA_2field = re.compile(r'^HLA_(\w+)_\d{4}')
 # p = re.compile(r'^([A-Za-z0-9_-]+)\s+(\w+)') # Frist two columns (ex. 'P pedigree' or 'rs969931 29602876', ... )
-p = re.compile(r'^(\S+)\s+(\S+)\s+') # Frist two columns (ex. 'P pedigree' or 'rs969931 29602876', ... )
+p = re.compile(r'^(\S+)\s+(\S+)') # Frist two columns (ex. 'P pedigree' or 'rs969931 29602876', ... )
 
 
 def Make_EXON234_Panel(__exonN__, infile, outfile, BEAGLE2LINKAGE, PLINK, __save_intermediates=False,

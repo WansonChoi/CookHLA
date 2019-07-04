@@ -430,8 +430,8 @@ def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate
 
             for _exonN_ in __ExonN__:
 
-                ### Reference Panel for exon N.
-                __ExonN_Refs__ = HLA_MultipleRefs(_exonN_, _reference, _out, _hg, BEAGLE2LINKAGE, PLINK)
+                ## Reference Panel for exon N.
+                __ExonN_Refs__ = HLA_MultipleRefs(_exonN_, _reference, _out, _hg, BEAGLE2LINKAGE, PLINK, f_only_HLA=False)
 
                 myImputation = HLA_Imputation(idx_process, MHC, __ExonN_Refs__.getOUTPUT(), _out+'.{}'.format(_exonN_), _hg,
                                               LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE,
@@ -442,7 +442,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate
                                               _exonN_=_exonN_, _answer=_answer)
 
                 # Hardcoding for partial testing.
-                # myImputation = HLA_Imputation(idx_process, MHC, 'tests/_3_CookHLA/20190523/T1DGC_REF.exon2',
+                # myImputation = HLA_Imputation(idx_process, MHC, 'tests/_3_CookHLA/20190530/T1DGC_REF.exon2',
                 #                               _out + '.exon2', _hg,
                 #                               LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE,
                 #                               PLINK, BEAGLE4,
@@ -456,7 +456,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate
 
     else:
 
-        myImputation = HLA_Imputation(idx_process, MHC, _reference, _out, _hg,
+        __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg,
                                       LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
                                       __save_intermediates,
                                       _aver_erate=_average_erate, _Genetic_Map=_geneticMap,
@@ -468,8 +468,11 @@ def CookHLA(_input, _out, _reference, _hg='18', _geneticMap=None, _average_erate
 
 
 
+    ### Average of accuracies.
 
-    # __MeanAccuracy__ = getMeanAccuracy(__IMPUTE_OUT__, __use_Multiple_Markers, f_useGeneticMap)
+    if _answer:
+        print("Raw Acc : \n{}".format(__IMPUTE_OUT__.accuracy))
+        __MeanAccuracy__ = getMeanAccuracy(__IMPUTE_OUT__, __use_Multiple_Markers, f_useGeneticMap)
 
 
 
@@ -546,13 +549,15 @@ def getMeanAccuracy(__IMPUTE_OUT__, __f_Multiple_Markers, __f_useGeneticMap):
 
     if __f_useGeneticMap:
 
+        __overlap__ = [3000, 4000, 5000]
+
         if __f_Multiple_Markers:
             for _hla in HLA_names:
-                __RETURN__[_hla] = mean([t_dict['4D'][_hla] for exonN in __ExonN__ for t_dict in __IMPUTE_OUT__[exonN].accuracy])
+                __RETURN__[_hla] = mean([__IMPUTE_OUT__[exonN].accuracy[_overlap_]['4D'][_hla] for exonN in __ExonN__ for _overlap_ in __overlap__])
         else:
 
             for _hla in HLA_names:
-                __RETURN__[_hla] = mean([t_dict['4D'][_hla] for t_dict in __IMPUTE_OUT__.accuracy])
+                __RETURN__[_hla] = mean([__IMPUTE_OUT__.accuracy[_overlap_]['4D'][_hla] for _overlap_ in __overlap__])
 
 
     else:
@@ -628,9 +633,11 @@ if __name__ == "__main__":
     ##### < for Testing > #####
 
     # args = parser.parse_args(["--input", "data/Target/HM_CEU.FOUNDERS.filt",
-    #                           "--out", "tests/_3_CookHLA/20190523/_3_HM_CEU_T1DGC_REF",
+    #                           "--out", "tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF",
     #                           "-ref", "data/HLA_PANEL/T1DGC/T1DGC_REF",
-    #                           "-ml"])
+    #                           "-gm", "data/HLA_PANEL/Genetic_map/CEU_T1DGC.mach_step.avg.clpsB",
+    #                           "-ae", "data/HLA_PANEL/Genetic_map/CEU_T1DGC.aver.erate",
+    #                           "-an", "tests/HM_CEU_REF.bgl.phased.alleles.answer"])
 
 
 
