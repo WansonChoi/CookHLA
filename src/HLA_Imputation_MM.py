@@ -6,6 +6,9 @@ from os.path import join
 from src.GC_tricked_bgl2ori_bgl import GCtricedBGL2OriginalBGL
 from src.RUN_Bash import RUN_Bash
 from src.measureAccuracy import measureAccuracy
+from src.redefineBPv1BH import redefineBP
+
+
 
 ########## < Core Varialbes > ##########
 
@@ -16,11 +19,12 @@ std_WARNING_MAIN_PROCESS_NAME = "\n[%s::WARNING]: " % (os.path.basename(__file__
 HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 HLA_names_gen = ["A", "C", "B", "DRB1", "DQA1", "DQB1", "DPA1", "DPB1"]
 
+# __EXON__ = ['exon2', 'exon3', 'exon4']
+__EXON__ = ['exon2']
+
 # __overlap__ = [3000, 4000, 5000]
 __overlap__ = [3000]
 
-# __EXON__ = ['exon2', 'exon3', 'exon4']
-__EXON__ = ['exon2']
 
 
 class HLA_Imputation_MM(object):
@@ -42,7 +46,7 @@ class HLA_Imputation_MM(object):
         # Result
         self.raw_IMP_Reuslt = None
         self.IMP_Result = None  # Final Imputation output ('*.imputed.alleles').
-        self.dict_IMP_Result = {}
+        self.dict_IMP_Result = {_exonN: {_overlap: None} for _exonN in __EXON__ for _overlap in __overlap__}
         self.accuracy = None
 
         # Dependencies
@@ -70,9 +74,9 @@ class HLA_Imputation_MM(object):
 
             ## Single Core (No Multiprocessing)
 
-            for _overlap in __overlap__:
-                for _exonN in __EXON__:
-                    self.dict_IMP_Result[_overlap][_exonN] = self.IMPUTATION_MM(_exonN, _overlap, MHC, _reference, _out, _hg)
+            for _exonN in __EXON__:
+                for _overlap in __overlap__:
+                    self.dict_IMP_Result[_exonN][_overlap] = self.IMPUTATION_MM(_exonN, _overlap, MHC, _reference, _out, _hg)
 
         else:
             ## Multiprocessing
@@ -82,67 +86,59 @@ class HLA_Imputation_MM(object):
             pass
 
 
+
+
+
+
+
     def CONVERT_IN(self, MHC, _reference, _out, _hg):
 
 
-        __MHC__ = MHC if not self.f_useMultipleMarkers else MHC+'.{}'.format(self.exonN)
-
         print("[{}] Converting data to beagle format.".format(self.idx_process))
 
-        command = ' '.join(
-            [self.LINKAGE2BEAGLE, 'pedigree={}'.format(MHC + '.QC.nopheno.ped'), 'data={}'.format(MHC + '.QC.dat'),
-             'beagle={}'.format(__MHC__ + '.QC.bgl'), 'standard=true', '>', __MHC__ + '.QC.bgl.log'])  # Making '*.bgl' file.
-        # print(command)
-        os.system(command)
+        RUN_Bash(self.LINKAGE2BEAGLE + ' pedigree={} data={} beagle={} standard=true > {}'.format(
+            MHC + '.QC.nopheno.ped', MHC + '.QC.dat', MHC + '.QC.bgl', _out+'.bgl.log'))
 
         if not self.__save_intermediates:
-            # os.system(' '.join(['rm', MHC + '.QC.nopheno.ped']))
-            # os.system(' '.join(['rm', MHC + '.QC.dat']))
-            os.system('rm {}'.format(__MHC__ + '.QC.bgl.log'))
+            os.system('rm {}'.format(MHC + '.QC.nopheno.ped'))
+            os.system('rm {}'.format(MHC + '.QC.dat'))
+            os.system('rm {}'.format(_out+'.bgl.log'))
+
+
 
 
         ### Converting data to reference_markers_Position (Dispersing same genomic position of some markers.)
-
-        from src.redefineBPv1BH import redefineBP
 
         RefinedMarkers = redefineBP(_reference + '.markers', self.OUTPUT_dir_ref+'.refined.markers')
         self.refined_REF_markers = RefinedMarkers # => This will be used in 'CONVERT_OUT'.
 
 
+
+
         ### Converting data to target_markers_Position and extract not_including snp.
 
-        command = ' '.join(['awk \'{print $2" "$4" "$5" "$6}\'', MHC + '.QC.bim', '>',
-                            __MHC__ + '.QC.markers'])  # Making '*.markers' file.
-        # print(command)
-        os.system(command)
+        RUN_Bash('awk \'{print $2" "$4" "$5" "$6}\' %s > %s' % (MHC + '.QC.bim', MHC + '.QC.markers'))
 
-        # if not self.__save_intermediates:
-        #     os.system(' '.join(['rm', MHC + '.QC.{bed,bim,fam,log}']))
-
-        command = ' '.join(['Rscript src/excluding_snp_and_refine_target_position-v1COOK02222017.R',
-                            __MHC__ + '.QC.markers', RefinedMarkers, __MHC__ + '.QC.pre.markers'])
-        # print(command)
-        os.system(command)
-
+        RUN_Bash('Rscript src/excluding_snp_and_refine_target_position-v1COOK02222017.R {} {} {}'.format(
+            MHC+'.QC.markers', RefinedMarkers, MHC+'.QC.pre.markers'
+        ))
         if not self.__save_intermediates:
-            os.system(' '.join(['rm', __MHC__ + '.QC.markers']))
+            os.system(' '.join(['rm', MHC + '.QC.markers']))
 
-        command = ' '.join(['mv', __MHC__ + '.QC.bgl', __MHC__ + '.QC.pre.bgl.phased'])
-        # print(command)
-        os.system(command)
+        RUN_Bash('mv {} {}'.format(MHC+'.QC.bgl', MHC+'.QC.pre.bgl.phased'))
 
-        command = ' '.join(
-            ["awk '{print $1}'", __MHC__ + '.QC.pre.markers', '>', os.path.join(self.OUTPUT_dir, 'selected_snp.txt')])
-        # print(command)
-        os.system(command)
+        RUN_Bash("awk '{print $1}' %s > %s" % (MHC+'.QC.pre.markers', join(self.OUTPUT_dir, 'selected_snp.txt')))
+
 
         from src.Panel_subset import Panel_Subset
-        qc_refined = Panel_Subset(__MHC__ + '.QC.pre', 'all', join(self.OUTPUT_dir, 'selected_snp.txt'), __MHC__ + '.QC.refined')
-        # print(qc_refined) # Refined Beagle files are generated here.
+        qc_refined = Panel_Subset(MHC + '.QC.pre', 'all', join(self.OUTPUT_dir, 'selected_snp.txt'), MHC + '.QC.refined')
 
         if not self.__save_intermediates:
-            os.system(' '.join(['rm', __MHC__ + '.QC.pre.{bgl.phased,markers}']))
-            os.system(' '.join(['rm', join(self.OUTPUT_dir, 'selected_snp.txt')]))
+            RUN_Bash('rm {}'.format(MHC + '.QC.pre.bgl.phased'))
+            RUN_Bash('rm {}'.format(MHC + '.QC.pre.markers'))
+            RUN_Bash('rm {}'.format(join(self.OUTPUT_dir, 'selected_snp.txt')))
+
+
 
 
         ### Converting data to GC_change_beagle format.
@@ -150,8 +146,8 @@ class HLA_Imputation_MM(object):
         from src.bgl2GC_trick_bgl import Bgl2GC
 
         # target
-        [GCchangeBGL, GCchangeMarkers] = Bgl2GC(__MHC__ + '.QC.refined.bgl.phased', __MHC__ + '.QC.refined.markers',
-                                                __MHC__ + '.QC.GCchange.bgl', __MHC__ + '.QC.GCchange.markers')
+        [GCchangeBGL, GCchangeMarkers] = Bgl2GC(MHC + '.QC.refined.bgl.phased', MHC + '.QC.refined.markers',
+                                                MHC + '.QC.GCchange.bgl', MHC + '.QC.GCchange.markers')
 
         self.GCchangeBGL = GCchangeBGL # it will be used in 'CONVERT_OUT' with Genetic Map
 
@@ -168,149 +164,69 @@ class HLA_Imputation_MM(object):
         #       "markers : {}".format(GCchangeBGL_REF, GCchangeMarkers_REF))
 
         if not self.__save_intermediates:
-            os.system(' '.join(['rm', __MHC__ + '.QC.refined.{bgl.phased,markers}']))
 
-            if self.f_useMultipleMarkers:
-                os.system(' '.join(['rm', RefinedMarkers])) # => This will be used in 'CONVERT_OUT" when not using Multiple Markers.
+            RUN_Bash('rm {}'.format(MHC + '.QC.refined.bgl.phased'))
+            RUN_Bash('rm {}'.format(MHC + '.QC.refined.markers'))
+            # RUN_Bash('rm {}'.format(RefinedMarkers))
+
+            # os.system(' '.join(['rm', RefinedMarkers])) # => This will be used in 'CONVERT_OUT" when not using Multiple Markers.
+
+
 
 
         ### Converting data to vcf_format
 
         # target
-        command = ' '.join([_BEAGLE2VCF, '6', GCchangeMarkers, GCchangeBGL, '0', '>', __MHC__ + '.QC.vcf'])
-        # print(command)
-        os.system(command)
+        RUN_Bash(self.BEAGLE2VCF + ' 6 {} {} 0 > {}'.format(GCchangeMarkers, GCchangeBGL, MHC+'.QC.vcf'))
 
-        MHC_QC_VCF = __MHC__ + '.QC.vcf'
+        MHC_QC_VCF = MHC + '.QC.vcf'
 
 
         # reference
-        command = ' '.join([_BEAGLE2VCF, '6', GCchangeMarkers_REF, GCchangeBGL_REF, '0', '>', self.OUTPUT_dir_ref + '.vcf'])
-        # print(command)
-        os.system(command)
+        RUN_Bash(self.BEAGLE2VCF + ' 6 {} {} 0 > {}'.format(GCchangeMarkers_REF, GCchangeBGL_REF, self.OUTPUT_dir_ref + '.vcf'))
 
         reference_vcf = self.OUTPUT_dir_ref + '.vcf'
 
 
+
+
         ### Converting data to reference_phased
 
-        command = ' '.join(['sed "s%/%|%g"', reference_vcf, '>', self.OUTPUT_dir_ref + '.phased.vcf'])
-        # print(command)
-        os.system(command)
+        RUN_Bash('sed "s%/%|%g" {} > {}'.format(reference_vcf, self.OUTPUT_dir_ref + '.phased.vcf'))
 
         REF_PHASED_VCF = self.OUTPUT_dir_ref + '.phased.vcf'
 
         if not self.__save_intermediates:
-            os.system(' '.join(['rm', reference_vcf]))
-            # if self.f_useMultipleMarkers:
-            if not self.f_useGeneticMap:
-                os.system(' '.join(['rm {}'.format(GCchangeBGL)])) # 'GCchangeBGL' will be used in 'CONVERT_OUT'
-                os.system(' '.join(['rm {}'.format(GCchangeMarkers_REF)]))  # 'GCchangeMarkers_REF' will be used in 'CONVERT_OUT'
-                os.system(' '.join(['rm {}'.format(GCchangeMarkers)]))
-                os.system(' '.join(['rm {}'.format(GCchangeBGL_REF)]))
+            RUN_Bash('rm {}'.format(reference_vcf))
+
+            # # if self.f_useMultipleMarkers:
+            # if not self.f_useGeneticMap:
+            #     os.system(' '.join(['rm {}'.format(GCchangeBGL)])) # 'GCchangeBGL' will be used in 'CONVERT_OUT'
+            #     os.system(' '.join(['rm {}'.format(GCchangeMarkers_REF)]))  # 'GCchangeMarkers_REF' will be used in 'CONVERT_OUT'
+            #     os.system(' '.join(['rm {}'.format(GCchangeMarkers)]))
+            #     os.system(' '.join(['rm {}'.format(GCchangeBGL_REF)]))
 
         """
-        (1) MHC + '.QC.vcf',
-        (2) self.OUTPUT_dir_ref + '.phased.vcf'
+        (1) `MHC_QC_VCF` := MHC + '.QC.vcf',
+        (2) `REF_PHASED_VCF` := self.OUTPUT_dir_ref + '.phased.vcf'
 
         These two files are to be passed into Beagle phasing;
         """
 
-        ### Adaptive Genetic Map
 
-        if self.f_useGeneticMap:
-
-            """
-            awk '{print $1" "$2" "$3}' $geneticMap > $geneticMap.first
-            awk '{print $2}' $REFERENCE.GCchange.markers > $geneticMap.second
-            paste -d " " $geneticMap.first $geneticMap.second > $geneticMap.refined.map
-
-            rm $geneticMap.first
-            rm $geneticMap.second
-
-            """
-
-            REFINED_GENTIC_MAP = self.OUTPUT_dir_GM + ('.{}.refined.map'.format(self.exonN) if self.f_useMultipleMarkers else '.refined.map')
-
-            # if self.f_useMultipleMarkers:
-            #     # When using both 'Adaptive Genetic Map' and 'Multiple Markers'.
-            #     # 'Adaptive Genetic Map' and 'ExonN reference markers file' have different number of rows.
-            #     # This block leaves markers which 'Adaptive Genetic Map' and 'ExonN Reference' both have.
-            #
-            #     from src.ManualInnerJoin import ManualInnerJoin
-            #
-            #     ManualInnerJoin(self.exonN, _Genetic_Map, GCchangeMarkers_REF, REFINED_GENTIC_MAP)
-            #
-            # else:
-
-            command = 'awk \'{print $1" "$2" "$3}\' %s > %s' % (_Genetic_Map, self.OUTPUT_dir_GM+'.first')
-            # print(command)
-            os.system(command)
-
-            command = 'awk \'{print $2}\' %s > %s' % (GCchangeMarkers_REF, self.OUTPUT_dir_GM+'.second')
-            # print(command)
-            os.system(command)
-
-            command = 'paste -d " " {} {} > {}'.format(self.OUTPUT_dir_GM+'.first', self.OUTPUT_dir_GM+'.second', REFINED_GENTIC_MAP)   # 이렇게 column bind시키는데는 당연히 *.first, *.second 파일의 row수가 같을 거라고 가정하는 상황.
-            # print(command)
-            os.system(command)
-
-
-            """
-            그냥 Adaptive Genetic Map만 활용할때는, _reference에 진짜 reference가 들어오고 Genetic Map또한 진짜 reference를 기반으로
-            만들어졌기 때문에 위 3줄의 Refined Genetic Map을 만드는데 문제가 없음.
-
-            그러나, Multiple Marker를 Adaptive Genetic Map과 같이 활용하는 경우, Multiple Marker를 활용하는 경우 _reference에 
-            HLA만 남긴 전처리된 다른 reference를 활용하기 때문에(HLA_MultipleRefs.py), 진짜 reference를 바탕으로 만들어진 Genetic Map과
-            row수부터가 달라서 저 위 3줄로 Refined Genetic Map을 만들기가 어려워짐.
-
-            보아하니 GM컬럼의 값 또한 ascending order로 주어져야하고, 그 와중에 BP 또한 ascending order로 주어져야 하니 GCchangeMarkers는
-            redefineMap을 거치고 온 상태이기 때문에 같이 쓰기는 힘듬(한쪽이 ascending 시키면 다른게 ascending형태로 준비되어질 수 없음.)
-
-            그래서 MakeEXON234_Panel.py부터 다시 손봐야 할 것 같음.
-
-
-            참고로 GM에서 HLA~, rs~하는 애들만 남겨도 ("GM", "BP")모두가 ascending되게 할 수는 없기 때문에 소용없음. 
-            => 생각해보면 Make_EXON234_Panel.py 건든다고 이 부분이 해결 안되는거 아닌가? rs~, HLA~이런 마커들만 남긴 reference panel에 대해
-                Genetic Map을 새로 만들어야 할 거 같은데.
-            """
-
-
-
-            if os.path.exists(REFINED_GENTIC_MAP):
-
-                self.refined_Genetic_Map = REFINED_GENTIC_MAP
-
-                # if not self.__save_intermediates:
-                #     os.system('rm {}'.format(self.OUTPUT_dir_GM+'.first'))
-                #     os.system('rm {}'.format(self.OUTPUT_dir_GM+'.second'))
-                #     os.system('rm {}'.format(GCchangeMarkers_REF)) # (Genetic Map) *.GCchange.markers is removed here.
-
-            else:
-                print(std_ERROR_MAIN_PROCESS_NAME + "Failed to generate Refined Genetic Map.")
-                sys.exit()
-
-
-
-
-        ### Mutliple Markers
-
-        if not self.f_useMultipleMarkers:
-
-            __RETURN__ = [MHC_QC_VCF, REF_PHASED_VCF]
-
-        else:
-
-            ### Phasing & Doubling (only on Target Sample.)
-
-            # Phasing
-            PHASED_RESULT = self.Phasing(__MHC__, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
-
-            # Doubling
-            DOUBLED_PHASED_RESULT = self.Doubling(PHASED_RESULT)
-
-
-            __RETURN__ = [DOUBLED_PHASED_RESULT, REF_PHASED_VCF]
+        # ### Mutliple Markers
+        #
+        #
+        # ### Phasing & Doubling (only on Target Sample.)
+        #
+        # # Phasing
+        # PHASED_RESULT = self.Phasing(MHC, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
+        #
+        # # Doubling
+        # DOUBLED_PHASED_RESULT = self.Doubling(PHASED_RESULT)
+        #
+        #
+        # __RETURN__ = [DOUBLED_PHASED_RESULT, REF_PHASED_VCF]
 
 
 
@@ -687,19 +603,19 @@ class HLA_Imputation_MM(object):
 
         ### (1) CONVERT_IN
 
-        [MHC_QC_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg)
+        temp = self.CONVERT_IN(MHC, _reference, _out, _hg)
 
 
-        ### (2) IMPUTE
-
-        self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
-        print("raw Imputed Reuslt : {}".format(self.raw_IMP_Reuslt))
-
-
-        ### (3) CONVERT_OUT
-
-        self.IMP_Result = self.CONVERT_OUT(MHC, _reference, _out, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)
-        print("\n\nImputation Result : {}".format(self.IMP_Result))
+        # ### (2) IMPUTE
+        #
+        # self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
+        # print("raw Imputed Reuslt : {}".format(self.raw_IMP_Reuslt))
+        #
+        #
+        # ### (3) CONVERT_OUT
+        #
+        # self.IMP_Result = self.CONVERT_OUT(MHC, _reference, _out, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)
+        # print("\n\nImputation Result : {}".format(self.IMP_Result))
 
         return 0
 
