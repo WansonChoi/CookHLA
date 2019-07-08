@@ -95,6 +95,8 @@ class HLA_Imputation_MM(object):
 
 
         print("[{}] Converting data to beagle format.".format(self.idx_process))
+        self.idx_process += 1
+
 
         RUN_Bash(self.LINKAGE2BEAGLE + ' pedigree={} data={} beagle={} standard=true > {}'.format(
             MHC + '.QC.nopheno.ped', MHC + '.QC.dat', MHC + '.QC.bgl', _out+'.bgl.log'))
@@ -214,25 +216,26 @@ class HLA_Imputation_MM(object):
         """
 
 
-        # ### Mutliple Markers
-        #
-        #
-        # ### Phasing & Doubling (only on Target Sample.)
-        #
-        # # Phasing
-        # PHASED_RESULT = self.Phasing(MHC, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
-        #
-        # # Doubling
-        # DOUBLED_PHASED_RESULT = self.Doubling(PHASED_RESULT)
-        #
-        #
-        # __RETURN__ = [DOUBLED_PHASED_RESULT, REF_PHASED_VCF]
+
+        ############### < Multiple Markers > ###############
+
+
+        ### Phasing & Doubling (only on Target Sample.)
+
+        # Phasing
+        PHASED_RESULT = self.Phasing(MHC, MHC_QC_VCF, REF_PHASED_VCF)
+
+        # [Temporary Hardcoding for Phased Result]
+        # PHASED_RESULT = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.MHC.QC.phasing_out_not_double"
+        # print("[Temporary Hardcoding]Phased Result:\n{}".format(PHASED_RESULT))
+
+
+        # Doubling
+        DOUBLED_PHASED_RESULT = self.Doubling(MHC, PHASED_RESULT)
 
 
 
-        self.idx_process += 1
-
-        return __RETURN__
+        return [DOUBLED_PHASED_RESULT, REF_PHASED_VCF]
 
 
 
@@ -240,6 +243,7 @@ class HLA_Imputation_MM(object):
 
 
         print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
+        self.idx_process += 1
 
 
         OUT = _out + ('.QC.doubled.imputation_out' if self.f_useMultipleMarkers else '.QC.imputation_out')
@@ -536,12 +540,15 @@ class HLA_Imputation_MM(object):
 
 
 
-    def Phasing(self, MHC, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4):
+    def Phasing(self, MHC, MHC_QC_VCF, REF_PHASED_VCF):
 
 
-        ### Phasing & Doubling (only on Target Sample.)
+        ### Phasing (only on Target Sample.)
+        print("[{}] Performing pre-phasing".format(self.idx_process))
+        self.idx_process += 1
 
-        command = ' '.join([_BEAGLE4, 'gt={} ref={} out={} impute=false > {}'.format(MHC_QC_VCF, REF_PHASED_VCF,
+
+        command = ' '.join([self.BEAGLE4, 'gt={} ref={} out={} impute=false > {}'.format(MHC_QC_VCF, REF_PHASED_VCF,
                                                                                      MHC + '.QC.phasing_out_not_double',
                                                                                      MHC + '.QC.phasing_out_not_double.vcf.log')])
         # print(command)
@@ -561,41 +568,46 @@ class HLA_Imputation_MM(object):
 
 
 
-    def Doubling(self, PHASED_RESULT):
+    def Doubling(self, MHC, PHASED_RESULT):
 
         ### Target data doubling step.
+        print("[{}] Performing Doubling".format(self.idx_process))
+        self.idx_process += 1
 
-        command = 'gzip -d -f {}'.format(PHASED_RESULT + '.vcf.gz')
-        # print(command)
-        os.system(command)
 
-        command = 'grep ^## {} > {}'.format(PHASED_RESULT + '.vcf', PHASED_RESULT + '.vcf.header')
-        # print(command)
-        os.system(command)
+        RUN_Bash('gzip -d -f {}'.format(PHASED_RESULT + '.vcf.gz'))
 
-        command = 'grep -v ^## {} > {}'.format(PHASED_RESULT + '.vcf', PHASED_RESULT + '.vcf.body')
-        # print(command)
-        os.system(command)
+        RUN_Bash('grep ^## {} > {}'.format(PHASED_RESULT + '.vcf', PHASED_RESULT + '.vcf.header1')) # Header part with '##'
+        RUN_Bash('grep -v ^## {} | head -n 1 > {}'.format(PHASED_RESULT + '.vcf', PHASED_RESULT + '.vcf.header2')) # Header part with '#'
+        RUN_Bash('grep -v ^# {} > {}'.format(PHASED_RESULT + '.vcf', PHASED_RESULT + '.vcf.body')) # Body part without '#' or '##'
 
-        from src.Doubling_vcf import Doubling_vcf
+        RUN_Bash('sed "s%#%%" {} > {}'.format(PHASED_RESULT + '.vcf.header2', PHASED_RESULT + '.vcf.noshop.header2'))
+        RUN_Bash('cat {} {} > {}'.format(PHASED_RESULT + '.vcf.noshop.header2', PHASED_RESULT + '.vcf.body', PHASED_RESULT + '.tobeDoubled.vcf'))
 
-        DOUBLED_VCF_body = Doubling_vcf(PHASED_RESULT + '.vcf.body', PHASED_RESULT + '.doubled.vcf.body')
-        # print(DOUBLED_VCF_body)
+        RUN_Bash('Rscript src/Doubling_vcf.R {} {}'.format(PHASED_RESULT + '.tobeDoubled.vcf', PHASED_RESULT + '.Doubled.pre.vcf'))
 
-        command = 'cat {} {} > {}'.format(PHASED_RESULT + '.vcf.header', DOUBLED_VCF_body,
-                                          PHASED_RESULT + '.doubled.vcf')
-        # print(command)
-        os.system(command)
+        if not os.path.exists(PHASED_RESULT + '.tobeDoubled.vcf'):
+            print(std_ERROR_MAIN_PROCESS_NAME + "Doubled phased file('{}') can't be found(or wasn't generated at all.".format(PHASED_RESULT + '.tobeDoubled.pre.vcf'))
+            sys.exit()
+
+        RUN_Bash('sed "s%CHROM%#CHROM%" {} > {}'.format(PHASED_RESULT + '.Doubled.pre.vcf', PHASED_RESULT + '.Doubled.pre2.vcf'))
+
+
+        RUN_Bash('cat {} {} > {}'.format(PHASED_RESULT + '.vcf.header1', PHASED_RESULT + '.Doubled.pre2.vcf', MHC+'.QC.phasing_out_doubled.vcf'))
 
         if not self.__save_intermediates:
-            os.system(' '.join(['rm', PHASED_RESULT + '.vcf']))
-            os.system(' '.join(['rm', PHASED_RESULT + '.vcf.header']))
+            # os.system(' '.join(['rm', PHASED_RESULT + '.vcf']))
+            os.system(' '.join(['rm', PHASED_RESULT + '.vcf.header1']))
+            os.system(' '.join(['rm', PHASED_RESULT + '.vcf.header2']))
+            os.system(' '.join(['rm', PHASED_RESULT + '.vcf.noshop.header2']))
             os.system(' '.join(['rm', PHASED_RESULT + '.vcf.body']))
-            os.system(' '.join(['rm', PHASED_RESULT + '.doubled.vcf.body']))
+            os.system(' '.join(['rm', PHASED_RESULT + '.tobeDoubled.vcf']))
+            os.system(' '.join(['rm', PHASED_RESULT + '.Doubled.pre.vcf']))
+            os.system(' '.join(['rm', PHASED_RESULT + '.Doubled.pre2.vcf']))
 
 
 
-        return PHASED_RESULT + '.doubled.vcf'
+        return MHC+'.QC.phasing_out_Doubled.vcf'
 
 
 
@@ -603,7 +615,7 @@ class HLA_Imputation_MM(object):
 
         ### (1) CONVERT_IN
 
-        temp = self.CONVERT_IN(MHC, _reference, _out, _hg)
+        [DOUBLED_PHASED_RESULT, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg)
 
 
         # ### (2) IMPUTE
