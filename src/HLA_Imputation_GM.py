@@ -2,10 +2,12 @@
 
 import os, sys, re
 from os.path import join
-import subprocess
 
 from src.BGL2Alleles import BGL2Alleles
 from src.GC_tricked_bgl2ori_bgl import GCtricedBGL2OriginalBGL
+from src.RUN_Bash import RUN_Bash
+from src.measureAccuracy import measureAccuracy
+
 
 
 ########## < Core Varialbes > ##########
@@ -19,27 +21,10 @@ HLA_names_gen = ["A", "C", "B", "DRB1", "DQA1", "DQB1", "DPA1", "DPB1"]
 
 
 
-def RUN_Bash(_command, __print=False, __save_intermediates=False):
-
-
-    if __print:
-        print(_command)
-
-    sb = subprocess.call(_command, shell=True)
-
-    if not sb:
-        return 0    # Success
-    else:
-        return -1   # Fail
-
-
-
-
-
 class HLA_Imputation_GM(object):
 
-    def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate, _LINKAGE2BEAGLE,
-                 _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4,
+    def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
+                 _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4,
                  _answer=None, f_save_intermediates=False):
 
 
@@ -53,6 +38,7 @@ class HLA_Imputation_GM(object):
         self.OUTPUT_dir = os.path.dirname(_out)
         self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
         self.OUTPUT_dir_GM = join(self.OUTPUT_dir, os.path.basename(_AdaptiveGeneticMap))
+        self.HLA_IMPUTED_Result_MHC = join(os.path.dirname(MHC), "HLA_IMPUTED_Result.{}".format(os.path.basename(MHC)))
 
         # Result
         self.raw_IMP_Reuslt = None
@@ -84,39 +70,41 @@ class HLA_Imputation_GM(object):
         ### (1) CONVERT_IN
 
         # self.CONVERT_IN(MHC, _reference, _out, _hg, _aver_erate=self.__AVER__, _Genetic_Map=self.__AGM__)
-        # [MHC_QC_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg, _aver_erate=self.__AVER__, _Genetic_Map=self.__AGM__)
+        [MHC_QC_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg, _aver_erate=self.__AVER__, _Genetic_Map=self.__AGM__)
 
         # [Temporary Hard coding]
-        [MHC_QC_VCF, REF_PHASED_VCF] = [
-            "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF.MHC.QC.vcf",
-            "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/T1DGC_REF.phased.vcf"
-        ]
-        self.refined_Genetic_Map = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/CEU_T1DGC.mach_step.avg.clpsB.refined.map'
-        print("CONVERT_IN :\n{}\n{}".format(MHC_QC_VCF, REF_PHASED_VCF))
+        # MHC_QC_VCF = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF.MHC.QC.vcf"
+        # REF_PHASED_VCF = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/T1DGC_REF.phased.vcf"
+        # self.refined_Genetic_Map = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/CEU_T1DGC.mach_step.avg.clpsB.refined.map'
+        # print("CONVERT_IN :\n{}\n{}".format(MHC_QC_VCF, REF_PHASED_VCF))
 
 
 
         ### (2) IMPUTE
 
-        # self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, self.__AVER__, self.refined_Genetic_Map)
+        self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, self.__AVER__, self.refined_Genetic_Map)
 
         # [Temporary Hard coding]
-        self.raw_IMP_Reuslt = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF.QC.imputation_out.vcf'
-        self.refined_REF_markers = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/T1DGC_REF.refined.markers'
-        self.GCchangeBGL = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF.MHC.QC.GCchange.bgl'
-        print("raw Imputed Reuslt :\n{}".format(self.raw_IMP_Reuslt))
+        # self.raw_IMP_Reuslt = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF.QC.imputation_out.vcf'
+        # self.refined_REF_markers = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/T1DGC_REF.refined.markers'
+        # self.GCchangeBGL = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF.MHC.QC.GCchange.bgl'
+        # print("raw Imputed Reuslt :\n{}".format(self.raw_IMP_Reuslt))
 
 
         ### (3) CONVERT_OUT
 
         self.IMP_Result = self.CONVERT_OUT(MHC, _reference, _out, self.raw_IMP_Reuslt)
 
-        print("\n\nImputation Result : {}".format(self.IMP_Result))
+        # [Temporary Hard coding]
+        # self.IMP_Result = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/HLA_IMPUTED_Result._3_HM_CEU_T1DGC_REF.MHC.imputed.alleles'
+        # print("\n\nImputation Result : {}".format(self.IMP_Result))
 
 
 
         ###### < Get Accuracy > ######
 
+        self.accuracy = self.getAccuracy(self.IMP_Result, _answer, self.HLA_IMPUTED_Result_MHC+'.imputed.alleles.accuracy')
+        # print("Accuracy result :\n{}".format(self.accuracy))
 
 
 
@@ -357,7 +345,7 @@ class HLA_Imputation_GM(object):
             os.system('rm {}'.format(MHC + '.QC.imputation_GCchange.bgl'))
             os.system('rm {}'.format(MHC + '.QC.imputation_GCchange.markers'))
 
-        HLA_IMPUTED_Result_MHC = join(os.path.dirname(MHC), "HLA_IMPUTED_Result.{}".format(os.path.basename(MHC)))
+        HLA_IMPUTED_Result_MHC = self.HLA_IMPUTED_Result_MHC
 
         RUN_Bash('Rscript src/complete_header.R {} {} {}'.format(self.GCchangeBGL, GC_decodedBGL, HLA_IMPUTED_Result_MHC+'.bgl.phased'))
 
@@ -380,6 +368,16 @@ class HLA_Imputation_GM(object):
         RUN_Bash('cp {} {}'.format(_reference+'.bim', HLA_IMPUTED_Result_MHC+'.bim'))
 
 
+        if not self.__save_intermediates:
+            RUN_Bash('rm {}'.format(_out+'.tmp'))
+            RUN_Bash('rm {}'.format(_out+'.tmp.ped'))
+            RUN_Bash('rm {}'.format(_out+'.tmp.dat'))
+
+            RUN_Bash('rm {}'.format(self.raw_IMP_Reuslt))
+            RUN_Bash('rm {}'.format(self.refined_REF_markers))
+            RUN_Bash('rm {}'.format(self.GCchangeBGL))
+
+
 
         # BGL2Allele.py
         __RETURN__ = BGL2Alleles(HLA_IMPUTED_Result_MHC+'.bgl.phased', HLA_IMPUTED_Result_MHC+'.imputed.alleles', 'all')
@@ -390,54 +388,9 @@ class HLA_Imputation_GM(object):
 
 
 
+    def getAccuracy(self, _IMT_Result, _answer, _out):
 
-
-
-    def Doubling(self, PHASED_RESULT):
-
-        ### Target data doubling step.
-
-        command = 'gzip -d -f {}'.format(PHASED_RESULT + '.vcf.gz')
-        # print(command)
-        os.system(command)
-
-        command = 'grep ^## {} > {}'.format(PHASED_RESULT + '.vcf', PHASED_RESULT + '.vcf.header')
-        # print(command)
-        os.system(command)
-
-        command = 'grep -v ^## {} > {}'.format(PHASED_RESULT + '.vcf', PHASED_RESULT + '.vcf.body')
-        # print(command)
-        os.system(command)
-
-        from src.Doubling_vcf import Doubling_vcf
-
-        DOUBLED_VCF_body = Doubling_vcf(PHASED_RESULT + '.vcf.body', PHASED_RESULT + '.doubled.vcf.body')
-        # print(DOUBLED_VCF_body)
-
-        command = 'cat {} {} > {}'.format(PHASED_RESULT + '.vcf.header', DOUBLED_VCF_body,
-                                          PHASED_RESULT + '.doubled.vcf')
-        # print(command)
-        os.system(command)
-
-        if not self.__save_intermediates:
-            os.system(' '.join(['rm', PHASED_RESULT + '.vcf']))
-            os.system(' '.join(['rm', PHASED_RESULT + '.vcf.header']))
-            os.system(' '.join(['rm', PHASED_RESULT + '.vcf.body']))
-            os.system(' '.join(['rm', PHASED_RESULT + '.doubled.vcf.body']))
-
-
-
-        return PHASED_RESULT + '.doubled.vcf'
-
-
-
-
-    def getIDX_PROCESS(self):
-        return self.idx_process
-
-
-
-    def getImputationResult(self):
-        return self.IMP_Result
-
-
+        if not _answer:
+            return -1
+        else:
+            return measureAccuracy(_answer, _IMT_Result, 'all', _out)
