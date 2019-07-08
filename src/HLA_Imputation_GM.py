@@ -48,9 +48,12 @@ class HLA_Imputation_GM(object):
         self.idx_process = idx_process
         self.__save_intermediates = f_save_intermediates
 
-        # Result
+        # Prefixes
         self.OUTPUT_dir = os.path.dirname(_out)
         self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
+        self.OUTPUT_dir_GM = join(self.OUTPUT_dir, os.path.basename(_AdaptiveGeneticMap))
+
+        # Result
         self.raw_IMP_Reuslt = None
         self.IMP_Result = None  # '*.imputed.alleles'
         self.accuracy = None
@@ -67,13 +70,10 @@ class HLA_Imputation_GM(object):
         self.__AGM__ = _AdaptiveGeneticMap
         self.__AVER__ = _Average_Erate
 
-        # self.refined_Genetic_Map = None
-        # self.GCchangeBGL = None
-
-        # 'CONVERT_OUT'
-        self.refined_REF_markers = None
-
-
+        # created in 'CONVERT_IN'
+        self.refined_REF_markers = None # used in 'CONVERT_OUT'
+        self.refined_Genetic_Map = None # used in 'IMPUTE'
+        self.GCchangeBGL = None # used in 'CONVERT_OUT'
 
 
 
@@ -82,17 +82,21 @@ class HLA_Imputation_GM(object):
 
         ### (1) CONVERT_IN
 
-        self.CONVERT_IN(MHC, _reference, _out, _hg, _aver_erate=self.__AVER__, _Genetic_Map=self.__AGM__)
+        # self.CONVERT_IN(MHC, _reference, _out, _hg, _aver_erate=self.__AVER__, _Genetic_Map=self.__AGM__)
+        # [MHC_QC_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg, _aver_erate=self.__AVER__, _Genetic_Map=self.__AGM__)
+
+        # Temporary Hard coding
+        [MHC_QC_VCF, REF_PHASED_VCF] = [
+            "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF.MHC.QC.vcf",
+            "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/T1DGC_REF.phased.vcf"
+        ]
+        print("CONVERT_IN :\n{}\n{}".format(MHC_QC_VCF, REF_PHASED_VCF))
 
 
 
         ### (2) IMPUTE
 
-        # Temporary Hard coding
-        # MHC_QC_VCF = 'tests/_3_CookHLA/20190523/temp/CONVERT_IN/_3_HM_CEU_T1DGC_REF.MHC.exon2.QC.phasing_out_not_double.doubled.vcf'
-        # REF_PHASED_VCF = 'tests/_3_CookHLA/20190523/temp/CONVERT_IN/T1DGC_REF.exon2.phased.vcf'
-
-        # self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
+        self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
         # print("raw Imputed Reuslt : {}".format(self.raw_IMP_Reuslt))
 
 
@@ -242,89 +246,48 @@ class HLA_Imputation_GM(object):
 
 
 
-        # ### Adaptive Genetic Map
-        #
-        # if self.f_useGeneticMap:
-        #
-        #     """
-        #     awk '{print $1" "$2" "$3}' $geneticMap > $geneticMap.first
-        #     awk '{print $2}' $REFERENCE.GCchange.markers > $geneticMap.second
-        #     paste -d " " $geneticMap.first $geneticMap.second > $geneticMap.refined.map
-        #
-        #     rm $geneticMap.first
-        #     rm $geneticMap.second
-        #
-        #     """
-        #
-        #     REFINED_GENTIC_MAP = self.OUTPUT_dir_GM + ('.{}.refined.map'.format(self.exonN) if self.f_useMultipleMarkers else '.refined.map')
-        #
-        #     # if self.f_useMultipleMarkers:
-        #     #     # When using both 'Adaptive Genetic Map' and 'Multiple Markers'.
-        #     #     # 'Adaptive Genetic Map' and 'ExonN reference markers file' have different number of rows.
-        #     #     # This block leaves markers which 'Adaptive Genetic Map' and 'ExonN Reference' both have.
-        #     #
-        #     #     from src.ManualInnerJoin import ManualInnerJoin
-        #     #
-        #     #     ManualInnerJoin(self.exonN, _Genetic_Map, GCchangeMarkers_REF, REFINED_GENTIC_MAP)
-        #     #
-        #     # else:
-        #
-        #     command = 'awk \'{print $1" "$2" "$3}\' %s > %s' % (_Genetic_Map, self.OUTPUT_dir_GM+'.first')
-        #     # print(command)
-        #     os.system(command)
-        #
-        #     command = 'awk \'{print $2}\' %s > %s' % (GCchangeMarkers_REF, self.OUTPUT_dir_GM+'.second')
-        #     # print(command)
-        #     os.system(command)
-        #
-        #     command = 'paste -d " " {} {} > {}'.format(self.OUTPUT_dir_GM+'.first', self.OUTPUT_dir_GM+'.second', REFINED_GENTIC_MAP)   # 이렇게 column bind시키는데는 당연히 *.first, *.second 파일의 row수가 같을 거라고 가정하는 상황.
-        #     # print(command)
-        #     os.system(command)
-        #
-        #
-        #     """
-        #     그냥 Adaptive Genetic Map만 활용할때는, _reference에 진짜 reference가 들어오고 Genetic Map또한 진짜 reference를 기반으로
-        #     만들어졌기 때문에 위 3줄의 Refined Genetic Map을 만드는데 문제가 없음.
-        #
-        #     그러나, Multiple Marker를 Adaptive Genetic Map과 같이 활용하는 경우, Multiple Marker를 활용하는 경우 _reference에
-        #     HLA만 남긴 전처리된 다른 reference를 활용하기 때문에(HLA_MultipleRefs.py), 진짜 reference를 바탕으로 만들어진 Genetic Map과
-        #     row수부터가 달라서 저 위 3줄로 Refined Genetic Map을 만들기가 어려워짐.
-        #
-        #     보아하니 GM컬럼의 값 또한 ascending order로 주어져야하고, 그 와중에 BP 또한 ascending order로 주어져야 하니 GCchangeMarkers는
-        #     redefineMap을 거치고 온 상태이기 때문에 같이 쓰기는 힘듬(한쪽이 ascending 시키면 다른게 ascending형태로 준비되어질 수 없음.)
-        #
-        #     그래서 MakeEXON234_Panel.py부터 다시 손봐야 할 것 같음.
-        #
-        #
-        #     참고로 GM에서 HLA~, rs~하는 애들만 남겨도 ("GM", "BP")모두가 ascending되게 할 수는 없기 때문에 소용없음.
-        #     => 생각해보면 Make_EXON234_Panel.py 건든다고 이 부분이 해결 안되는거 아닌가? rs~, HLA~이런 마커들만 남긴 reference panel에 대해
-        #         Genetic Map을 새로 만들어야 할 거 같은데.
-        #     """
-        #
-        #
-        #
-        #     if os.path.exists(REFINED_GENTIC_MAP):
-        #
-        #         self.refined_Genetic_Map = REFINED_GENTIC_MAP
-        #
-        #         # if not self.__save_intermediates:
-        #         #     os.system('rm {}'.format(self.OUTPUT_dir_GM+'.first'))
-        #         #     os.system('rm {}'.format(self.OUTPUT_dir_GM+'.second'))
-        #         #     os.system('rm {}'.format(GCchangeMarkers_REF)) # (Genetic Map) *.GCchange.markers is removed here.
-        #
-        #     else:
-        #         print(std_ERROR_MAIN_PROCESS_NAME + "Failed to generate Refined Genetic Map.")
-        #         sys.exit()
-        #
-        #
-        #
-        # __RETURN__ = [MHC_QC_VCF, REF_PHASED_VCF]
-        #
-        #
-        #
-        # self.idx_process += 1
-        #
-        # return __RETURN__
+        ############### < Adaptive Genetic Map > ###############
+
+
+        """
+        awk '{print $1" "$2" "$3}' $geneticMap > $geneticMap.first
+        awk '{print $2}' $REFERENCE.GCchange.markers > $geneticMap.second
+        paste -d " " $geneticMap.first $geneticMap.second > $geneticMap.refined.map
+
+        rm $geneticMap.first
+        rm $geneticMap.second
+
+        """
+
+        REFINED_GENTIC_MAP = self.OUTPUT_dir_GM + '.refined.map'
+
+        RUN_Bash('awk \'{print $1" "$2" "$3}\' %s > %s' % (_Genetic_Map, self.OUTPUT_dir_GM+'.first'))
+        RUN_Bash('awk \'{print $2}\' %s > %s' % (GCchangeMarkers_REF, self.OUTPUT_dir_GM+'.second'))
+        RUN_Bash('paste -d " " {} {} > {}'.format(self.OUTPUT_dir_GM+'.first', self.OUTPUT_dir_GM+'.second', REFINED_GENTIC_MAP))   # 이렇게 column bind시키는데는 당연히 *.first, *.second 파일의 row수가 같을 거라고 가정하는 상황.
+
+
+        if os.path.exists(REFINED_GENTIC_MAP):
+
+            self.refined_Genetic_Map = REFINED_GENTIC_MAP
+
+            if not self.__save_intermediates:
+                os.system('rm {}'.format(self.OUTPUT_dir_GM+'.first'))
+                os.system('rm {}'.format(self.OUTPUT_dir_GM+'.second'))
+                os.system('rm {}'.format(GCchangeMarkers_REF)) # (Genetic Map) *.GCchange.markers is removed here.
+
+        else:
+            print(std_ERROR_MAIN_PROCESS_NAME + "Failed to generate Refined Genetic Map.")
+            sys.exit()
+
+
+
+        __RETURN__ = [MHC_QC_VCF, REF_PHASED_VCF]
+
+
+
+        self.idx_process += 1
+
+        return __RETURN__
 
 
 
