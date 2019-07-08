@@ -85,19 +85,20 @@ class HLA_Imputation_GM(object):
         # self.CONVERT_IN(MHC, _reference, _out, _hg, _aver_erate=self.__AVER__, _Genetic_Map=self.__AGM__)
         # [MHC_QC_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg, _aver_erate=self.__AVER__, _Genetic_Map=self.__AGM__)
 
-        # Temporary Hard coding
+        # [Temporary Hard coding]
         [MHC_QC_VCF, REF_PHASED_VCF] = [
             "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF.MHC.QC.vcf",
             "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/T1DGC_REF.phased.vcf"
         ]
+        self.refined_Genetic_Map = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/CEU_T1DGC.mach_step.avg.clpsB.refined.map'
         print("CONVERT_IN :\n{}\n{}".format(MHC_QC_VCF, REF_PHASED_VCF))
 
 
 
         ### (2) IMPUTE
 
-        self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
-        # print("raw Imputed Reuslt : {}".format(self.raw_IMP_Reuslt))
+        self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, self.__AVER__, self.refined_Genetic_Map)
+        print("raw Imputed Reuslt : {}".format(self.raw_IMP_Reuslt))
 
 
         ### (3) CONVERT_OUT
@@ -291,61 +292,38 @@ class HLA_Imputation_GM(object):
 
 
 
-    def IMPUTE(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF, _BEAGLE4, _overlap=None, _aver_erate=None, _Genetic_Map=None):
+    def IMPUTE(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF, _aver_erate, _Refined_Genetic_Map):
 
 
         print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
 
 
-        OUT = _out + ('.QC.doubled.imputation_out' if self.f_useMultipleMarkers else '.QC.imputation_out')
+        OUT = _out + '.QC.imputation_out'
 
 
-        if self.f_useGeneticMap:
+        """
+        beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true 
+                    map=$geneticMap.refined.map ne=10000 overlap=5000 err=$aver_erate
+        """
 
-            ### Using both 'Multiple Markers' and 'Adaptive Genetic Map'.
+        with open(_aver_erate, 'r') as f:
+            aver_erate = f.readline().rstrip('\n')
 
-            """
-            java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true 
-                                    gprobs=true ne=10000 overlap=5000 err=$aver_erate map=$geneticMap.refined.map
-            """
-
-            with open(_aver_erate, 'r') as f:
-                aver_erate = f.readline().rstrip('\n')
-
-            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={}'.format(_BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _overlap, aver_erate, self.refined_Genetic_Map)
-            print(command)
-            if not os.system(command):
-                if not self.__save_intermediates:
-                    os.system('rm {}'.format(OUT+'.log'))
-                    # os.system('rm {}'.format(_MHC_QC_VCF))
-                    # os.system('rm {}'.format(_REF_PHASED_VCF)) # These 2 files
-            else:
-                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation with Geneticmap failed.")
-                sys.exit()
-
-
+        command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} ne=10000 overlap=5000 err={} '.format(
+            self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT,
+            _Refined_Genetic_Map, aver_erate)
+        print(command)
+        if not os.system(command):
+            if not self.__save_intermediates:
+                os.system('rm {}'.format(OUT+'.log'))
+                # os.system('rm {}'.format(_MHC_QC_VCF))
+                # os.system('rm {}'.format(_REF_PHASED_VCF)) # These 2 files
         else:
-
-            """
-            java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true 
-            """
-
-            command = '{} gt={} ref={} out={} impute=true lowmem=true'.format(_BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT)
-            # print(command)
-            if not os.system(command):
-                if not self.__save_intermediates:
-                    # os.system(' '.join(['rm', OUT + '.log'])) # Imputation Log file will be saved.
-                    os.system(' '.join(['rm', _MHC_QC_VCF]))
-                    os.system(' '.join(['rm', _REF_PHASED_VCF]))
-            else:
-                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation failed.")
-                sys.exit()
+            print(std_ERROR_MAIN_PROCESS_NAME + "Imputation with Geneticmap failed.")
+            sys.exit()
 
 
-
-        command = 'gzip -d -f {}.vcf.gz'.format(OUT)
-        # print(command)
-        os.system(command)
+        RUN_Bash('gzip -d -f {}.vcf.gz'.format(OUT))
 
         __RETURN__ = OUT + '.vcf'
         self.idx_process += 1
