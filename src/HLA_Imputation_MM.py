@@ -2,10 +2,10 @@
 
 import os, sys, re
 from os.path import join
-import pandas as pd
 
 from src.GC_tricked_bgl2ori_bgl import GCtricedBGL2OriginalBGL
-
+from src.RUN_Bash import RUN_Bash
+from src.measureAccuracy import measureAccuracy
 
 ########## < Core Varialbes > ##########
 
@@ -19,42 +19,44 @@ HLA_names_gen = ["A", "C", "B", "DRB1", "DQA1", "DQB1", "DPA1", "DPB1"]
 # __overlap__ = [3000, 4000, 5000]
 __overlap__ = [3000]
 
+# __EXON__ = ['exon2', 'exon3', 'exon4']
+__EXON__ = ['exon2']
+
 
 class HLA_Imputation_MM(object):
 
     def __init__(self, idx_process, MHC, _reference, _out, _hg,
-                 _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE,
-                 _PLINK, _BEAGLE4,
-                 __save_intermediates=False,
-                 _aver_erate=None, _Genetic_Map=None, f_useGeneticMap=False,
-                 f_useMultipleMarkers=False, _exonN_ = None, _answer=None):
+                 _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4,
+                 _answer=None, f_save_intermediates=False, _MultP=1):
 
 
-        ### Class variables
+        ### General
         self.idx_process = idx_process
-        self.__save_intermediates = __save_intermediates
+        self.__save_intermediates = f_save_intermediates
 
-        self.f_useGeneticMap = f_useGeneticMap
-        self.f_useMultipleMarkers = f_useMultipleMarkers
-
-        self.exonN = _exonN_
-
-        self.refined_Genetic_Map = None
-        self.GCchangeBGL = None
-
-        # 'CONVERT_OUT'
-        self.refined_REF_markers = None
-
-        # Result
+        # Prefixes
         self.OUTPUT_dir = os.path.dirname(_out)
         self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
-        self.OUTPUT_dir_GM = join(self.OUTPUT_dir, os.path.basename(_Genetic_Map)) if f_useGeneticMap else None
-
-        self.raw_IMP_Reuslt = None
         self.IMP_Result_prefix = _out # when using only multiple markers.
-        self.IMP_Result = None  # '*.imputed.alleles'
 
+        # Result
+        self.raw_IMP_Reuslt = None
+        self.IMP_Result = None  # Final Imputation output ('*.imputed.alleles').
+        self.dict_IMP_Result = {}
         self.accuracy = None
+
+        # Dependencies
+        self.LINKAGE2BEAGLE = _LINKAGE2BEAGLE
+        self.BEAGLE2LINKAGE = _BEAGLE2LINKAGE
+        self.BEAGLE2VCF = _BEAGLE2VCF
+        self.VCF2BEAGLE = _VCF2BEAGLE
+        self.PLINK = _PLINK
+        self.BEAGLE4 = _BEAGLE4
+
+        # created in 'CONVERT_IN'
+        self.refined_REF_markers = None # used in 'CONVERT_OUT'
+        self.refined_Genetic_Map = None # used in 'IMPUTE'
+        self.GCchangeBGL = None # used in 'CONVERT_OUT'
 
 
 
@@ -64,129 +66,23 @@ class HLA_Imputation_MM(object):
 
         ###### < Main - 'CONVERT_IN', 'IMPUTE', 'CONVERT_OUT' > ######
 
+        if _MultP == 1:
 
-        """
-        앞서 언급한 Multiple Marker와 Adaptive Genetic Map을 모두 활용하는 경우, 사실상 exonN에 대한 Genetic Map을 새로 떠야하는
-        상황이기 때문에 CONVERT_IN() 함수 들어가기 전에 이쯤에서 Genetic Map을 만들어야 할 듯.
-        """
+            ## Single Core (No Multiprocessing)
 
-
-        ### (1) CONVERT_IN
-
-        [MHC_QC_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg,
-                                                       _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4,
-                                                       _aver_erate=_aver_erate, _Genetic_Map=_Genetic_Map)
-
-        # self.CONVERT_IN(MHC, _reference, _out, _hg, _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4,
-        #                 _aver_erate=_aver_erate, _Genetic_Map=_Genetic_Map)
-
-        # print("Convert_IN :\n{}\n{}".format(MHC_QC_VCF, REF_PHASED_VCF))
-
-
-
-
-        if self.f_useGeneticMap:
-
-
-            self.IMP_Result = {_overlap_: None for _overlap_ in __overlap__}    # Imputation Results.
-
-            if self.f_useMultipleMarkers:
-
-                ### Imputation with both 'Adaptive Genetic Map' and 'Multiple Markers' (Main CookHLA).
-                # No multiprocessing (Sequentially)
-
-                for _overlap_ in __overlap__:
-
-                    t = self.IMPUTE_GM(_overlap_, _out, MHC_QC_VCF, REF_PHASED_VCF, MHC, _reference, _aver_erate, _Genetic_Map,
-                                       _BEAGLE4, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)
-
-                    self.IMP_Result[_overlap_] = t
-
-
-            else:
-                ### Imputation with only 'Adaptive Genetic Map'.
-                # Multiprocessing
-
-                import multiprocessing as mp
-
-                pool = mp.Pool(processes=3)
-
-                dict_Pool = {_overlap_: pool.apply_async(self.IMPUTE_GM, (_overlap_, _out, MHC_QC_VCF, REF_PHASED_VCF, MHC, _reference, _aver_erate, _Genetic_Map,
-                                                                          _BEAGLE4, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)) for _overlap_ in __overlap__}
-
-                self.IMP_Result = {_overlap_: _OUT.get() for _overlap_, _OUT in dict_Pool.items()}
-
-
-
-            print(self.IMP_Result)
-
+            for _overlap in __overlap__:
+                for _exonN in __EXON__:
+                    self.dict_IMP_Result[_overlap][_exonN] = self.IMPUTATION_MM(_exonN, _overlap, MHC, _reference, _out, _hg)
 
         else:
+            ## Multiprocessing
 
-            # Plain Single Implementation
+            # Under construction.
 
-            if f_useMultipleMarkers:
-                print(std_MAIN_PROCESS_NAME + "exonN: {}".format(_exonN_))
-
-
-            ### (2) IMPUTE
-
-            # Temporary Hard coding
-            # MHC_QC_VCF = 'tests/_3_CookHLA/20190523/temp/CONVERT_IN/_3_HM_CEU_T1DGC_REF.MHC.exon2.QC.phasing_out_not_double.doubled.vcf'
-            # REF_PHASED_VCF = 'tests/_3_CookHLA/20190523/temp/CONVERT_IN/T1DGC_REF.exon2.phased.vcf'
-
-            self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
-            print("raw Imputed Reuslt : {}".format(self.raw_IMP_Reuslt))
+            pass
 
 
-            ### (3) CONVERT_OUT
-
-            # Temporary Hard-coding
-            # print("Temporary Hard-coding for testing 'CONVERT_OUT'.")
-            # self.raw_IMP_Reuslt = 'tests/_3_CookHLA/20190523/_3_HM_CEU_T1DGC_REF.exon2.QC.doubled.imputation_out.vcf'
-
-            self.IMP_Result = self.CONVERT_OUT(MHC, _reference, _out, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)
-
-            print("\n\nImputation Result : {}".format(self.IMP_Result))
-
-
-
-        ###### < Get Accuracy > ######
-
-        if _answer:
-
-            if not os.path.exists(_answer):
-                print(std_WARNING_MAIN_PROCESS_NAME + "Given Answer file doesn't exist. Skipping calculating accuracy."
-                                                      "Please check '--answer' argument again.")
-
-
-            from src.measureAccuracy import measureAccuracy
-
-            if isinstance(self.IMP_Result, str):
-                self.accuracy = measureAccuracy(_answer, self.IMP_Result, 'all', outfile=_out+'.accuracy')
-            elif isinstance(self.IMP_Result, dict):
-                self.accuracy = {k: measureAccuracy(_answer, v, 'all') for k, v in self.IMP_Result.items()}
-
-
-
-
-        ###### < Get Accuracy > ######
-
-        # Removing
-        # if not self.__save_intermediates:
-        #     if self.f_useGeneticMap:
-        #         os.system('rm {}'.format(self.refined_Genetic_Map))
-        #         os.system('rm {}'.format(self.GCchangeBGL))
-        #         os.system('rm {}'.format(self.refined_REF_markers))
-
-
-
-
-
-
-
-    def CONVERT_IN(self, MHC, _reference, _out, _hg, _LINKAGE2BEAGLE, _BEAGLE2VCF, _PLINK, _BEAGLE4,
-                   _aver_erate=None, _Genetic_Map=None):
+    def CONVERT_IN(self, MHC, _reference, _out, _hg):
 
 
         __MHC__ = MHC if not self.f_useMultipleMarkers else MHC+'.{}'.format(self.exonN)
@@ -194,7 +90,7 @@ class HLA_Imputation_MM(object):
         print("[{}] Converting data to beagle format.".format(self.idx_process))
 
         command = ' '.join(
-            [_LINKAGE2BEAGLE, 'pedigree={}'.format(MHC + '.QC.nopheno.ped'), 'data={}'.format(MHC + '.QC.dat'),
+            [self.LINKAGE2BEAGLE, 'pedigree={}'.format(MHC + '.QC.nopheno.ped'), 'data={}'.format(MHC + '.QC.dat'),
              'beagle={}'.format(__MHC__ + '.QC.bgl'), 'standard=true', '>', __MHC__ + '.QC.bgl.log'])  # Making '*.bgl' file.
         # print(command)
         os.system(command)
@@ -363,17 +259,17 @@ class HLA_Imputation_MM(object):
             """
             그냥 Adaptive Genetic Map만 활용할때는, _reference에 진짜 reference가 들어오고 Genetic Map또한 진짜 reference를 기반으로
             만들어졌기 때문에 위 3줄의 Refined Genetic Map을 만드는데 문제가 없음.
-            
+
             그러나, Multiple Marker를 Adaptive Genetic Map과 같이 활용하는 경우, Multiple Marker를 활용하는 경우 _reference에 
             HLA만 남긴 전처리된 다른 reference를 활용하기 때문에(HLA_MultipleRefs.py), 진짜 reference를 바탕으로 만들어진 Genetic Map과
             row수부터가 달라서 저 위 3줄로 Refined Genetic Map을 만들기가 어려워짐.
-            
+
             보아하니 GM컬럼의 값 또한 ascending order로 주어져야하고, 그 와중에 BP 또한 ascending order로 주어져야 하니 GCchangeMarkers는
             redefineMap을 거치고 온 상태이기 때문에 같이 쓰기는 힘듬(한쪽이 ascending 시키면 다른게 ascending형태로 준비되어질 수 없음.)
-            
+
             그래서 MakeEXON234_Panel.py부터 다시 손봐야 할 것 같음.
-            
-            
+
+
             참고로 GM에서 HLA~, rs~하는 애들만 남겨도 ("GM", "BP")모두가 ascending되게 할 수는 없기 때문에 소용없음. 
             => 생각해보면 Make_EXON234_Panel.py 건든다고 이 부분이 해결 안되는거 아닌가? rs~, HLA~이런 마커들만 남긴 reference panel에 대해
                 Genetic Map을 새로 만들어야 할 거 같은데.
@@ -749,7 +645,6 @@ class HLA_Imputation_MM(object):
 
 
 
-
     def Doubling(self, PHASED_RESULT):
 
         ### Target data doubling step.
@@ -788,56 +683,31 @@ class HLA_Imputation_MM(object):
 
 
 
+    def IMPUTATION_MM(self, _exonN, _overlap, MHC, _reference, _out, _hg):
 
-    def getIDX_PROCESS(self):
-        return self.idx_process
+        ### (1) CONVERT_IN
 
-
-
-    def getImputationResult(self):
-        return self.IMP_Result
-
-
-    def IMPUTE_GM(self, _overlap_, _out, MHC_QC_VCF, REF_PHASED_VCF, MHC, _reference, _aver_erate, _Genetic_Map,
-                  _BEAGLE4,_VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK):
-
-
-        OUT_prefix = _out
-
-        if self.f_useMultipleMarkers:
-            print(std_MAIN_PROCESS_NAME + "exonN: {} / Overlap: {}".format(self.exonN, _overlap_))
-            OUT_prefix = OUT_prefix +'.{}.overlap{}'.format(self.exonN, _overlap_)
-        else:
-            print(std_MAIN_PROCESS_NAME + "Overlap: {}".format(_overlap_))
-            OUT_prefix = OUT_prefix +'.overlap{}'.format(_overlap_)
-
-        # self.IMP_Result_prefix = self.IMP_Result_prefix + '.overlap{}'.format(_overlap_)
-
+        [MHC_QC_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg)
 
 
         ### (2) IMPUTE
 
-        t_raw_IMP_Reuslt = self.IMPUTE(OUT_prefix, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4,
-                                       _overlap=_overlap_, _aver_erate=_aver_erate, _Genetic_Map=_Genetic_Map)
-        print("raw Imputed Reuslt : {}".format(t_raw_IMP_Reuslt))
+        self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, _BEAGLE4)
+        print("raw Imputed Reuslt : {}".format(self.raw_IMP_Reuslt))
 
 
         ### (3) CONVERT_OUT
 
-        # temporary hard-coding
-        # self.raw_IMP_Reuslt = 'tests/_3_CookHLA/20190529/_3_HM_CEU_T1DGC_REF.QC.imputation_out.vcf'
-
-        t_IMP_Result = self.CONVERT_OUT(MHC, _reference, OUT_prefix, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK, _overlap=_overlap_,
-                                        raw_IMP_Result=t_raw_IMP_Reuslt)
-        print('t_IMP_Result : {}'.format(t_IMP_Result))
-
-
-        return t_IMP_Result
-
-
-
-    def ManualInnerJoin(self, _left, _right, _out):
-
-
+        self.IMP_Result = self.CONVERT_OUT(MHC, _reference, _out, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)
+        print("\n\nImputation Result : {}".format(self.IMP_Result))
 
         return 0
+
+
+
+    def getAccuracy(self, _IMT_Result, _answer, _out):
+
+        if not _answer:
+            return -1
+        else:
+            return measureAccuracy(_answer, _IMT_Result, 'all', _out)
