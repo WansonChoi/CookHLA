@@ -45,10 +45,10 @@ class HLA_Imputation_MM(object):
         self.IMP_Result_prefix = _out # when using only multiple markers.
 
         # Result
-        self.raw_IMP_Reuslt = None
-        self.IMP_Result = None  # Final Imputation output ('*.imputed.alleles').
+        # self.IMP_Result = None  # Finally consensed Imputation output ('*.imputed.alleles').
+        self.dict_ExonN_Panel = {_exonN: None for _exonN in __EXON__}
         self.dict_IMP_Result = {_exonN: {_overlap: None} for _exonN in __EXON__ for _overlap in __overlap__}
-        self.accuracy = None
+        self.accuracy = {_exonN: {_overlap: None} for _exonN in __EXON__ for _overlap in __overlap__}
 
         # Dependencies
         self.LINKAGE2BEAGLE = _LINKAGE2BEAGLE
@@ -68,8 +68,12 @@ class HLA_Imputation_MM(object):
 
         ###### < Reference panel for Exon 2, 3, 4 > ######
 
-        multiple_panels = HLA_MultipleRefs(_reference, self.OUTPUT_dir_ref, _hg, self.BEAGLE2LINKAGE, self.PLINK, _MultP=_MultP)
-        dict_ExonN_Panel = multiple_panels.ExonN_Panel
+        # multiple_panels = HLA_MultipleRefs(_reference, self.OUTPUT_dir_ref, _hg, self.BEAGLE2LINKAGE, self.PLINK, _MultP=_MultP)
+        # self.dict_ExonN_Panel = multiple_panels.ExonN_Panel
+
+        # [Temporary Hard-coding]
+        self.dict_ExonN_Panel['exon2'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/T1DGC_REF.exon2'
+        # print("Hard coded exon2 panel : \n{}".format(self.dict_ExonN_Panel['exon2']))
 
 
         ###### < Main - 'CONVERT_IN', 'IMPUTE', 'CONVERT_OUT' > ######
@@ -80,7 +84,14 @@ class HLA_Imputation_MM(object):
 
             for _exonN in __EXON__:
                 for _overlap in __overlap__:
-                    self.dict_IMP_Result[_exonN][_overlap] = self.IMPUTATION_MM(_exonN, _overlap, MHC, dict_ExonN_Panel[_exonN], _out, _hg)
+                    self.dict_IMP_Result[_exonN][_overlap] = self.IMPUTATION_MM(_exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg)
+
+
+            # Getting Accuracy
+            for _exonN in __EXON__:
+                for _overlap in __overlap__:
+                    self.accuracy[_exonN][_overlap] = self.getAccuracy(self.dict_IMP_Result[_exonN][_overlap], _answer, _out+'.{}.{}.imputed.alleles.accuracy'.format(_exonN, _overlap))
+
 
         else:
             ## Multiprocessing
@@ -88,9 +99,6 @@ class HLA_Imputation_MM(object):
             # Under construction.
 
             pass
-
-
-
 
 
 
@@ -286,236 +294,153 @@ class HLA_Imputation_MM(object):
 
 
 
-    def CONVERT_OUT(self, MHC, _reference, _out, _overlap):
+    def CONVERT_OUT(self, _raw_IMP_Result, _reference, _out, _overlap, _exonN):
 
 
-        if not self.f_useMultipleMarkers:
+        Prefix_raw_IMP_Result = _raw_IMP_Result.rstrip('.vcf')
+        OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
+        OUT = _out+'.{}.{}'.format(_exonN, _overlap)
 
-            __MHC__ = MHC+'.overlap{}'.format(_overlap)
 
-            ### Converting imputation result in vcf file to beagle format.
-
-            command = 'cat {} | {} 0 {}'.format(raw_IMP_Result, _VCF2BEAGLE, __MHC__ + '.QC.imputation_GCchange')
-            # print(command)
-            if not os.system(command):
-                if not self.__save_intermediates:
-                    os.system('rm {}'.format(__MHC__ + '.QC.imputation_GCchange.int'))
-
-            command = 'gzip -d -f {}'.format(__MHC__ + '.QC.imputation_GCchange.bgl.gz')
+        ### vcf2HLAVCF
+        for _hla in HLA_names:
+            command = 'grep HLA_%s %s > %s' % (_hla, _raw_IMP_Result, Prefix_raw_IMP_Result+'.EXON_VCF_HLA_{}.txt'.format(_hla))
             # print(command)
             os.system(command)
 
+        # Is file empty? (Introduced by W. Choi)
+        vcf2HLAVCF = {_hla: None for _hla in HLA_names}
 
-            ### Decoding GC-encoded values in beagle file to original values.
-
-            # Decoding GC-encoding
-            GC_decodedBGL = GCtricedBGL2OriginalBGL(__MHC__ + '.QC.imputation_GCchange.bgl', self.refined_REF_markers, __MHC__ + '.QC.imputation_ori.bgl')
-            # print('GC_decodedBGL : {}'.format(GC_decodedBGL))
-
-            if not self.__save_intermediates:
-                os.system('rm {}'.format(__MHC__ + '.QC.imputation_GCchange.bgl'))
-                os.system('rm {}'.format(__MHC__ + '.QC.imputation_GCchange.markers'))
-
-            #
-            # HLA_IMPUTED_Result = self.IMP_Result_prefix + '.bgl.phased'
-            HLA_IMPUTED_Result = _out + '.bgl.phased'
-
-            command = 'Rscript src/complete_header.R {} {} {}'.format(self.GCchangeBGL, GC_decodedBGL, HLA_IMPUTED_Result)
-            # print(command)
-            if not os.system(command):
-                if not self.__save_intermediates:
-                    # os.system('rm {}'.format(__MHC__ + '.QC.GCchange.bgl'))
-                    os.system('rm {}'.format(GC_decodedBGL))
+        for _hla in HLA_names:
+            if os.path.getsize(Prefix_raw_IMP_Result+'.EXON_VCF_HLA_{}.txt'.format(_hla)) > 0:
+                # print(Prefix_raw_IMP_Result+'.EXON_VCF_HLA_{}.txt'.format(_hla))
+                vcf2HLAVCF[_hla] = Prefix_raw_IMP_Result+'.EXON_VCF_HLA_{}.txt'.format(_hla)
 
 
-            ### Converting decoded beagle file to PLINK file.
-
-            # command = 'cat {} | {} {}'.format(HLA_IMPUTED_Result, _BEAGLE2LINKAGE, _out+'.tmp')
-            # print(command)
-            # os.system(command)
-            #
-            # command = "cut -d ' ' -f6- {} > {}".format(_out+'.tmp.ped', _out+'.tmp')
-            # print(command)
-            # os.system(command)
-            #
-            # command = "paste -d ' ' {} {} | tr -d '\015' > {}".format(__MHC__ + '.fam', _out + '.tmp', HLA_IMPUTED_Result + '.ped') # *.ped
-            # print(command)
-            # os.system(command)
-            #
-            # command = 'cut -f1-4 {} > {}'.format(_reference+'.bim', HLA_IMPUTED_Result+'.map') # *.map
-            # print(command)
-            # os.system(command)
-            #
-            # command = 'cp {} {}'.format(__MHC__ + '.fam', HLA_IMPUTED_Result + '.fam')
-            # print(command)
-            # os.system(command)
-            #
-            # # Create PLINK bed format
-            # command = '{} --ped {} --map {} --make-bed --out {}'.format(_PLINK, HLA_IMPUTED_Result+'.ped', HLA_IMPUTED_Result+'.map', HLA_IMPUTED_Result)
-            # print(command)
-            # os.system(command)
-            #
-            # command = 'rm {}'.format(HLA_IMPUTED_Result + '.fam')
-            # print(command)
-            # os.system(command)
-            #
-            # command = 'cp {} {}'.format(_reference+'.bim', HLA_IMPUTED_Result+'.bim')
-            # print(command)
-            # os.system(command)
-
-
-            # BGL2Allele.py
-
-            from src.BGL2Alleles import BGL2Alleles
-
-            __RETURN__ = BGL2Alleles(HLA_IMPUTED_Result, _out+'.imputed.alleles', 'all')
-
-
-
-
-        else:
-
-            Prefix_raw_IMP_Result = self.raw_IMP_Reuslt.rstrip('.vcf')
-
-            ### vcf2HLAVCF
-            for _hla in HLA_names:
-                command = 'grep HLA_%s %s > %s' % (_hla, self.raw_IMP_Reuslt, Prefix_raw_IMP_Result+'.EXON_VCF_HLA_{}.txt'.format(_hla))
+        ### DP_min_selection.R
+        for _hla in HLA_names:
+            if vcf2HLAVCF[_hla]:
+                command = 'Rscript src/DP_min_selection.R {} {}'.format(vcf2HLAVCF[_hla],
+                                                                        Prefix_raw_IMP_Result+'.EXON_VCF_DP_MIN_VCF_HLA_{}.txt'.format(_hla))
                 # print(command)
-                os.system(command)
+                if not os.system(command):
+                    vcf2HLAVCF[_hla] = Prefix_raw_IMP_Result+'.EXON_VCF_DP_MIN_VCF_HLA_{}.txt'.format(_hla)
+                    # Replacing('*.EXON_VCF_HLA{}.txt' -> '*.EXON_VCF_DP_MIN_VCF_HLA_{}.txt')
 
-            # Is file empty? (Introduced by W. Choi)
-            vcf2HLAVCF = {_hla: None for _hla in HLA_names}
+            else:
+                print('No HLA_{} alleles. DP_min_seleciton for HLA_{} will be skipped.'.format(_hla, _hla))
 
-            for _hla in HLA_names:
-                if os.path.getsize(Prefix_raw_IMP_Result+'.EXON_VCF_HLA_{}.txt'.format(_hla)) > 0:
-                    # print(Prefix_raw_IMP_Result+'.EXON_VCF_HLA_{}.txt'.format(_hla))
-                    vcf2HLAVCF[_hla] = Prefix_raw_IMP_Result+'.EXON_VCF_HLA_{}.txt'.format(_hla)
-
-
-            ### DP_min_selection.R
-            for _hla in HLA_names:
-                if vcf2HLAVCF[_hla]:
-                    command = 'Rscript src/DP_min_selection.R {} {}'.format(vcf2HLAVCF[_hla],
-                                                                            Prefix_raw_IMP_Result+'.EXON_VCF_DP_MIN_VCF_HLA_{}.txt'.format(_hla))
-                    # print(command)
-                    if not os.system(command):
-                        vcf2HLAVCF[_hla] = Prefix_raw_IMP_Result+'.EXON_VCF_DP_MIN_VCF_HLA_{}.txt'.format(_hla)
-                        # Replacing('*.EXON_VCF_HLA{}.txt' -> '*.EXON_VCF_DP_MIN_VCF_HLA_{}.txt')
-
-                else:
-                    print('No HLA_{} alleles. DP_min_seleciton for HLA_{} will be skipped.'.format(_hla, _hla))
-
-                # Removing '*.EXON_VCF_HLA_{}.txt'
-                os.system('rm {}'.format(Prefix_raw_IMP_Result + '.EXON_VCF_HLA_{}.txt'.format(_hla)))
+            # Removing '*.EXON_VCF_HLA_{}.txt'
+            os.system('rm {}'.format(Prefix_raw_IMP_Result + '.EXON_VCF_HLA_{}.txt'.format(_hla)))
 
 
 
-            # Set aside vcf header
-            command = 'grep "#" {} > {}'.format(self.raw_IMP_Reuslt, self.raw_IMP_Reuslt+'.header.txt')
-            # print(command)
-            os.system(command)
+        # keep vcf header
+        command = 'grep "#" {} > {}'.format(_raw_IMP_Result, _raw_IMP_Result+'.header.txt')
+        # print(command)
+        os.system(command)
 
-            # Concatenate body part in the genomic position order.
-            to_cat = []
-            for _hla in HLA_names_gen:
-                if vcf2HLAVCF[_hla]:
-                    to_cat.append(vcf2HLAVCF[_hla])
+        # Concatenate body part in the genomic position order.
+        to_cat = []
+        for _hla in HLA_names_gen:
+            if vcf2HLAVCF[_hla]:
+                to_cat.append(vcf2HLAVCF[_hla])
 
-            to_cat = ' '.join(to_cat)
+        to_cat = ' '.join(to_cat)
 
-            command = 'cat {} > {}'.format(to_cat, Prefix_raw_IMP_Result+'.DP_MIN_VCF_HLA_all.txt')
-            # print(command)
-            if not os.system(command):
-
-                if not self.__save_intermediates:
-                    for _hla in HLA_names:
-                        if vcf2HLAVCF[_hla]:
-                            os.system('rm {}'.format(vcf2HLAVCF[_hla]))
-
-
-            # complete_vcf_HLA
-            command = 'cat {} {} > {}'.format(self.raw_IMP_Reuslt+'.header.txt', Prefix_raw_IMP_Result+'.DP_MIN_VCF_HLA_all.txt',
-                                              Prefix_raw_IMP_Result+'.DP_MIN_VCF_HLA_all_with_header.txt')
-            # print(command)
-            if not os.system(command):
-                # os.system('rm {}'.format(self.raw_IMP_Reuslt))
-                os.system('rm {}'.format(self.raw_IMP_Reuslt+'.header.txt'))
-                os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_VCF_HLA_all.txt'))
-
-
-            # Get Marker
-            command = 'grep HLA {} > {}'.format(_reference+'.markers', self.OUTPUT_dir_ref+'.HLA.markers')
-            # print(command)
-            os.system(command)
-
-
-            #####
-
-
-            command = 'cat {} | {} 0 {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_VCF_HLA_all_with_header.txt',
-                                                _VCF2BEAGLE, Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header')
-            # print(command)
-            if not os.system(command):
-                if not self.__save_intermediates:
-                    os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_VCF_HLA_all_with_header.txt'))
-                    os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.int'))
-                    os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.markers'))
-
-
-            command = 'gzip -d -f {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl.gz')
-            # print(command)
-            os.system(command)
-
-
-            command = 'head -1 {} > {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl',
-                                               Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl.header.txt')
-            # print(command)
-            os.system(command)
-
-
-            command = 'cat {} {} > {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl.header.txt',
-                                              Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl',
-                                              Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header_with_fid.bgl') # (2019. 05. 28.) FID라고 적혀있는데 I행만 두 개 더 들어가는게 꺼림찍함.
-            # print(command)
-            if not os.system(command):
-                if not self.__save_intermediates:
-                    os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl'))
-                    os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl.header.txt'))
-
-
-
-            # gc_change_ori_bgl.
-
-            GC_decodedBGL = GCtricedBGL2OriginalBGL(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header_with_fid.bgl',
-                                                    self.OUTPUT_dir_ref+'.HLA.markers', Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.notGC.bgl')
-            # print(GC_decodedBGL)
+        command = 'cat {} > {}'.format(to_cat, Prefix_raw_IMP_Result+'.DP_MIN_VCF_HLA_all.txt')
+        # print(command)
+        if not os.system(command):
 
             if not self.__save_intermediates:
-                os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header_with_fid.bgl'))
-                os.system('rm {}'.format(self.OUTPUT_dir_ref+'.HLA.markers'))
+                for _hla in HLA_names:
+                    if vcf2HLAVCF[_hla]:
+                        os.system('rm {}'.format(vcf2HLAVCF[_hla]))
 
 
-            from src.BGL2Alleles_for_merge import BGL2Alleles4Merge
+        # complete_vcf_HLA
+        command = 'cat {} {} > {}'.format(_raw_IMP_Result+'.header.txt', Prefix_raw_IMP_Result+'.DP_MIN_VCF_HLA_all.txt',
+                                          Prefix_raw_IMP_Result+'.DP_MIN_VCF_HLA_all_with_header.txt')
+        # print(command)
+        if not os.system(command):
+            # os.system('rm {}'.format(_raw_IMP_Result))
+            os.system('rm {}'.format(_raw_IMP_Result+'.header.txt'))
+            os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_VCF_HLA_all.txt'))
 
-            DOUBLE_ALLELES = BGL2Alleles4Merge(GC_decodedBGL, Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_double.alleles', 'all')
-            # print(DOUBLE_ALLELES)
 
+        # Get Marker
+        command = 'grep HLA {} > {}'.format(_reference+'.markers', OUTPUT_dir_ref+'.HLA.markers')
+        # print(command)
+        os.system(command)
+
+
+        #####
+
+
+        command = 'cat {} | {} 0 {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_VCF_HLA_all_with_header.txt',
+                                            self.VCF2BEAGLE, Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header')
+        # print(command)
+        if not os.system(command):
             if not self.__save_intermediates:
-                os.system('rm {}'.format(GC_decodedBGL))
+                os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_VCF_HLA_all_with_header.txt'))
+                os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.int'))
+                os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.markers'))
+
+
+        command = 'gzip -d -f {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl.gz')
+        # print(command)
+        os.system(command)
+
+
+        command = 'head -1 {} > {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl',
+                                           Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl.header.txt')
+        # print(command)
+        os.system(command)
+
+
+        command = 'cat {} {} > {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl.header.txt',
+                                          Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl',
+                                          Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header_with_fid.bgl') # (2019. 05. 28.) FID라고 적혀있는데 I행만 두 개 더 들어가는게 꺼림찍함.
+        # print(command)
+        if not os.system(command):
+            if not self.__save_intermediates:
+                os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl'))
+                os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.bgl.header.txt'))
+
+
+
+        # gc_change_ori_bgl.
+
+        GC_decodedBGL = GCtricedBGL2OriginalBGL(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header_with_fid.bgl',
+                                                OUTPUT_dir_ref+'.HLA.markers', Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header.notGC.bgl')
+        # print(GC_decodedBGL)
+
+        if not self.__save_intermediates:
+            os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header_with_fid.bgl'))
+            os.system('rm {}'.format(OUTPUT_dir_ref+'.HLA.markers'))
+
+
+        from src.BGL2Alleles_for_merge import BGL2Alleles4Merge
+
+        DOUBLE_ALLELES = BGL2Alleles4Merge(GC_decodedBGL, Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_double.alleles', 'all')
+        # print(DOUBLE_ALLELES)
+
+        if not self.__save_intermediates:
+            os.system('rm {}'.format(GC_decodedBGL))
 
 
 
 
-            # Double2Single
+        # Double2Single
 
-            command = 'Rscript src/Double_alleles_decoder.R {} {}'.format(DOUBLE_ALLELES, self.IMP_Result_prefix+'.imputed.alleles') # single
-            # print(command)
-            if not os.system(command):
-                if not self.__save_intermediates:
-                    os.system('rm {}'.format(DOUBLE_ALLELES))
+        command = 'Rscript src/Double_alleles_decoder.R {} {}'.format(DOUBLE_ALLELES, OUT+'.imputed.alleles') # single
+        # print(command)
+        if not os.system(command):
+            if not self.__save_intermediates:
+                os.system('rm {}'.format(DOUBLE_ALLELES))
 
 
-            __RETURN__ = self.IMP_Result_prefix+'.imputed.alleles'
+        __RETURN__ = OUT+'.imputed.alleles'
 
 
         self.idx_process += 1
@@ -596,28 +521,31 @@ class HLA_Imputation_MM(object):
 
     def IMPUTATION_MM(self, _exonN, _overlap, MHC, _reference, _out, _hg):
 
-        ### (1) CONVERT_IN
-
-        [DOUBLED_PHASED_RESULT, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg, _overlap, _exonN)
-        # temp = self.CONVERT_IN(MHC, _reference, _out, _hg, _exonN)
-
-
-        ### (2) IMPUTE
-
-        self.raw_IMP_Reuslt = self.IMPUTE( MHC, _out, DOUBLED_PHASED_RESULT, REF_PHASED_VCF, _overlap, _exonN)
-        print("raw Imputed Reuslt : \n{}".format(self.raw_IMP_Reuslt))
-
-
-        # ### (3) CONVERT_OUT
+        # ### (1) CONVERT_IN
         #
-        # self.IMP_Result = self.CONVERT_OUT(MHC, _reference, _out, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK)
-        # print("\n\nImputation Result : {}".format(self.IMP_Result))
+        # [DOUBLED_PHASED_RESULT, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg, _overlap, _exonN)
+        # # temp = self.CONVERT_IN(MHC, _reference, _out, _hg, _exonN)
+        #
+        #
+        # ### (2) IMPUTE
+        #
+        # raw_IMP_Reuslt = self.IMPUTE( MHC, _out, DOUBLED_PHASED_RESULT, REF_PHASED_VCF, _overlap, _exonN)
+        # print("raw Imputed Reuslt : \n{}".format(raw_IMP_Reuslt)) # *.vcf
 
-        return 0
+        # [Temporary Hard-coding]
+        raw_IMP_Reuslt = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.MHC.exon2.3000.QC.doubled.imputation_out.vcf'
+
+
+        ### (3) CONVERT_OUT
+
+        self.IMP_Result = self.CONVERT_OUT(raw_IMP_Reuslt, _reference, _out, _overlap, _exonN)
+        print("\n\nImputation Result : {}".format(self.IMP_Result))
+
+        return self.IMP_Result
 
 
 
-    def getAccuracy(self, _IMT_Result, _answer, _out):
+    def getAccuracy(self, _IMT_Result, _answer, _out=None):
 
         if not _answer:
             return -1
