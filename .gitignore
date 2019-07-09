@@ -19,6 +19,7 @@ tests/
 *.pversion
 *.ipynb
 *.sh
+.vscode/
 
 plink.log
 .Rproj.user
