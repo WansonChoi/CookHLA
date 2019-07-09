@@ -14,85 +14,65 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 isClassI = {"A": True, "B": True, "C": True, "DPA1": False, "DPB1": False, "DQA1": False, "DQB1": False, "DRB1": False}
 
 # Patterns to use.
-p_HLA_2field = re.compile(r'^HLA_(\w+)_\d{4}')
+# p_HLA_2field = re.compile(r'^HLA_(\w+)_\d{4}')
 # p = re.compile(r'^([A-Za-z0-9_-]+)\s+(\w+)') # Frist two columns (ex. 'P pedigree' or 'rs969931 29602876', ... )
-p = re.compile(r'^(\S+)\s+(\S+)') # Frist two columns (ex. 'P pedigree' or 'rs969931 29602876', ... )
+# p = re.compile(r'^(\S+)\s+(\S+)') # Frist two columns (ex. 'P pedigree' or 'rs969931 29602876', ... )
 
 
-def Make_EXON234_Panel(__exonN__, infile, outfile, BEAGLE2LINKAGE, PLINK, __save_intermediates=False,
-                       f_only_HLA=True):
+def Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, PLINK, __save_intermediates=False):
 
 
-    if __exonN__ not in ['exon2', 'exon3', 'exon4']:
-        print(std_ERROR_MAIN_PROCESS_NAME + "Exon error.")
-        sys.exit()
-
-
-    REF_base = os.path.basename(outfile)
-    OUTPUT_dir = os.path.dirname(outfile)
-    OUTPUT_REF = os.path.join(OUTPUT_dir, REF_base)
-
-
-    print(std_MAIN_PROCESS_NAME + "Generating Reference Panel for {}".format(__exonN__.capitalize()))
-
-    if f_only_HLA:
-
-        # print("STEP1_Collect_SNP_HLA_DATA")
-
-        # In STEP1, New *.markers file will be used just next step.
-        command = "grep rs {} > {}".format(infile + ".markers", OUTPUT_REF+".STEP1_SNP.markers")
-        # print(command)
-        os.system(command)
-
-        command = "grep \'HLA_[A-Z]_[0-9][0-9][0-9][0-9]\' {} > {}".format(infile + ".markers", OUTPUT_REF+".STEP1_class1_4dit.markers")
-        # print(command)
-        os.system(command)
-
-        command = "grep \'HLA_[A-Z][A-Z][A-Z][0-9]_[0-9][0-9][0-9][0-9]\' {} > {}".format(infile + ".markers", OUTPUT_REF+".STEP1_class2_4dit.markers")
-        # print(command)
-        os.system(command)
-
-        command = 'cat {} {} {} > {}'.format(OUTPUT_REF+".STEP1_SNP.markers", OUTPUT_REF+".STEP1_class1_4dit.markers",
-                                             OUTPUT_REF+".STEP1_class2_4dit.markers", OUTPUT_REF+".STEP1_SNP_4dit.markers")
-        # print(command)
-        os.system(command)
-
-
-        # Remove
-        if not __save_intermediates:
-            os.system('rm {}'.format(OUTPUT_REF+".STEP1_SNP.markers"))
-            os.system('rm {}'.format(OUTPUT_REF+".STEP1_class1_4dit.markers"))
-            os.system('rm {}'.format(OUTPUT_REF+".STEP1_class2_4dit.markers"))
-
-    else:
-
-        # In case there is no need to filter out only rs_id alleles and HLA alleles.
-
-        command = 'cp {} {}'.format(infile + ".markers", OUTPUT_REF+".STEP1_SNP_4dit.markers")
-        print(command)
-        os.system(command)
+    # REF_base = os.path.basename(outfile)
+    # OUTPUT_dir = os.path.dirname(outfile)
+    # outfile = os.path.join(OUTPUT_dir, REF_base)
 
 
 
-    # print("STEP2_EXON234_MARKERS")
+    ### STEP1_Collect_SNP_HLA_DATA
 
-    # [outbgl, outmarker] = HLA2EXON234(OUTPUT_REF+".STEP1_SNP_4dit.markers",
-    #                                   infile + ".bgl.phased", OUTPUT_REF+".STEP2_exon234.bgl.phased",
-    #                                   infile + ".markers", OUTPUT_REF+".STEP2_exon234.markers")
+    # In STEP1, New *.markers file will be used just next step.
+    command = "grep rs {} > {}".format(infile + ".markers", outfile+".STEP1_SNP.markers")
+    # print(command)
+    os.system(command)
 
-    [outbgl, outmarker] = MakeExon234(__exonN__, OUTPUT_REF+".STEP1_SNP_4dit.markers",
-                                      infile + ".bgl.phased", OUTPUT_REF+".STEP2_exon234.bgl.phased",
-                                      infile + ".markers", OUTPUT_REF+".STEP2_exon234.markers")
+    command = "grep \'HLA_[A-Z]_[0-9][0-9][0-9][0-9]\' {} > {}".format(infile + ".markers", outfile+".STEP1_class1_4dit.markers")
+    # print(command)
+    os.system(command)
+
+    command = "grep \'HLA_[A-Z][A-Z][A-Z][0-9]_[0-9][0-9][0-9][0-9]\' {} > {}".format(infile + ".markers", outfile+".STEP1_class2_4dit.markers")
+    # print(command)
+    os.system(command)
+
+    command = 'cat {} {} {} > {}'.format(outfile+".STEP1_SNP.markers", outfile+".STEP1_class1_4dit.markers",
+                                         outfile+".STEP1_class2_4dit.markers", outfile+".STEP1_SNP_4dit.markers")
+    # print(command)
+    os.system(command)
+
 
     # Remove
     if not __save_intermediates:
-        os.system('rm {}'.format(OUTPUT_REF+".STEP1_SNP_4dit.markers"))
+        os.system('rm {}'.format(outfile+".STEP1_SNP.markers"))
+        os.system('rm {}'.format(outfile+".STEP1_class1_4dit.markers"))
+        os.system('rm {}'.format(outfile+".STEP1_class2_4dit.markers"))
 
 
-    # print("STEP3_SORT")
+
+
+    ### STEP2_EXON234_MARKERS
+
+    [outbgl, outmarker] = HLA2EXON234(outfile+".STEP1_SNP_4dit.markers",
+                                      infile + ".bgl.phased", outfile+".STEP2_exon234.bgl.phased",
+                                      infile + ".markers", outfile+".STEP2_exon234.markers")
+
+    # Remove
+    if not __save_intermediates:
+        os.system('rm {}'.format(outfile+".STEP1_SNP_4dit.markers"))
+
+
+    ### STEP3_SORT
 
     # Dispersing genomic positions of given marker file (*.markers)
-    refiend_outmarker = redefineBP(outmarker, OUTPUT_REF+".STEP3_refined.markers")
+    refiend_outmarker = redefineBP(outmarker, outfile+".STEP3_refined.markers")
     # print(refiend_outmarker)
 
 
@@ -119,7 +99,7 @@ def Make_EXON234_Panel(__exonN__, infile, outfile, BEAGLE2LINKAGE, PLINK, __save
 
 
 
-    # print("STEP_4_Make_plink_file")
+    ### STEP_4_Make_plink_file
 
     command = 'cat {} | {} {}'.format(sorted_outbgl, BEAGLE2LINKAGE, outfile + ".STEP4_tmp") # *.ped, *.dat (cf. 'java -jar' is included in 'BEAGLE2LINKAGE'.)
     # print(command)
@@ -160,8 +140,16 @@ def Make_EXON234_Panel(__exonN__, infile, outfile, BEAGLE2LINKAGE, PLINK, __save
         ["paste -d \'6  0 \'", "/dev/null", "/dev/null", outfile + ".STEP4_map.rsid", "/dev/null", "/dev/null",
          outfile + ".STEP4_map.bp", ">", outfile + ".map"]))
 
+    # os.system(' '.join(
+    #     ["paste -d \'   \'", outfile + ".STEP4_map.rsid", outfile + ".STEP4_map.bp", ">", outfile + ".refallele"]))
+
     os.system(' '.join(
-        ["paste -d \' \'", outfile + ".STEP4_map.rsid", outfile + ".STEP4_map.bp", ">", outfile + ".refallele"]))
+        ["paste -d \'   \'", outfile + ".STEP4_map.rsid", outfile + ".STEP4_map.allele1", ">", outfile + ".refallele"]))
+
+    """
+    (2019. 07. 09.)
+    To make '*.refallele' file, I think right part is supposed to be 'outfile + ".STEP4_map.allele1"' not 'outfile + ".STEP4_map.bp"'
+    """
 
 
     # bed, bim, fam files.
@@ -178,7 +166,8 @@ def Make_EXON234_Panel(__exonN__, infile, outfile, BEAGLE2LINKAGE, PLINK, __save
             os.system('rm {}'.format(outfile + ".STEP4_map.rsid"))
             os.system('rm {}'.format(outfile + ".STEP4_map.bp"))
             os.system('rm {}'.format(outfile + ".STEP4_map.allele1"))
-            os.system('rm {}'.format(outfile + ".{ped,map}"))
+            os.system('rm {}'.format(outfile + ".ped"))
+            os.system('rm {}'.format(outfile + ".map"))
             os.system('rm {}'.format(outfile + ".log"))
             os.system('rm {}'.format(outfile + ".refallele"))
 
@@ -325,96 +314,104 @@ def HLA2EXON234(markerchoicefile, inbgl, outbgl, inmarker, outmarker):
 
 
 
-def MakeExon234(__exonN__, markerchoicefile, inbgl, outbgl, inmarker, outmarker):
-
-
-
-    HLA_POSITION = {
-        'exon2': {'A': '30018647', 'C': '31347489', 'B': '31432578', 'DRB1': '32659998', 'DQA1': '32717189', 'DQB1': '32740687', 'DPA1': '33145518', 'DPB1': '33156558'},
-        'exon3': {'A': '30019161', 'C': '31346966', 'B': '31432060', 'DRB1': '32657452', 'DQA1': '32717867', 'DQB1': '32737862', 'DPA1': '33144914', 'DPB1': '33160845'},
-        'exon4': {'A': '30020015', 'C': '31346103', 'B': '31431210'}
-    }
-
-
-
-    ### Obtaining marker labels from sorted *.markers file(`sort_markers`)
-
-    selectMarkers = []
-    with open(markerchoicefile) as fin:
-        selectMarkers = [p.match(string=l).group(1) for l in fin]
-
-    # print(selectMarkers)
-
-
-    ## Changing rows for exon N in beagle file.
-
-    with open(inbgl) as pf, open(outbgl, 'w') as of:
-        for l in pf:
-
-            m = p.match(l)
-            header = [m.group(1), m.group(2)]
-
-            if header[0] == "M" and header[1] not in selectMarkers:
-                # Excluding out 2-digit HLA alleles or Bizarre markers.
-                continue
-
-
-            m2 = p_HLA_2field.match(header[1])
-
-            if m2:
-
-                hla = m2.group(1)
-
-                if __exonN__ == 'exon4' and not isClassI[hla]:
-                    # new_line = l
-                    continue
-                else:
-                    # HLA alleles (with 4-digit(2-field))
-                    header2 = ' '.join([header[0], header[1]+'_{}'.format(__exonN__)])
-                    new_line = p.sub(repl=header2, string=l)
-                    # body = p.sub(repl='', string=l)
-                    # new_line = header2 + body
-
-                of.write(new_line)
-
-            else:
-                # Normal SNPs (ex. rs969931)
-                of.write(l)
-
-
-    ### Changin rows for exon N in markers file(*.markers)
-    with open(inmarker) as mf, open(outmarker, 'w') as of:
-        for l in mf:
-
-            m = p.match(l)
-            rsid_bp = [m.group(1), m.group(2)]
-            # print(rsid_bp)
-
-            if rsid_bp[0] not in selectMarkers:
-                continue
-
-
-            m2 = p_HLA_2field.match(rsid_bp[0])
-
-            if m2:
-                hla = m2.group(1)
-
-                if __exonN__ == 'exon4' and not isClassI[hla]:
-                    continue
-                else:
-                    new_marker_name = rsid_bp[0]+'_{}'.format(__exonN__)
-                    new_bp = HLA_POSITION[__exonN__][hla]
-
-                    new_line = p.sub(repl=' '.join([new_marker_name, new_bp]), string=l)
-                    # print("Before : {}".format(l))
-                    # print("After : {}".format(new_line))
-
-                    of.write(new_line)
-            else:
-                of.write(l)
-
-
-    return [outbgl, outmarker]
+# def MakeExon234(__exonN__, markerchoicefile, inbgl, outbgl, inmarker, outmarker):
+#
+#
+#     """
+#
+#     - Created by wschoi.
+#     - Enhacned version of 'HLA2EXON234.py'
+#
+#     """
+#
+#
+#
+#     HLA_POSITION = {
+#         'exon2': {'A': '30018647', 'C': '31347489', 'B': '31432578', 'DRB1': '32659998', 'DQA1': '32717189', 'DQB1': '32740687', 'DPA1': '33145518', 'DPB1': '33156558'},
+#         'exon3': {'A': '30019161', 'C': '31346966', 'B': '31432060', 'DRB1': '32657452', 'DQA1': '32717867', 'DQB1': '32737862', 'DPA1': '33144914', 'DPB1': '33160845'},
+#         'exon4': {'A': '30020015', 'C': '31346103', 'B': '31431210'}
+#     }
+#
+#
+#
+#     ### Obtaining marker labels from sorted *.markers file(`sort_markers`)
+#
+#     selectMarkers = []
+#     with open(markerchoicefile) as fin:
+#         selectMarkers = [p.match(string=l).group(1) for l in fin]
+#
+#     # print(selectMarkers)
+#
+#
+#     ## Changing rows for exon N in beagle file.
+#
+#     with open(inbgl) as pf, open(outbgl, 'w') as of:
+#         for l in pf:
+#
+#             m = p.match(l)
+#             header = [m.group(1), m.group(2)]
+#
+#             if header[0] == "M" and header[1] not in selectMarkers:
+#                 # Excluding out 2-digit HLA alleles or Bizarre markers.
+#                 continue
+#
+#
+#             m2 = p_HLA_2field.match(header[1])
+#
+#             if m2:
+#
+#                 hla = m2.group(1)
+#
+#                 if __exonN__ == 'exon4' and not isClassI[hla]:
+#                     # new_line = l
+#                     continue
+#                 else:
+#                     # HLA alleles (with 4-digit(2-field))
+#                     header2 = ' '.join([header[0], header[1]+'_{}'.format(__exonN__)])
+#                     new_line = p.sub(repl=header2, string=l)
+#                     # body = p.sub(repl='', string=l)
+#                     # new_line = header2 + body
+#
+#                 of.write(new_line)
+#
+#             else:
+#                 # Normal SNPs (ex. rs969931)
+#                 of.write(l)
+#
+#
+#     ### Changin rows for exon N in markers file(*.markers)
+#     with open(inmarker) as mf, open(outmarker, 'w') as of:
+#         for l in mf:
+#
+#             m = p.match(l)
+#             rsid_bp = [m.group(1), m.group(2)]
+#             # print(rsid_bp)
+#
+#             if rsid_bp[0] not in selectMarkers:
+#                 continue
+#
+#
+#             m2 = p_HLA_2field.match(rsid_bp[0])
+#
+#             if m2:
+#                 hla = m2.group(1)
+#
+#                 if __exonN__ == 'exon4' and not isClassI[hla]:
+#                     continue
+#                 else:
+#                     new_marker_name = rsid_bp[0]+'_{}'.format(__exonN__)
+#                     new_bp = HLA_POSITION[__exonN__][hla]
+#
+#                     new_line = p.sub(repl=' '.join([new_marker_name, new_bp]), string=l)
+#                     # print("Before : {}".format(l))
+#                     # print("After : {}".format(new_line))
+#
+#                     of.write(new_line)
+#             else:
+#                 of.write(l)
+#
+#
+#     return [outbgl, outmarker]
 
 
 if __name__ == '__main__':
