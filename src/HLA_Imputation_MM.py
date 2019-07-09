@@ -7,6 +7,7 @@ from src.GC_tricked_bgl2ori_bgl import GCtricedBGL2OriginalBGL
 from src.RUN_Bash import RUN_Bash
 from src.measureAccuracy import measureAccuracy
 from src.redefineBPv1BH import redefineBP
+from src.HLA_MultipleRefs import HLA_MultipleRefs
 
 
 
@@ -40,7 +41,7 @@ class HLA_Imputation_MM(object):
 
         # Prefixes
         self.OUTPUT_dir = os.path.dirname(_out)
-        # self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
+        self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
         self.IMP_Result_prefix = _out # when using only multiple markers.
 
         # Result
@@ -65,7 +66,10 @@ class HLA_Imputation_MM(object):
 
 
 
+        ###### < Reference panel for Exon 2, 3, 4 > ######
 
+        multiple_panels = HLA_MultipleRefs(_reference, self.OUTPUT_dir_ref, _hg, self.BEAGLE2LINKAGE, self.PLINK, _MultP=_MultP)
+        dict_ExonN_Panel = multiple_panels.ExonN_Panel
 
 
         ###### < Main - 'CONVERT_IN', 'IMPUTE', 'CONVERT_OUT' > ######
@@ -76,7 +80,7 @@ class HLA_Imputation_MM(object):
 
             for _exonN in __EXON__:
                 for _overlap in __overlap__:
-                    self.dict_IMP_Result[_exonN][_overlap] = self.IMPUTATION_MM(_exonN, _overlap, MHC, _reference, _out, _hg)
+                    self.dict_IMP_Result[_exonN][_overlap] = self.IMPUTATION_MM(_exonN, _overlap, MHC, dict_ExonN_Panel[_exonN], _out, _hg)
 
         else:
             ## Multiprocessing
@@ -95,7 +99,7 @@ class HLA_Imputation_MM(object):
 
         __MHC_exonN__ = MHC+'.{}.{}'.format(_exonN, _overlap)
         __out_exonN__ = _out+'.{}.{}'.format(_exonN, _overlap)
-        __reference_exonN__ = os.path.basename(_reference)+'.{}.{}'.format(_exonN, _overlap)
+        __reference_exonN__ = os.path.basename(_reference)
         OUTPUT_dir_ref_exonN = join(self.OUTPUT_dir, __reference_exonN__)
 
 
@@ -244,7 +248,7 @@ class HLA_Imputation_MM(object):
 
 
 
-    def IMPUTE(self, _out, MHC, _DOUBLED_PHASED_RESULT, _REF_PHASED_VCF, _overlap, _exonN):
+    def IMPUTE(self, MHC, _out, _DOUBLED_PHASED_RESULT, _REF_PHASED_VCF, _overlap, _exonN):
 
 
         print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
@@ -282,7 +286,7 @@ class HLA_Imputation_MM(object):
 
 
 
-    def CONVERT_OUT(self, MHC, _reference, _out, _VCF2BEAGLE, _BEAGLE2LINKAGE, _PLINK, _overlap=None, raw_IMP_Result=None):
+    def CONVERT_OUT(self, MHC, _reference, _out, _overlap):
 
 
         if not self.f_useMultipleMarkers:
@@ -600,7 +604,7 @@ class HLA_Imputation_MM(object):
 
         ### (2) IMPUTE
 
-        self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC, DOUBLED_PHASED_RESULT, REF_PHASED_VCF, _overlap, _exonN)
+        self.raw_IMP_Reuslt = self.IMPUTE( MHC, _out, DOUBLED_PHASED_RESULT, REF_PHASED_VCF, _overlap, _exonN)
         print("raw Imputed Reuslt : \n{}".format(self.raw_IMP_Reuslt))
 
 
