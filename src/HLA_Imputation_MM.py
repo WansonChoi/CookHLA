@@ -190,7 +190,7 @@ class HLA_Imputation_MM(object):
         if not self.__save_intermediates:
             RUN_Bash('rm {}'.format(MHC + '.QC.nopheno.ped'))
             RUN_Bash('rm {}'.format(MHC + MHC + '.QC.dat'))
-
+            RUN_Bash('rm {}'.format(join(self.OUTPUT_dir, 'selected_snp.txt')))
 
 
 
@@ -247,7 +247,7 @@ class HLA_Imputation_MM(object):
         if not self.__save_intermediates:
             RUN_Bash('rm {}'.format(__MHC_exonN__ + '.QC.pre.bgl.phased'))
             RUN_Bash('rm {}'.format(__MHC_exonN__ + '.QC.pre.markers'))
-            RUN_Bash('rm {}'.format(join(self.OUTPUT_dir, 'selected_snp.txt')))
+            # RUN_Bash('rm {}'.format(join(self.OUTPUT_dir, 'selected_snp.txt')))
 
 
 
@@ -593,7 +593,7 @@ class HLA_Imputation_MM(object):
         RUN_Bash('sed "s%CHROM%#CHROM%" {} > {}'.format(PHASED_RESULT + '.Doubled.pre.vcf', PHASED_RESULT + '.Doubled.pre2.vcf'))
 
 
-        RUN_Bash('cat {} {} > {}'.format(PHASED_RESULT + '.vcf.header1', PHASED_RESULT + '.Doubled.pre2.vcf', MHC+'.QC.phasing_out_doubled.vcf'))
+        RUN_Bash('cat {} {} > {}'.format(PHASED_RESULT + '.vcf.header1', PHASED_RESULT + '.Doubled.pre2.vcf', MHC+'.QC.phasing_out_Doubled.vcf'))
 
         if not self.__save_intermediates:
             # os.system(' '.join(['rm', PHASED_RESULT + '.vcf']))
