@@ -54,6 +54,9 @@ class HLA_Imputation_MM(object):
         self.dict_IMP_Result = {_exonN: {_overlap: None} for _exonN in __EXON__ for _overlap in __overlap__}
         self.accuracy = {_exonN: {_overlap: None} for _exonN in __EXON__ for _overlap in __overlap__}
 
+        self.dict_DOUBLED_PHASED_RESULT = {_exonN: None for _exonN in __EXON__}
+        self.dict_REF_PHASED_VCF = {_exonN: None for _exonN in __EXON__}
+
         # Dependencies
         self.LINKAGE2BEAGLE = _LINKAGE2BEAGLE
         self.BEAGLE2LINKAGE = _BEAGLE2LINKAGE
@@ -65,71 +68,106 @@ class HLA_Imputation_MM(object):
         # created in 'CONVERT_IN'
         # self.refined_REF_markers = None # used in 'CONVERT_OUT'
         # self.refined_Genetic_Map = None # used in 'IMPUTE'
-        self.GCchangeBGL = None # used in 'CONVERT_OUT'
+        # self.GCchangeBGL = None # used in 'CONVERT_OUT'
 
 
 
 
-        # ###### < Reference panel for Exon 2, 3, 4 > ######
-        #
-        # multiple_panels = HLA_MultipleRefs(_reference, self.OUTPUT_dir_ref, _hg, self.BEAGLE2LINKAGE, self.PLINK, _MultP=_MultP)
-        # self.dict_ExonN_Panel = multiple_panels.ExonN_Panel
-        #
-        # # [Temporary Hard-coding]
-        # # self.dict_ExonN_Panel['exon2'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/T1DGC_REF.exon2'
-        # # print("Hard coded exon2 panel : \n{}".format(self.dict_ExonN_Panel['exon2']))
-        #
-        #
-        # ###### < Main - 'CONVERT_IN', 'IMPUTE', 'CONVERT_OUT' > ######
-        #
-        # if _MultP == 1:
-        #
-        #     ## Main iteration over 'overlap'
-        #     for _exonN in __EXON__:
-        #
-        #         ### (1) CONVERT_IN
-        #
-        #         [DOUBLED_PHASED_RESULT, REF_PHASED_VCF] = self.CONVERT_IN(MHC, self.dict_ExonN_Panel[_exonN], _out, _hg, _exonN)
-        #
-        #
-        #         for _overlap in __overlap__:
-        #             self.dict_IMP_Result[_exonN][_overlap] = self.IMPUTATION_MM(DOUBLED_PHASED_RESULT, REF_PHASED_VCF,
-        #                                                                         _exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg)
-        #
-        #
-        # else:
-        #
-        #     ## Main iteration over 'overlap'
-        #     for _exonN in __EXON__:
-        #
-        #         ### (1) CONVERT_IN
-        #
-        #         [DOUBLED_PHASED_RESULT, REF_PHASED_VCF] = self.CONVERT_IN(MHC, self.dict_ExonN_Panel[_exonN], _out, _hg, _exonN)
-        #
-        #
-        #         ## Multiprocessing (over 'overlap')
-        #         pool = mp.Pool(processes=_MultP)
-        #         dict_Pool = {_overlap: pool.apply_async(self.IMPUTATION_MM, (DOUBLED_PHASED_RESULT, REF_PHASED_VCF, _exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg))
-        #                      for _overlap in __overlap__}
-        #
-        #         pool.close()
-        #         pool.join()
-        #
-        #         for _overlap in __overlap__:
-        #             self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_overlap].get()
-        #             print("Imputation Result({}, {}) : {}".format(_exonN, _overlap, self.dict_IMP_Result[_exonN][_overlap]))
+        ###### < Reference panel for Exon 2, 3, 4 > ######
+
+        multiple_panels = HLA_MultipleRefs(_reference, self.OUTPUT_dir_ref, _hg, self.BEAGLE2LINKAGE, self.PLINK, _MultP=_MultP)
+        self.dict_ExonN_Panel = multiple_panels.ExonN_Panel
+
+        # [Temporary Hard-coding]
+        # self.dict_ExonN_Panel['exon2'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/T1DGC_REF.exon2'
+        # self.dict_ExonN_Panel['exon3'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/T1DGC_REF.exon3'
+        # self.dict_ExonN_Panel['exon4'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/T1DGC_REF.exon4'
+
+
+
+        ###### < Main - 'IMPUTE', 'CONVERT_OUT' > ######
+
+        if _MultP == 1:
+
+            ## Main iteration over 'overlap'
+            for _exonN in __EXON__:
+
+                ### (1) CONVERT_IN
+
+                [DOUBLED_PHASED_RESULT, REF_PHASED_VCF] = self.CONVERT_IN(MHC, self.dict_ExonN_Panel[_exonN], _out, _hg, _exonN)
+
+
+                for _overlap in __overlap__:
+                    self.dict_IMP_Result[_exonN][_overlap] = self.IMPUTATION_MM(DOUBLED_PHASED_RESULT, REF_PHASED_VCF,
+                                                                                _exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg)
+
+
+        else:
+
+            ###### < 'CONVERT_IN' in parallel. > ######
+
+            """
+            - In Multiple Marker technique, Pre-phasing in 'CONVERT_IN' block takes tremendous time.
+            - working process executed by multiprocessing can't call multiprocessing further.
+            - 'CONVERT_IN' is independent to 'IMPUTE' block.
+
+            """
+
+            ### (1) CONVERT_IN (by exon 2,3,4)
+
+            pool_prephasing = mp.Pool(processes=_MultP)
+            dict_Pool_prephasing = {_exonN: pool_prephasing.apply_async(self.CONVERT_IN, (MHC, self.dict_ExonN_Panel[_exonN], _out, _hg, _exonN))
+                                    for _exonN in __EXON__}
+
+            pool_prephasing.close()
+            pool_prephasing.join()
+
+
+            for _exonN in __EXON__:
+
+                [a, b] = dict_Pool_prephasing[_exonN].get()
+                self.dict_DOUBLED_PHASED_RESULT[_exonN] = a
+                self.dict_REF_PHASED_VCF[_exonN] = b
+
+            # print("DOUBLED_PHASED_RESULT :\n{}".format(self.dict_DOUBLED_PHASED_RESULT))
+            # print("REF_PHASED_VCF :\n{}".format(self.dict_REF_PHASED_VCF))
+
+            # [Temporary Hardcoding - 'CONVERT_IN' in parallel.
+            # self.dict_DOUBLED_PHASED_RESULT['exon2'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/set_aside/_3_HM_CEU_T1DGC_REF.MHC.exon2.QC.phasing_out_doubled.vcf'
+            # self.dict_REF_PHASED_VCF['exon2'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/T1DGC_REF.exon2.phased.vcf'
+            #
+            # self.dict_DOUBLED_PHASED_RESULT['exon3'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/set_aside/_3_HM_CEU_T1DGC_REF.MHC.exon3.QC.phasing_out_doubled.vcf'
+            # self.dict_REF_PHASED_VCF['exon3'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/T1DGC_REF.exon3.phased.vcf'
+            #
+            # self.dict_DOUBLED_PHASED_RESULT['exon4'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/set_aside/_3_HM_CEU_T1DGC_REF.MHC.exon4.QC.phasing_out_doubled.vcf'
+            # self.dict_REF_PHASED_VCF['exon4'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/T1DGC_REF.exon4.phased.vcf'
+
+
+            ### Main iteration
+            for _exonN in __EXON__:
+
+                # Multiprocessing (over 'overlap')
+                pool = mp.Pool(processes=_MultP)
+                dict_Pool = {_overlap: pool.apply_async(self.IMPUTATION_MM, (self.dict_DOUBLED_PHASED_RESULT[_exonN], self.dict_REF_PHASED_VCF[_exonN], _exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg))
+                             for _overlap in __overlap__}
+
+                pool.close()
+                pool.join()
+
+                for _overlap in __overlap__:
+                    self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_overlap].get()
 
 
         # [Temporary Hardcoding - measuring accuracy]
-        self.dict_IMP_Result['exon2'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.3000.imputed.alleles'
-        self.dict_IMP_Result['exon2'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.4000.imputed.alleles'
-        self.dict_IMP_Result['exon2'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.5000.imputed.alleles'
-        self.dict_IMP_Result['exon3'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.3000.imputed.alleles'
-        self.dict_IMP_Result['exon3'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.4000.imputed.alleles'
-        self.dict_IMP_Result['exon3'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.5000.imputed.alleles'
-        self.dict_IMP_Result['exon4'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.3000.imputed.alleles'
-        self.dict_IMP_Result['exon4'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.4000.imputed.alleles'
-        self.dict_IMP_Result['exon4'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.5000.imputed.alleles'
+        # self.dict_IMP_Result['exon2'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.3000.imputed.alleles'
+        # self.dict_IMP_Result['exon2'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.4000.imputed.alleles'
+        # self.dict_IMP_Result['exon2'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.5000.imputed.alleles'
+        # self.dict_IMP_Result['exon3'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.3000.imputed.alleles'
+        # self.dict_IMP_Result['exon3'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.4000.imputed.alleles'
+        # self.dict_IMP_Result['exon3'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.5000.imputed.alleles'
+        # self.dict_IMP_Result['exon4'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.3000.imputed.alleles'
+        # self.dict_IMP_Result['exon4'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.4000.imputed.alleles'
+        # self.dict_IMP_Result['exon4'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.5000.imputed.alleles'
 
 
         # Getting Accuracy
@@ -137,12 +175,23 @@ class HLA_Imputation_MM(object):
 
             for _exonN in __EXON__:
                 for _overlap in __overlap__:
+                    print("Imputation Result({}, {}) : {}".format(_exonN, _overlap, self.dict_IMP_Result[_exonN][_overlap]))
                     self.accuracy[_exonN][_overlap] = measureAccuracy(_answer, self.dict_IMP_Result[_exonN][_overlap], 'all', _out+'.{}.{}.imputed.alleles.accuracy'.format(_exonN, _overlap))
 
             self.getPosteriorAccuracy(self.accuracy, _out+'.imputed.alleles.accuracy.avg')
 
         else:
             print(std_MAIN_PROCESS_NAME + "No answer file to calculate accuracy.")
+
+
+
+
+        ### General Removal
+        if not self.__save_intermediates:
+            RUN_Bash('rm {}'.format(MHC + '.QC.nopheno.ped'))
+            RUN_Bash('rm {}'.format(MHC + MHC + '.QC.dat'))
+
+
 
 
 
@@ -162,8 +211,8 @@ class HLA_Imputation_MM(object):
             MHC + '.QC.nopheno.ped', MHC + '.QC.dat', __MHC_exonN__ + '.QC.bgl', __out_exonN__+'.bgl.log'))
 
         if not self.__save_intermediates:
-            os.system('rm {}'.format(MHC + '.QC.nopheno.ped'))
-            os.system('rm {}'.format(MHC + '.QC.dat'))
+            # os.system('rm {}'.format(MHC + '.QC.nopheno.ped'))
+            # os.system('rm {}'.format(MHC + '.QC.dat'))
             os.system('rm {}'.format(__out_exonN__+'.bgl.log'))
 
 
@@ -283,10 +332,10 @@ class HLA_Imputation_MM(object):
         ### Phasing & Doubling (only on Target Sample.)
 
         # Phasing
-        # PHASED_RESULT = self.Phasing(__MHC_exonN__, MHC_QC_VCF_exonN, REF_PHASED_VCF)
+        PHASED_RESULT = self.Phasing(__MHC_exonN__, MHC_QC_VCF_exonN, REF_PHASED_VCF)
 
         # [Temporary Hardcoding for Phased Result]
-        PHASED_RESULT = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.MHC.exon2.QC.phasing_out_not_double"
+        # PHASED_RESULT = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.MHC.exon2.QC.phasing_out_not_double"
         # print("[Temporary Hardcoding]Phased Result:\n{}".format(PHASED_RESULT))
 
 
