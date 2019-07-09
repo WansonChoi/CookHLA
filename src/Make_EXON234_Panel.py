@@ -144,7 +144,7 @@ def Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, PLINK, __save_intermedia
     #     ["paste -d \'   \'", outfile + ".STEP4_map.rsid", outfile + ".STEP4_map.bp", ">", outfile + ".refallele"]))
 
     os.system(' '.join(
-        ["paste -d \'   \'", outfile + ".STEP4_map.rsid", outfile + ".STEP4_map.allele1", ">", outfile + ".refallele"]))
+        ["paste -d \' \'", outfile + ".STEP4_map.rsid", outfile + ".STEP4_map.allele1", ">", outfile + ".refallele"]))
 
     """
     (2019. 07. 09.)
