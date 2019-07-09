@@ -71,11 +71,14 @@ class HLA_MultipleRefs():
             ## Multiprocessing
             pool = mp.Pool(processes=_MultP)
 
-            self.ExonN_Panel = {_exonN: pool.apply_async(
+            dict_Pool = {_exonN: pool.apply_async(
                 self.Make_ExonN_Panel, (_exonN, self.EXON234_Panel, _out+'.{}'.format(_exonN))
             ) for _exonN in __EXON__}
 
+            pool.close()
+            pool.join()
 
+            self.ExonN_Panel = {_exonN_: _OUT.get() for _exonN_, _OUT in dict_Pool.items()}
 
 
 
