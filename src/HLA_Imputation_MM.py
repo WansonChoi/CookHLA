@@ -2,6 +2,7 @@
 
 import os, sys, re
 from os.path import join
+import multiprocessing as mp
 
 from src.GC_tricked_bgl2ori_bgl import GCtricedBGL2OriginalBGL
 from src.RUN_Bash import RUN_Bash
@@ -23,8 +24,8 @@ HLA_names_gen = ["A", "C", "B", "DRB1", "DQA1", "DQB1", "DPA1", "DPB1"]
 # __EXON__ = ['exon2', 'exon3', 'exon4']
 __EXON__ = ['exon2']
 
-# __overlap__ = [3000, 4000, 5000]
-__overlap__ = [3000]
+__overlap__ = [3000, 4000, 5000]
+# __overlap__ = [3000]
 
 
 
@@ -68,11 +69,11 @@ class HLA_Imputation_MM(object):
 
         ###### < Reference panel for Exon 2, 3, 4 > ######
 
-        # multiple_panels = HLA_MultipleRefs(_reference, self.OUTPUT_dir_ref, _hg, self.BEAGLE2LINKAGE, self.PLINK, _MultP=_MultP)
-        # self.dict_ExonN_Panel = multiple_panels.ExonN_Panel
+        multiple_panels = HLA_MultipleRefs(_reference, self.OUTPUT_dir_ref, _hg, self.BEAGLE2LINKAGE, self.PLINK, _MultP=_MultP)
+        self.dict_ExonN_Panel = multiple_panels.ExonN_Panel
 
         # [Temporary Hard-coding]
-        self.dict_ExonN_Panel['exon2'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/T1DGC_REF.exon2'
+        # self.dict_ExonN_Panel['exon2'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/T1DGC_REF.exon2'
         # print("Hard coded exon2 panel : \n{}".format(self.dict_ExonN_Panel['exon2']))
 
 
@@ -80,33 +81,61 @@ class HLA_Imputation_MM(object):
 
         if _MultP == 1:
 
-            ## Single Core (No Multiprocessing)
-
+            ## Main iteration over 'overlap'
             for _exonN in __EXON__:
-                for _overlap in __overlap__:
-                    self.dict_IMP_Result[_exonN][_overlap] = self.IMPUTATION_MM(_exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg)
+
+                ### (1) CONVERT_IN
+
+                [DOUBLED_PHASED_RESULT, REF_PHASED_VCF] = self.CONVERT_IN(MHC, self.dict_ExonN_Panel[_exonN], _out, _hg, _exonN)
 
 
-            # Getting Accuracy
-            for _exonN in __EXON__:
                 for _overlap in __overlap__:
-                    self.accuracy[_exonN][_overlap] = self.getAccuracy(self.dict_IMP_Result[_exonN][_overlap], _answer, _out+'.{}.{}.imputed.alleles.accuracy'.format(_exonN, _overlap))
+                    self.dict_IMP_Result[_exonN][_overlap] = self.IMPUTATION_MM(DOUBLED_PHASED_RESULT, REF_PHASED_VCF,
+                                                                                _exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg)
 
 
         else:
-            ## Multiprocessing
 
-            # Under construction.
+            ## Main iteration over 'overlap'
+            for _exonN in __EXON__:
 
-            pass
+                ### (1) CONVERT_IN
+
+                [DOUBLED_PHASED_RESULT, REF_PHASED_VCF] = self.CONVERT_IN(MHC, self.dict_ExonN_Panel[_exonN], _out, _hg, _exonN)
+
+
+                ## Multiprocessing (over 'overlap')
+                pool = mp.Pool(processes=_MultP)
+                dict_Pool = {_overlap: pool.apply_async(self.IMPUTATION_MM, (DOUBLED_PHASED_RESULT, REF_PHASED_VCF, _exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg))
+                             for _overlap in __overlap__}
+
+                pool.close()
+                pool.join()
+
+                for _overlap in __overlap__:
+                    self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_overlap].get()
+                    print("Imputation Result({}, {}) : {}".format(_exonN, _overlap, self.dict_IMP_Result[_exonN][_overlap]))
 
 
 
+        # Getting Accuracy
+        if _answer:
 
-    def CONVERT_IN(self, MHC, _reference, _out, _hg, _overlap, _exonN):
+            for _exonN in __EXON__:
+                for _overlap in __overlap__:
+                    self.accuracy[_exonN][_overlap] = measureAccuracy(self.dict_IMP_Result[_exonN][_overlap], _answer, _out+'.{}.{}.imputed.alleles.accuracy'.format(_exonN, _overlap))
 
-        __MHC_exonN__ = MHC+'.{}.{}'.format(_exonN, _overlap)
-        __out_exonN__ = _out+'.{}.{}'.format(_exonN, _overlap)
+            self.getPosteriorAccuracy(self.accuracy)
+
+        else:
+            print(std_MAIN_PROCESS_NAME + "No answer file to calculate accuracy.")
+
+
+
+    def CONVERT_IN(self, MHC, _reference, _out, _hg, _exonN):
+
+        __MHC_exonN__ = MHC+'.{}'.format(_exonN)
+        __out_exonN__ = _out+'.{}'.format(_exonN)
         __reference_exonN__ = os.path.basename(_reference)
         OUTPUT_dir_ref_exonN = join(self.OUTPUT_dir, __reference_exonN__)
 
@@ -240,11 +269,11 @@ class HLA_Imputation_MM(object):
         ### Phasing & Doubling (only on Target Sample.)
 
         # Phasing
-        # PHASED_RESULT = self.Phasing(__MHC_exonN__, MHC_QC_VCF_exonN, REF_PHASED_VCF)
+        PHASED_RESULT = self.Phasing(__MHC_exonN__, MHC_QC_VCF_exonN, REF_PHASED_VCF)
 
         # [Temporary Hardcoding for Phased Result]
-        PHASED_RESULT = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.MHC.{}.{}.QC.phasing_out_not_double".format(_exonN, _overlap)
-        print("[Temporary Hardcoding]Phased Result:\n{}".format(PHASED_RESULT))
+        # PHASED_RESULT = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.MHC.{}.{}.QC.phasing_out_not_double".format(_exonN, _overlap)
+        # print("[Temporary Hardcoding]Phased Result:\n{}".format(PHASED_RESULT))
 
 
         # Doubling
@@ -417,7 +446,7 @@ class HLA_Imputation_MM(object):
 
         if not self.__save_intermediates:
             os.system('rm {}'.format(Prefix_raw_IMP_Result+'.DP_MIN_Beagle_HLA_all_with_header_with_fid.bgl'))
-            os.system('rm {}'.format(OUTPUT_dir_ref+'.HLA.markers'))
+            # os.system('rm {}'.format(OUTPUT_dir_ref+'.HLA.markers')) # This file must be shared between overlap 3000, 4000, 5000 of exon_N
 
 
         from src.BGL2Alleles_for_merge import BGL2Alleles4Merge
@@ -519,35 +548,26 @@ class HLA_Imputation_MM(object):
 
 
 
-    def IMPUTATION_MM(self, _exonN, _overlap, MHC, _reference, _out, _hg):
+    def IMPUTATION_MM(self, _DOUBLED_PHASED_RESULT, _REF_PHASED_VCF, _exonN, _overlap, MHC, _reference, _out, _hg):
 
-        # ### (1) CONVERT_IN
-        #
-        # [DOUBLED_PHASED_RESULT, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg, _overlap, _exonN)
-        # # temp = self.CONVERT_IN(MHC, _reference, _out, _hg, _exonN)
-        #
-        #
-        # ### (2) IMPUTE
-        #
-        # raw_IMP_Reuslt = self.IMPUTE( MHC, _out, DOUBLED_PHASED_RESULT, REF_PHASED_VCF, _overlap, _exonN)
+
+        ### (2) IMPUTE
+
+        raw_IMP_Reuslt = self.IMPUTE(MHC, _out, _DOUBLED_PHASED_RESULT, _REF_PHASED_VCF, _overlap, _exonN)
         # print("raw Imputed Reuslt : \n{}".format(raw_IMP_Reuslt)) # *.vcf
 
         # [Temporary Hard-coding]
-        raw_IMP_Reuslt = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.MHC.exon2.3000.QC.doubled.imputation_out.vcf'
+        # raw_IMP_Reuslt = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.MHC.exon2.3000.QC.doubled.imputation_out.vcf'
 
 
         ### (3) CONVERT_OUT
 
         self.IMP_Result = self.CONVERT_OUT(raw_IMP_Reuslt, _reference, _out, _overlap, _exonN)
-        print("\n\nImputation Result : {}".format(self.IMP_Result))
 
         return self.IMP_Result
 
 
 
-    def getAccuracy(self, _IMT_Result, _answer, _out=None):
+    def getPosteriorAccuracy(self, _accuracy):
 
-        if not _answer:
-            return -1
-        else:
-            return measureAccuracy(_answer, _IMT_Result, 'all', _out)
+        return 0
