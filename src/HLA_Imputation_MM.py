@@ -144,18 +144,20 @@ class HLA_Imputation_MM(object):
 
 
             ### Main iteration
+
+            pool = mp.Pool(processes=_MultP*3)
+
+            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTATION_MM, (self.dict_DOUBLED_PHASED_RESULT[_exonN], self.dict_REF_PHASED_VCF[_exonN], _exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg))
+                                  for _overlap in __overlap__}
+                         for _exonN in __EXON__}
+
+            pool.close()
+            pool.join()
+
+
             for _exonN in __EXON__:
-
-                # Multiprocessing (over 'overlap')
-                pool = mp.Pool(processes=_MultP)
-                dict_Pool = {_overlap: pool.apply_async(self.IMPUTATION_MM, (self.dict_DOUBLED_PHASED_RESULT[_exonN], self.dict_REF_PHASED_VCF[_exonN], _exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg))
-                             for _overlap in __overlap__}
-
-                pool.close()
-                pool.join()
-
                 for _overlap in __overlap__:
-                    self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_overlap].get()
+                    self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_exonN][_overlap].get()
 
 
         # [Temporary Hardcoding - measuring accuracy]
@@ -189,7 +191,7 @@ class HLA_Imputation_MM(object):
         ### General Removal
         if not self.__save_intermediates:
             RUN_Bash('rm {}'.format(MHC + '.QC.nopheno.ped'))
-            RUN_Bash('rm {}'.format(MHC + MHC + '.QC.dat'))
+            RUN_Bash('rm {}'.format(MHC + '.QC.dat'))
             RUN_Bash('rm {}'.format(join(self.OUTPUT_dir, 'selected_snp.txt')))
 
 
