@@ -110,7 +110,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     if _Average_Erate and _AdaptiveGeneticMap:
 
         if os.path.exists(_Average_Erate) and os.path.exists(_AdaptiveGeneticMap):
-            __use_GeneticMap = True
+            __use_GeneticMap = True     # Using Adaptive Genetic Map.
         else:
             if not os.path.exists(_Average_Erate):
                 print(std_ERROR_MAIN_PROCESS_NAME + "The file ('{}') doesn't exist.\n"
@@ -400,14 +400,21 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
 
     if __use_Multiple_Markers and __use_GeneticMap:
+
         # Original CookHLA
-        pass
+        __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
+                                           LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
+                                           _answer=_answer, f_save_intermediates=__save_intermediates, _MultP=_MultP)
+
     elif __use_Multiple_Markers and not __use_GeneticMap:
+
         # Only Multiple Markers (for Performance Test.)
-        __IMPUTE_OUT__ = HLA_Imputation_MM(idx_process, MHC, _reference, _out, _hg, LINKAGE2BEAGLE, BEAGLE2LINKAGE,
-                                           BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4, _answer=_answer,
+        __IMPUTE_OUT__ = HLA_Imputation_MM(idx_process, MHC, _reference, _out, _hg,
+                                           LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4, _answer=_answer,
                                            f_save_intermediates=__save_intermediates, _MultP=_MultP)
+
     elif not __use_Multiple_Markers and __use_GeneticMap:
+
         # Only Adaptive Genetic Map (for Performance Test.)
         __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
                                            LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
