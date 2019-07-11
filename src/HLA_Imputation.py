@@ -156,20 +156,20 @@ class HLA_Imputation(object):
 
 
             ### Main iteration
+
+            pool = mp.Pool(processes=_MultP if _MultP <= 9 else 9)
+
+            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTATION_MM, (self.dict_DOUBLED_PHASED_RESULT[_exonN], self.dict_REF_PHASED_VCF[_exonN], self.dict_ExonN_AGM[_exonN], _exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg))
+                                  for _overlap in __overlap__}
+                         for _exonN in __EXON__}
+
+            pool.close()
+            pool.join()
+
+
             for _exonN in __EXON__:
-
-                pool = mp.Pool(processes=_MultP if _MultP <= 9 else 9)
-
-                dict_Pool = {_overlap: pool.apply_async(
-                    self.IMPUTATION_MM, (self.dict_DOUBLED_PHASED_RESULT[_exonN], self.dict_REF_PHASED_VCF[_exonN], self.dict_ExonN_AGM[_exonN],
-                                         _exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg))
-                    for _overlap in __overlap__}
-
-                pool.close()
-                pool.join()
-
                 for _overlap in __overlap__:
-                    self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_overlap].get()
+                    self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_exonN][_overlap].get()
 
 
 
@@ -190,16 +190,22 @@ class HLA_Imputation(object):
 
         if _answer:
 
-            for _exonN in __EXON__:
-                for _overlap in __overlap__:
-                    print("Imputation Result({}, {}) : {}".format(_exonN, _overlap,
-                                                                  self.dict_IMP_Result[_exonN][_overlap]))
-                    self.accuracy[_exonN][_overlap] = measureAccuracy(_answer, self.dict_IMP_Result[_exonN][_overlap], 'all', _out + '.{}.{}.imputed.alleles.accuracy'.format(_exonN, _overlap))
+            if not os.path.isfile(_answer):
 
-            self.getPosteriorAccuracy(self.accuracy, _out + '.imputed.alleles.avg.accuracy')
+                for _exonN in __EXON__:
+                    for _overlap in __overlap__:
+                        print("Imputation Result({}, {}) : {}".format(_exonN, _overlap,
+                                                                      self.dict_IMP_Result[_exonN][_overlap]))
+                        self.accuracy[_exonN][_overlap] = measureAccuracy(_answer, self.dict_IMP_Result[_exonN][_overlap], 'all', _out + '.{}.{}.imputed.alleles.accuracy'.format(_exonN, _overlap))
+
+                self.getPosteriorAccuracy(self.accuracy, _out + '.imputed.alleles.avg.accuracy')
+
+            else:
+                print(std_WARNING_MAIN_PROCESS_NAME + "Answer file to get accuracy('{}') can't be found. Skipping accuracy calculation.\n"
+                                                      "Please check '--answer/-an' argument again.")
 
         else:
-            print(std_MAIN_PROCESS_NAME + "No answer file to calculate accuracy.")
+            print(std_MAIN_PROCESS_NAME + "No answer file given for calculating accuracy.")
 
 
 
