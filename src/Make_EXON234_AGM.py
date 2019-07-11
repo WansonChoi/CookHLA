@@ -76,7 +76,7 @@ def GEN_Trim_Columns(_df_merged):
 
 def GEN_stitch_GD(_df):
 
-    print(_df.head())
+    # print(_df.head())
 
     ## Version B: Collapse special variables into mid-point, while keeping other variables.
 
