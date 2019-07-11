@@ -3,7 +3,6 @@
 import os, sys, re
 from os.path import join
 import argparse, textwrap
-from statistics import mean
 
 
 from src.HLA_Imputation import HLA_Imputation
@@ -97,8 +96,8 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     VCF2BEAGLE = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_vcf2beagle])
 
     MERGE = os.path.join(p_src, 'merge_tables.pl')
-    PARSEDOSAGE = os.path.join(p_src, 'ParseDosage.csh')
-    BGL2BED = os.path.join(p_src, 'Panel-BGL2BED.sh')
+    # PARSEDOSAGE = os.path.join(p_src, 'ParseDosage.csh')
+    # BGL2BED = os.path.join(p_src, 'Panel-BGL2BED.sh')
 
 
 
@@ -493,7 +492,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--answer", "-an", help="\nAnswer file to calculate imputation accuracy.\n\n")
 
-    parser.add_argument("--multiprocess", "-mp", help="\nSetting parallel multiprocessing.\n\n", type=int, choices=[2,3], nargs='?', default=1, const=3)
+    parser.add_argument("--multiprocess", "-mp", help="\nSetting parallel multiprocessing.\n\n", type=int, choices=[2,3,4,5,6,7,8,9], nargs='?', default=1, const=3)
 
     parser.add_argument("--java-memory", "-mem", help="\nMemory requried for beagle(ex. 12g).\n\n", default="2g")
 
