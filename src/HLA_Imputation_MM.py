@@ -192,7 +192,7 @@ class HLA_Imputation_MM(object):
         if not self.__save_intermediates:
             RUN_Bash('rm {}'.format(MHC + '.QC.nopheno.ped'))
             RUN_Bash('rm {}'.format(MHC + '.QC.dat'))
-            RUN_Bash('rm {}'.format(join(self.OUTPUT_dir, 'selected_snp.txt')))
+            # RUN_Bash('rm {}'.format(join(self.OUTPUT_dir, 'selected_snp.txt')))
 
 
 
@@ -240,16 +240,17 @@ class HLA_Imputation_MM(object):
 
         RUN_Bash('mv {} {}'.format(__MHC_exonN__+'.QC.bgl', __MHC_exonN__+'.QC.pre.bgl.phased'))
 
-        RUN_Bash("awk '{print $1}' %s > %s" % (__MHC_exonN__+'.QC.pre.markers', join(self.OUTPUT_dir, 'selected_snp.txt')))
+        RUN_Bash("awk '{print $1}' %s > %s" % (__MHC_exonN__+'.QC.pre.markers', join(self.OUTPUT_dir, 'selected_snp.{}.txt'.format(_exonN))))
 
 
         from src.Panel_subset import Panel_Subset
-        qc_refined = Panel_Subset(__MHC_exonN__ + '.QC.pre', 'all', join(self.OUTPUT_dir, 'selected_snp.txt'), __MHC_exonN__ + '.QC.refined')
+        qc_refined = Panel_Subset(__MHC_exonN__ + '.QC.pre', 'all', join(self.OUTPUT_dir, 'selected_snp.{}.txt'.format(_exonN)),
+                                  __MHC_exonN__ + '.QC.refined')
 
         if not self.__save_intermediates:
             RUN_Bash('rm {}'.format(__MHC_exonN__ + '.QC.pre.bgl.phased'))
             RUN_Bash('rm {}'.format(__MHC_exonN__ + '.QC.pre.markers'))
-            # RUN_Bash('rm {}'.format(join(self.OUTPUT_dir, 'selected_snp.txt')))
+            RUN_Bash('rm {}'.format(join(self.OUTPUT_dir, 'selected_snp.{}.txt'.format(_exonN))))
 
 
 
