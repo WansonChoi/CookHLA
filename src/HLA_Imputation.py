@@ -190,7 +190,7 @@ class HLA_Imputation(object):
 
         if _answer:
 
-            if not os.path.isfile(_answer):
+            if not os.path.exists(_answer):
 
                 for _exonN in __EXON__:
                     for _overlap in __overlap__:
@@ -202,7 +202,7 @@ class HLA_Imputation(object):
 
             else:
                 print(std_WARNING_MAIN_PROCESS_NAME + "Answer file to get accuracy('{}') can't be found. Skipping accuracy calculation.\n"
-                                                      "Please check '--answer/-an' argument again.")
+                                                      "Please check '--answer/-an' argument again.".format(_answer))
 
         else:
             print(std_MAIN_PROCESS_NAME + "No answer file given for calculating accuracy.")
