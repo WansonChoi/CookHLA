@@ -4,7 +4,7 @@ import os, sys, re
 import multiprocessing as mp
 
 from src.Make_EXON234_Panel import Make_EXON234_Panel
-
+from src.Make_EXON234_AGM import Make_EXON234_AGM
 
 
 ########## < Core Varialbes > ##########
@@ -29,8 +29,8 @@ p_ExonN = {'exon2' : re.compile(r'^HLA_\w+_\d+_exon2'),
 
 class HLA_MultipleRefs():
 
-    def __init__(self, __REFERENCE__, _out, _hg, _BEAGLE2LINKAGE, _PLINK, _MultP=1,
-                 f_save_intermediates=False):
+    def __init__(self, __REFERENCE__, _out_panel, _hg, _BEAGLE2LINKAGE, _PLINK, _MultP=1, f_save_intermediates=False,
+                 __AGM__=None, _out_AGM=None):
 
         """
 
@@ -51,28 +51,35 @@ class HLA_MultipleRefs():
         self.PLINK = _PLINK
 
         # Main panel data.
-        self.EXON234_Panel = Make_EXON234_Panel(__REFERENCE__, _out+'.exon234', _BEAGLE2LINKAGE, _PLINK)
-        # self.EXON234_Panel = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/T1DGC_REF.exon234"    # [Temporary Hardcoding.]
-        # print("[Temporary Hardcoding of EXON234_Panel] :\n{}".format(self.EXON234_Panel))
+        self.EXON234_Panel = Make_EXON234_Panel(__REFERENCE__, _out_panel + '.exon234', _BEAGLE2LINKAGE, _PLINK)
         self.ExonN_Panel = {_exonN : None for _exonN in __EXON__}
 
+        if __AGM__ and _out_AGM:
+
+            if not os.path.exists(self.EXON234_Panel+'.markers'):
+                print(std_ERROR_MAIN_PROCESS_NAME + "Marker file of exon234 panel('{}') can't be found.".format(self.EXON234_Panel+'.exon234.markers'))
+                sys.exit()
+
+            self.EXON234_AGM = Make_EXON234_AGM(__AGM__, self.EXON234_Panel+'.markers', _out_AGM+'.exon234.txt')
+            self.ExonN_AGM = {_exonN : None for _exonN in __EXON__}
 
 
-        ### Generating Exon 2, 3, 4 Panel
+
+        ###### < Generating Exon 2, 3, 4 Reference Panel > ######
 
         if _MultP == 1:
 
             for _exonN in __EXON__:
 
-                self.ExonN_Panel[_exonN] = self.Make_ExonN_Panel(_exonN, self.EXON234_Panel, _out+'.{}'.format(_exonN))
+                self.ExonN_Panel[_exonN] = self.Make_ExonN_Panel(_exonN, self.EXON234_Panel, _out_panel + '.{}'.format(_exonN))
 
         else:
 
             ## Multiprocessing
-            pool = mp.Pool(processes=_MultP)
+            pool = mp.Pool(processes=_MultP if _MultP <= 3 else 3)
 
             dict_Pool = {_exonN: pool.apply_async(
-                self.Make_ExonN_Panel, (_exonN, self.EXON234_Panel, _out+'.{}'.format(_exonN))
+                self.Make_ExonN_Panel, (_exonN, self.EXON234_Panel, _out_panel + '.{}'.format(_exonN))
             ) for _exonN in __EXON__}
 
             pool.close()
@@ -81,8 +88,35 @@ class HLA_MultipleRefs():
             self.ExonN_Panel = {_exonN_: _OUT.get() for _exonN_, _OUT in dict_Pool.items()}
 
 
-        # Remove exon_234 panel (assuming Each 2,3,4 panel successfully created.)
-        self.removeOUTPUT(self.EXON234_Panel)
+
+
+        ###### < Generating Exon 2, 3, 4 Adpative Genetic Map > ######
+
+        if _MultP == 1:
+
+            for _exonN in __EXON__:
+                self.ExonN_AGM = self.Make_ExonN_AGM(_exonN, self.EXON234_AGM, _out_AGM+'.{}.txt'.format(_exonN))
+
+        else:
+
+            ## Multiprocessing
+            pool = mp.Pool(processes=_MultP if _MultP <= 3 else 3)
+
+            dict_Pool = {_exonN: pool.apply_async(
+                self.Make_ExonN_AGM, (_exonN, self.EXON234_AGM, _out_AGM+'.{}.txt'.format(_exonN))
+            ) for _exonN in __EXON__}
+
+            pool.close()
+            pool.join()
+
+            self.ExonN_AGM = {_exonN: _OUT.get() for _exonN, _OUT in dict_Pool.items()}
+
+
+
+
+        ###### < Removal > ######
+        self.removePanel(self.EXON234_Panel)
+        os.system("rm {}".format(self.EXON234_AGM))
 
 
 
@@ -162,7 +196,7 @@ class HLA_MultipleRefs():
             # if count > 10 : break
 
 
-        f_bgl_exon234.close(); f_markers_exon234.close(); f_out_bgl.close(); f_out_markers.close();
+        f_bgl_exon234.close(); f_markers_exon234.close(); f_out_bgl.close(); f_out_markers.close()
 
         # Generated exonN Panel.
         bgl_exonN = _out+'.bgl.phased'
@@ -258,8 +292,38 @@ class HLA_MultipleRefs():
 
 
 
+    def Make_ExonN_AGM(self, _exonN, _EXON234_AGM, _out):
 
-    def removeOUTPUT(self, _prefix):
+
+        with open(_EXON234_AGM, 'r') as f_Exon234_AGM, open(_out, 'w') as f_out:
+
+            count = 0
+
+            for line in f_Exon234_AGM:
+
+                l = re.split(r'\s+', line.rstrip('\n'))
+                # print(l)
+
+                id = l[1]
+
+                if re.match(r'^HLA_', id):
+                    # HLA allele binary marker (ex. HLA_A_...)
+                    if p_ExonN[_exonN].match(id):
+                        f_out.write(line)
+
+                else:
+                    # SNP markers (ex. rs1234)
+                    f_out.write(line)
+
+
+                count += 1
+                # if count > 5 : break
+
+        return _out
+
+
+
+    def removePanel(self, _prefix):
 
         # Removing Exon_N reference panel.
         os.system('rm {}'.format(_prefix + '.bed'))
