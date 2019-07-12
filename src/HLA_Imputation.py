@@ -190,7 +190,7 @@ class HLA_Imputation(object):
 
         if _answer:
 
-            if os.path.exists(_answer):
+            if os.path.isfile(_answer):
 
                 for _exonN in __EXON__:
                     for _overlap in __overlap__:
