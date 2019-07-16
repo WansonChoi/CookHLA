@@ -155,6 +155,9 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     if __use_GeneticMap:
         print("- Using Adaptive Genetic Map.")
 
+    if _given_prephased:
+        print("- (Test Purpose) Pre-phased result given.")
+
 
 
 

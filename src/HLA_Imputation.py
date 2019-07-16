@@ -113,7 +113,7 @@ class HLA_Imputation(object):
 
         ### (1) CONVERT_IN
 
-        DOUBLED_PHASED_RESULT = self.CONVERT_IN(MHC, self.Exon234_Panel, _out, _hg)
+        DOUBLED_PHASED_RESULT = self.CONVERT_IN(MHC, self.Exon234_Panel, _out, _hg, _given_prephased=_given_prephased)
         # Only one time of pre-phasing with Exon234 reference panel.
 
 
@@ -129,9 +129,6 @@ class HLA_Imputation(object):
 
 
         else:
-
-            ###### < 'CONVERT_IN' in parallel. > ######
-
 
             ## Parallel implementation of main.
 
@@ -164,7 +161,26 @@ class HLA_Imputation(object):
 
 
 
-    def CONVERT_IN(self, MHC, _reference, _out, _hg):
+    def CONVERT_IN(self, MHC, _reference, _out, _hg, _given_prephased=None):
+
+
+        if _given_prephased:
+
+            print("(Test Purpose) Given pre-phased result will be used. ('{}')".format(_given_prephased))
+
+            ############### < Multiple Markers > ###############
+
+            ### Phasing & Doubling (only on Target Sample.)
+
+            # Phasing (If previously prephased result is given, then the process to make new phased result will be skipped.
+            PHASED_RESULT = _given_prephased
+
+            # Doubling
+            DOUBLED_PHASED_RESULT = self.Doubling(MHC, PHASED_RESULT.rstrip('.vcf'))
+
+            return DOUBLED_PHASED_RESULT
+
+
 
 
         OUTPUT_dir_Exon234_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
@@ -301,11 +317,11 @@ class HLA_Imputation(object):
         ### Phasing & Doubling (only on Target Sample.)
 
         # Phasing
-        # PHASED_RESULT = self.Phasing(MHC, MHC_QC_VCF_exonN, REF_PHASED_VCF)
+        PHASED_RESULT = self.Phasing(MHC, MHC_QC_VCF_exonN, REF_PHASED_VCF)
 
         # [Temporary Hardcoding for Phased Result]
-        PHASED_RESULT = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190716_BOTH/_3_HM_CEU_T1DGC_REF.MHC.QC.phasing_out_not_double"
-        print("[Temporary Hardcoding]Phased Result:\n{}".format(PHASED_RESULT))
+        # PHASED_RESULT = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190716_BOTH/_3_HM_CEU_T1DGC_REF.MHC.QC.phasing_out_not_double"
+        # print("[Temporary Hardcoding]Phased Result:\n{}".format(PHASED_RESULT))
 
         # Doubling
         DOUBLED_PHASED_RESULT = self.Doubling(MHC, PHASED_RESULT)
@@ -317,6 +333,11 @@ class HLA_Imputation(object):
 
 
     def IMPUTE(self, MHC, _out, _DOUBLED_PHASED_RESULT, _REF_PHASED_VCF, _overlap, _exonN, _aver_erate, _Refined_Genetic_Map):
+
+        if os.path.getsize(_DOUBLED_PHASED_RESULT) == 0:
+            print(std_ERROR_MAIN_PROCESS_NAME + "Doubled phased file contains nothing. Please check it again.")
+            sys.exit()
+
 
         print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
         self.idx_process += 1
