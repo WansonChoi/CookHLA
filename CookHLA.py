@@ -25,7 +25,7 @@ TOLERATED_DIFF = 0.15
 
 def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Average_Erate=None, _java_memory='2g',
             _MultP=1, _answer=None, __save_intermediates=False, __use_Multiple_Markers=False, _p_src="./src",
-            _p_dependency="./dependency"):
+            _p_dependency="./dependency", _given_prephased=None):
 
     p_src = _p_src
     p_dependency = _p_dependency
@@ -53,6 +53,10 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
     ### Source files
 
+    ### Given prephased result
+    if _given_prephased and not os.path.exists(_given_prephased):
+        print(std_ERROR_MAIN_PROCESS_NAME + "Given prephased result file('{}') doesn't exist. Please check '--prephase/-ph' argument again.\n".format(_given_prephased))
+        sys.exit()
 
 
     ###### < Bash Command Preparation > ######
@@ -403,7 +407,8 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         # Original CookHLA
         __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
                                            LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
-                                           _answer=_answer, f_save_intermediates=__save_intermediates, _MultP=_MultP)
+                                           _answer=_answer, f_save_intermediates=__save_intermediates, _MultP=_MultP,
+                                        _given_prephased=_given_prephased)
 
     elif __use_Multiple_Markers and not __use_GeneticMap:
 
@@ -496,6 +501,10 @@ if __name__ == "__main__":
 
     parser.add_argument("--java-memory", "-mem", help="\nMemory requried for beagle(ex. 12g).\n\n", default="2g")
 
+    parser.add_argument("--prephased", "-ph",
+                        help="\n(For Testing Purpose) Passing prephased result manually to control the error rate of prephasing. "
+                             "If given, Imputation will be done based on this phased file.\n\n")
+
 
 
 
@@ -526,4 +535,4 @@ if __name__ == "__main__":
 
     CookHLA(args.input, args.out, args.reference, args.hg, args.genetic_map, args.average_erate,
             _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer,
-            __use_Multiple_Markers=args.use_multiple_markers)
+            __use_Multiple_Markers=args.use_multiple_markers, _given_prephased=args.prephased)

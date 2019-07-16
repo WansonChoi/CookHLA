@@ -39,7 +39,7 @@ class HLA_Imputation(object):
 
     def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
                  _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4,
-                 _answer=None, f_save_intermediates=False, _MultP=1):
+                 _answer=None, f_save_intermediates=False, _MultP=1, _given_prephased=None):
 
         ### General
         self.idx_process = idx_process
