@@ -53,6 +53,7 @@ class HLA_Imputation(object):
 
         # Result
         # self.IMP_Result = None  # Finally consensed Imputation output ('*.imputed.alleles').
+        self.Exon234_Panel = None
         self.dict_ExonN_Panel = {_exonN: None for _exonN in __EXON__}
         self.dict_ExonN_AGM = {_exonN: None for _exonN in __EXON__}
         self.dict_IMP_Result = {_exonN: {_overlap: None for _overlap in __overlap__} for _exonN in __EXON__}
@@ -84,82 +85,59 @@ class HLA_Imputation(object):
 
         ###### < Reference panel for Exon 2, 3, 4 > ######
 
-        multiple_panels = HLA_MultipleRefs(_reference, self.OUTPUT_dir_ref, _hg, self.BEAGLE2LINKAGE, self.PLINK, _MultP=_MultP,
+        multiple_panels = HLA_MultipleRefs(_reference, self.OUTPUT_dir_ref, _hg,
+                                           self.BEAGLE2LINKAGE, self.BEAGLE2VCF, self.PLINK,
+                                           _MultP=_MultP,
                                            __AGM__=self.__AGM__, _out_AGM=self.OUTPUT_dir_GM)
+
         self.dict_ExonN_Panel = multiple_panels.ExonN_Panel
+        self.Exon234_Panel = multiple_panels.EXON234_Panel
+
         self.dict_ExonN_AGM = multiple_panels.ExonN_AGM
 
         # [Temporary Hard-coding]
-        # self.dict_ExonN_Panel['exon2'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190711_BOTH/T1DGC_REF.exon2'
-        # self.dict_ExonN_Panel['exon3'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190711_BOTH/T1DGC_REF.exon3'
-        # self.dict_ExonN_Panel['exon4'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190711_BOTH/T1DGC_REF.exon4'
+        # self.Exon234_Panel = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190716_BOTH/T1DGC_REF.exon234'
         #
-        # self.dict_ExonN_AGM['exon2'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190711_BOTH/CEU_T1DGC.mach_step.avg.clpsB.exon2.txt'
-        # self.dict_ExonN_AGM['exon3'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190711_BOTH/CEU_T1DGC.mach_step.avg.clpsB.exon3.txt'
-        # self.dict_ExonN_AGM['exon4'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190711_BOTH/CEU_T1DGC.mach_step.avg.clpsB.exon4.txt'
+        # self.dict_ExonN_Panel['exon2'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190716_BOTH/T1DGC_REF.exon2'
+        # self.dict_ExonN_Panel['exon3'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190716_BOTH/T1DGC_REF.exon3'
+        # self.dict_ExonN_Panel['exon4'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190716_BOTH/T1DGC_REF.exon4'
+        #
+        # self.dict_ExonN_AGM['exon2'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190716_BOTH/CEU_T1DGC.mach_step.avg.clpsB.exon2.txt'
+        # self.dict_ExonN_AGM['exon3'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190716_BOTH/CEU_T1DGC.mach_step.avg.clpsB.exon3.txt'
+        # self.dict_ExonN_AGM['exon4'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190716_BOTH/CEU_T1DGC.mach_step.avg.clpsB.exon4.txt'
 
 
 
         ###### < Main - 'CONVERT_IN', 'IMPUTE', 'CONVERT_OUT' > ######
 
+
+        ### (1) CONVERT_IN
+
+        DOUBLED_PHASED_RESULT = self.CONVERT_IN(MHC, self.Exon234_Panel, _out, _hg)
+        # Only one time of pre-phasing with Exon234 reference panel.
+
+
         if _MultP == 1:
 
             ## Serial implementation of main.
             for _exonN in __EXON__:
-
-                ### (1) CONVERT_IN
-
-                [DOUBLED_PHASED_RESULT, REF_PHASED_VCF] = self.CONVERT_IN(MHC, self.dict_ExonN_Panel[_exonN], _out, _hg, _exonN, self.__AGM__)
-
                 for _overlap in __overlap__:
-                    self.dict_IMP_Result[_exonN][_overlap] = self.IMPUTATION_MM(DOUBLED_PHASED_RESULT, REF_PHASED_VCF, self.dict_ExonN_AGM[_exonN],
-                                                                                _exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg)
+
+                    self.dict_IMP_Result[_exonN][_overlap] = \
+                        self.IMPUTE(MHC, _out, DOUBLED_PHASED_RESULT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf',
+                                    _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN])
 
 
         else:
 
             ###### < 'CONVERT_IN' in parallel. > ######
 
-            """
-            - In Multiple Marker technique, Pre-phasing in 'CONVERT_IN' block takes tremendous time.
-            - working process executed by multiprocessing can't call multiprocessing further.
-            - 'CONVERT_IN' is independent to 'IMPUTE' block.
 
-            """
-
-            ### (1) CONVERT_IN (by exon 2,3,4)
-
-            pool_prephasing = mp.Pool(processes=_MultP if _MultP <= 3 else 3)
-            dict_Pool_prephasing = {_exonN: pool_prephasing.apply_async(self.CONVERT_IN, (MHC, self.dict_ExonN_Panel[_exonN], _out, _hg, _exonN, self.__AGM__))
-                                    for _exonN in __EXON__}
-
-            pool_prephasing.close()
-            pool_prephasing.join()
-
-            for _exonN in __EXON__:
-                [a, b] = dict_Pool_prephasing[_exonN].get()
-                self.dict_DOUBLED_PHASED_RESULT[_exonN] = a
-                self.dict_REF_PHASED_VCF[_exonN] = b
-
-            # print("DOUBLED_PHASED_RESULT :\n{}".format(self.dict_DOUBLED_PHASED_RESULT))
-            # print("REF_PHASED_VCF :\n{}".format(self.dict_REF_PHASED_VCF))
-
-            # [Temporary Hardcoding - 'CONVERT_IN' in parallel.
-            # self.dict_DOUBLED_PHASED_RESULT['exon2'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/set_aside/_3_HM_CEU_T1DGC_REF.MHC.exon2.QC.phasing_out_doubled.vcf'
-            # self.dict_REF_PHASED_VCF['exon2'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/T1DGC_REF.exon2.phased.vcf'
-            #
-            # self.dict_DOUBLED_PHASED_RESULT['exon3'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/set_aside/_3_HM_CEU_T1DGC_REF.MHC.exon3.QC.phasing_out_doubled.vcf'
-            # self.dict_REF_PHASED_VCF['exon3'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/T1DGC_REF.exon3.phased.vcf'
-            #
-            # self.dict_DOUBLED_PHASED_RESULT['exon4'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/set_aside/_3_HM_CEU_T1DGC_REF.MHC.exon4.QC.phasing_out_doubled.vcf'
-            # self.dict_REF_PHASED_VCF['exon4'] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190709_MM/T1DGC_REF.exon4.phased.vcf'
-
-
-            ### Main iteration
+            ## Parallel implementation of main.
 
             pool = mp.Pool(processes=_MultP if _MultP <= 9 else 9)
 
-            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTATION_MM, (self.dict_DOUBLED_PHASED_RESULT[_exonN], self.dict_REF_PHASED_VCF[_exonN], self.dict_ExonN_AGM[_exonN], _exonN, _overlap, MHC, self.dict_ExonN_Panel[_exonN], _out, _hg))
+            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, DOUBLED_PHASED_RESULT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN]))
                                   for _overlap in __overlap__}
                          for _exonN in __EXON__}
 
@@ -175,41 +153,6 @@ class HLA_Imputation(object):
 
 
 
-        ###### < Getting Accuracy > ######
-
-        # [Temporary Hardcoding - measuring accuracy]
-        # self.dict_IMP_Result['exon2'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.3000.imputed.alleles'
-        # self.dict_IMP_Result['exon2'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.4000.imputed.alleles'
-        # self.dict_IMP_Result['exon2'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.5000.imputed.alleles'
-        # self.dict_IMP_Result['exon3'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.3000.imputed.alleles'
-        # self.dict_IMP_Result['exon3'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.4000.imputed.alleles'
-        # self.dict_IMP_Result['exon3'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.5000.imputed.alleles'
-        # self.dict_IMP_Result['exon4'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.3000.imputed.alleles'
-        # self.dict_IMP_Result['exon4'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.4000.imputed.alleles'
-        # self.dict_IMP_Result['exon4'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190708_MM/_3_HM_CEU_T1DGC_REF.exon2.5000.imputed.alleles'
-
-        if _answer:
-
-            if os.path.isfile(_answer):
-
-                for _exonN in __EXON__:
-                    for _overlap in __overlap__:
-                        print("Imputation Result({}, {}) : {}".format(_exonN, _overlap,
-                                                                      self.dict_IMP_Result[_exonN][_overlap]))
-                        self.accuracy[_exonN][_overlap] = measureAccuracy(_answer, self.dict_IMP_Result[_exonN][_overlap], 'all', _out + '.{}.{}.imputed.alleles.accuracy'.format(_exonN, _overlap))
-
-                self.getPosteriorAccuracy(self.accuracy, _out + '.imputed.alleles.avg.accuracy')
-
-            else:
-                print(std_WARNING_MAIN_PROCESS_NAME + "Answer file to get accuracy('{}') can't be found. Skipping accuracy calculation.\n"
-                                                      "Please check '--answer/-an' argument again.".format(_answer))
-
-        else:
-            print(std_MAIN_PROCESS_NAME + "No answer file given for calculating accuracy.")
-
-
-
-
 
         ### General Removal
         if not self.__save_intermediates:
@@ -221,31 +164,31 @@ class HLA_Imputation(object):
 
 
 
-    def CONVERT_IN(self, MHC, _reference, _out, _hg, _exonN, _Genetic_Map):
+    def CONVERT_IN(self, MHC, _reference, _out, _hg):
 
-        __MHC_exonN__ = MHC + '.{}'.format(_exonN)
-        __out_exonN__ = _out + '.{}'.format(_exonN)
-        __reference_exonN__ = os.path.basename(_reference)
-        OUTPUT_dir_ref_exonN = join(self.OUTPUT_dir, __reference_exonN__)
+
+        OUTPUT_dir_Exon234_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
 
 
         print("[{}] Converting data to beagle format.".format(self.idx_process))
         self.idx_process += 1
 
         RUN_Bash(self.LINKAGE2BEAGLE + ' pedigree={} data={} beagle={} standard=true > {}'.format(
-            MHC + '.QC.nopheno.ped', MHC + '.QC.dat', __MHC_exonN__ + '.QC.bgl', __out_exonN__ + '.bgl.log'))
+            MHC + '.QC.nopheno.ped', MHC + '.QC.dat', MHC + '.QC.bgl', _out + '.bgl.log'))
 
         if not self.__save_intermediates:
             # os.system('rm {}'.format(MHC + '.QC.nopheno.ped'))
             # os.system('rm {}'.format(MHC + '.QC.dat'))
-            os.system('rm {}'.format(__out_exonN__ + '.bgl.log'))
+            os.system('rm {}'.format(_out + '.bgl.log'))
 
 
 
 
         ### Converting data to reference_markers_Position (Dispersing same genomic position of some markers.)
 
-        RefinedMarkers = redefineBP(_reference + '.markers', OUTPUT_dir_ref_exonN + '.refined.markers')
+        # RefinedMarkers = redefineBP(_reference + '.markers', OUTPUT_dir_Exon234_ref + '.refined.markers')
+        RUN_Bash('cp {} {}'.format(_reference + '.markers', OUTPUT_dir_Exon234_ref + '.refined.markers'))
+        RefinedMarkers = OUTPUT_dir_Exon234_ref + '.refined.markers'
         # self.refined_REF_markers = RefinedMarkers # => This will be used in 'CONVERT_OUT'.
 
 
@@ -253,26 +196,26 @@ class HLA_Imputation(object):
 
         ### Converting data to target_markers_Position and extract not_including snp.
 
-        RUN_Bash('awk \'{print $2" "$4" "$5" "$6}\' %s > %s' % (MHC + '.QC.bim', __MHC_exonN__ + '.QC.markers'))
+        RUN_Bash('awk \'{print $2" "$4" "$5" "$6}\' %s > %s' % (MHC + '.QC.bim', MHC + '.QC.markers'))
 
         RUN_Bash('Rscript src/excluding_snp_and_refine_target_position-v1COOK02222017.R {} {} {}'.format(
-            __MHC_exonN__ + '.QC.markers', RefinedMarkers, __MHC_exonN__ + '.QC.pre.markers'
+            MHC + '.QC.markers', RefinedMarkers, MHC + '.QC.pre.markers'
         ))
         if not self.__save_intermediates:
-            os.system(' '.join(['rm', __MHC_exonN__ + '.QC.markers']))
+            os.system(' '.join(['rm', MHC + '.QC.markers']))
 
-        RUN_Bash('mv {} {}'.format(__MHC_exonN__ + '.QC.bgl', __MHC_exonN__ + '.QC.pre.bgl.phased'))
+        RUN_Bash('mv {} {}'.format(MHC + '.QC.bgl', MHC + '.QC.pre.bgl.phased'))
 
-        RUN_Bash("awk '{print $1}' %s > %s" % (__MHC_exonN__ + '.QC.pre.markers', join(self.OUTPUT_dir, 'selected_snp.{}.txt'.format(_exonN))))
+        RUN_Bash("awk '{print $1}' %s > %s" % (MHC + '.QC.pre.markers', join(self.OUTPUT_dir, 'selected_snp.txt')))
 
         from src.Panel_subset import Panel_Subset
-        qc_refined = Panel_Subset(__MHC_exonN__ + '.QC.pre', 'all', join(self.OUTPUT_dir, 'selected_snp.{}.txt'.format(_exonN)),
-                                  __MHC_exonN__ + '.QC.refined')
+        qc_refined = Panel_Subset(MHC + '.QC.pre', 'all', join(self.OUTPUT_dir, 'selected_snp.txt'),
+                                  MHC + '.QC.refined')
 
         if not self.__save_intermediates:
-            RUN_Bash('rm {}'.format(__MHC_exonN__ + '.QC.pre.bgl.phased'))
-            RUN_Bash('rm {}'.format(__MHC_exonN__ + '.QC.pre.markers'))
-            RUN_Bash('rm {}'.format(join(self.OUTPUT_dir, 'selected_snp.{}.txt'.format(_exonN))))
+            RUN_Bash('rm {}'.format(MHC + '.QC.pre.bgl.phased'))
+            RUN_Bash('rm {}'.format(MHC + '.QC.pre.markers'))
+            RUN_Bash('rm {}'.format(join(self.OUTPUT_dir, 'selected_snp.txt')))
 
 
 
@@ -282,10 +225,10 @@ class HLA_Imputation(object):
         from src.bgl2GC_trick_bgl import Bgl2GC
 
         # target
-        [GCchangeBGL, GCchangeMarkers] = Bgl2GC(__MHC_exonN__ + '.QC.refined.bgl.phased',
-                                                __MHC_exonN__ + '.QC.refined.markers',
-                                                __MHC_exonN__ + '.QC.GCchange.bgl',
-                                                __MHC_exonN__ + '.QC.GCchange.markers')
+        [GCchangeBGL, GCchangeMarkers] = Bgl2GC(MHC + '.QC.refined.bgl.phased',
+                                                MHC + '.QC.refined.markers',
+                                                MHC + '.QC.GCchange.bgl',
+                                                MHC + '.QC.GCchange.markers')
 
         self.GCchangeBGL = GCchangeBGL  # it will be used in 'CONVERT_OUT' with Genetic Map
 
@@ -295,15 +238,15 @@ class HLA_Imputation(object):
 
         # reference
         [GCchangeBGL_REF, GCchangeMarkers_REF] = Bgl2GC(_reference + '.bgl.phased', RefinedMarkers,
-                                                        OUTPUT_dir_ref_exonN + '.GCchange.bgl.phased',
-                                                        OUTPUT_dir_ref_exonN + '.GCchange.markers')
+                                                        OUTPUT_dir_Exon234_ref + '.GCchange.bgl.phased',
+                                                        OUTPUT_dir_Exon234_ref + '.GCchange.markers')
         # print("<Reference GCchanged bgl and marker file>\n"
         #       "bgl : {}\n"
         #       "markers : {}".format(GCchangeBGL_REF, GCchangeMarkers_REF))
 
         if not self.__save_intermediates:
-            RUN_Bash('rm {}'.format(__MHC_exonN__ + '.QC.refined.bgl.phased'))
-            RUN_Bash('rm {}'.format(__MHC_exonN__ + '.QC.refined.markers'))
+            RUN_Bash('rm {}'.format(MHC + '.QC.refined.bgl.phased'))
+            RUN_Bash('rm {}'.format(MHC + '.QC.refined.markers'))
             # RUN_Bash('rm {}'.format(RefinedMarkers))
 
             # os.system(' '.join(['rm', RefinedMarkers])) # => This will be used in 'CONVERT_OUT" when not using Multiple Markers.
@@ -314,25 +257,25 @@ class HLA_Imputation(object):
         ### Converting data to vcf_format
 
         # target
-        RUN_Bash(self.BEAGLE2VCF + ' 6 {} {} 0 > {}'.format(GCchangeMarkers, GCchangeBGL, __MHC_exonN__ + '.QC.vcf'))
+        RUN_Bash(self.BEAGLE2VCF + ' 6 {} {} 0 > {}'.format(GCchangeMarkers, GCchangeBGL, MHC + '.QC.vcf'))
 
-        MHC_QC_VCF_exonN = __MHC_exonN__ + '.QC.vcf'
+        MHC_QC_VCF_exonN = MHC + '.QC.vcf'
 
 
         # reference
         RUN_Bash(self.BEAGLE2VCF + ' 6 {} {} 0 > {}'.format(GCchangeMarkers_REF, GCchangeBGL_REF,
-                                                            OUTPUT_dir_ref_exonN + '.vcf'))
+                                                            OUTPUT_dir_Exon234_ref + '.vcf'))
 
-        reference_vcf = OUTPUT_dir_ref_exonN + '.vcf'
+        reference_vcf = OUTPUT_dir_Exon234_ref + '.vcf'
 
 
 
 
         ### Converting data to reference_phased
 
-        RUN_Bash('sed "s%/%|%g" {} > {}'.format(reference_vcf, OUTPUT_dir_ref_exonN + '.phased.vcf'))
+        RUN_Bash('sed "s%/%|%g" {} > {}'.format(reference_vcf, OUTPUT_dir_Exon234_ref + '.phased.vcf'))
 
-        REF_PHASED_VCF = OUTPUT_dir_ref_exonN + '.phased.vcf'
+        REF_PHASED_VCF = OUTPUT_dir_Exon234_ref + '.phased.vcf'
 
         if not self.__save_intermediates:
             RUN_Bash('rm {}'.format(reference_vcf))
@@ -346,7 +289,7 @@ class HLA_Imputation(object):
 
         """
         (1) `MHC_QC_VCF_exonN` := MHC + '.QC.vcf',
-        (2) `REF_PHASED_VCF` := OUTPUT_dir_ref_exonN + '.phased.vcf'
+        (2) `REF_PHASED_VCF` := OUTPUT_dir_Exon234_ref + '.phased.vcf'
 
         These two files are to be passed into Beagle phasing;
         """
@@ -358,18 +301,18 @@ class HLA_Imputation(object):
         ### Phasing & Doubling (only on Target Sample.)
 
         # Phasing
-        PHASED_RESULT = self.Phasing(__MHC_exonN__, MHC_QC_VCF_exonN, REF_PHASED_VCF)
+        # PHASED_RESULT = self.Phasing(MHC, MHC_QC_VCF_exonN, REF_PHASED_VCF)
 
         # [Temporary Hardcoding for Phased Result]
-        # PHASED_RESULT = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190710_BOTH/_3_HM_CEU_T1DGC_REF.MHC.exon2.QC.phasing_out_not_double"
-        # print("[Temporary Hardcoding]Phased Result:\n{}".format(PHASED_RESULT))
+        PHASED_RESULT = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190716_BOTH/_3_HM_CEU_T1DGC_REF.MHC.QC.phasing_out_not_double"
+        print("[Temporary Hardcoding]Phased Result:\n{}".format(PHASED_RESULT))
 
         # Doubling
-        DOUBLED_PHASED_RESULT = self.Doubling(__MHC_exonN__, PHASED_RESULT)
+        DOUBLED_PHASED_RESULT = self.Doubling(MHC, PHASED_RESULT)
 
 
 
-        return [DOUBLED_PHASED_RESULT, REF_PHASED_VCF]
+        return DOUBLED_PHASED_RESULT
 
 
 
@@ -651,55 +594,3 @@ class HLA_Imputation(object):
         self.IMP_Result = self.CONVERT_OUT(raw_IMP_Reuslt, _reference, _out, _overlap, _exonN)
 
         return self.IMP_Result
-
-
-
-    def getPosteriorAccuracy(self, _accuracy, _out=None, __also2D=False):
-
-        # print(_accuracy)
-
-        dict_accuracy_4D = {_hla: [] for _hla in HLA_names}
-        dict_accuracy_2D = {_hla: [] for _hla in HLA_names}
-
-        for _hla in HLA_names:
-            for _exonN in __EXON__:
-
-                if _exonN == 'exon4' and not isClassI[_hla]:
-                    continue
-                else:
-                    for _overlap in __overlap__:
-                        dict_accuracy_4D[_hla].append(_accuracy[_exonN][_overlap]['4D'][_hla])
-
-        # print(dict_accuracy_4D)
-        dict_mean_accuracy_4D = {_hla: mean(dict_accuracy_4D[_hla]) for _hla in HLA_names}
-        print("\nAverage of imputation accuracy :\n{}".format(dict_mean_accuracy_4D))
-
-        if __also2D:
-
-            for _hla in HLA_names:
-                for _exonN in __EXON__:
-
-                    if _exonN == 'exon4' and not isClassI[_hla]:
-                        continue
-                    else:
-                        for _overlap in __overlap__:
-                            dict_accuracy_2D[_hla].append(_accuracy[_exonN][_overlap]['2D'][_hla])
-
-            # print(dict_accuracy_2D)
-            dict_mean_accuracy_2D = {_hla: mean(dict_accuracy_2D[_hla]) for _hla in HLA_names}
-            print(dict_mean_accuracy_2D)
-
-        ### file write
-        if _out:
-            with open(_out, 'w') as f_out:
-                for _hla in HLA_names:
-                    f_out.write("%s\t4D\t%.5f\n" % (_hla, float(dict_mean_accuracy_4D[_hla])))
-                    if __also2D:
-                        f_out.write("%s\t2D\t%.5f\n" % (_hla, float(dict_mean_accuracy_2D[_hla])))
-
-            return _out
-        else:
-            if not __also2D:
-                return dict_mean_accuracy_4D
-            else:
-                return [dict_mean_accuracy_4D, dict_mean_accuracy_2D]

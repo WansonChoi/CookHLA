@@ -6,6 +6,10 @@ import multiprocessing as mp
 from src.Make_EXON234_Panel import Make_EXON234_Panel
 from src.Make_EXON234_AGM import Make_EXON234_AGM
 
+from src.bgl2GC_trick_bgl import Bgl2GC
+from src.RUN_Bash import RUN_Bash
+
+
 
 ########## < Core Varialbes > ##########
 
@@ -29,7 +33,7 @@ p_ExonN = {'exon2' : re.compile(r'^HLA_\w+_\d+_exon2'),
 
 class HLA_MultipleRefs():
 
-    def __init__(self, __REFERENCE__, _out_panel, _hg, _BEAGLE2LINKAGE, _PLINK, _MultP=1, f_save_intermediates=False,
+    def __init__(self, __REFERENCE__, _out_panel, _hg, _BEAGLE2LINKAGE, _BEAGLE2VCF, _PLINK, _MultP=1, f_save_intermediates=False,
                  __AGM__=None, _out_AGM=None):
 
         """
@@ -48,6 +52,7 @@ class HLA_MultipleRefs():
 
         # dependency
         self.BEAGLE2LINKAGE = _BEAGLE2LINKAGE
+        self.BEAGLE2VCF = _BEAGLE2VCF
         self.PLINK = _PLINK
 
         # Main panel data.
@@ -115,8 +120,8 @@ class HLA_MultipleRefs():
 
 
         ###### < Removal > ######
-        self.removePanel(self.EXON234_Panel)
-        os.system("rm {}".format(self.EXON234_AGM))
+        # self.removePanel(self.EXON234_Panel)
+        # os.system("rm {}".format(self.EXON234_AGM))
 
 
 
@@ -286,6 +291,52 @@ class HLA_MultipleRefs():
             # Remove
             if not self.__save_intermediates:
                 os.system('rm {}'.format(_out + ".FRQ.log"))
+
+
+        """
+        
+        Prephasing : Exon234 panel is used.
+        Each imputation : Exon2,3,4 panel, each.
+        
+        For each Exon 2,3,4 panel to be used in Beagle Imputation, preprocessing must be done to them.
+        (ex. GC change)
+        (cf. redefining BP is already done in 'Make_EXON234_Panel.py'. So it won't be done here.)
+        
+        Below code is originally 'CONVERT_IN' part.
+        
+        """
+
+        # reference
+        [GCchangeBGL_REF, GCchangeMarkers_REF] = Bgl2GC(_out + '.bgl.phased', _out + '.markers',
+                                                        _out + '.GCchange.bgl.phased',
+                                                        _out + '.GCchange.markers')
+        # print("<Reference GCchanged bgl and marker file>\n"
+        #       "bgl : {}\n"
+        #       "markers : {}".format(GCchangeBGL_REF, GCchangeMarkers_REF))
+
+        RUN_Bash(self.BEAGLE2VCF + ' 6 {} {} 0 > {}'.format(GCchangeMarkers_REF, GCchangeBGL_REF,
+                                                            _out + '.vcf'))
+
+        reference_vcf = _out + '.vcf'
+
+
+
+
+        ### Converting data to reference_phased
+
+        RUN_Bash('sed "s%/%|%g" {} > {}'.format(reference_vcf, _out + '.phased.vcf'))
+
+        # REF_PHASED_VCF = _out + '.phased.vcf'
+
+        if not self.__save_intermediates:
+            RUN_Bash('rm {}'.format(reference_vcf))
+
+            # # if self.f_useMultipleMarkers:
+            # if not self.f_useGeneticMap:
+            #     os.system(' '.join(['rm {}'.format(GCchangeBGL)])) # 'GCchangeBGL' will be used in 'CONVERT_OUT'
+            #     os.system(' '.join(['rm {}'.format(GCchangeMarkers_REF)]))  # 'GCchangeMarkers_REF' will be used in 'CONVERT_OUT'
+            #     os.system(' '.join(['rm {}'.format(GCchangeMarkers)]))
+            #     os.system(' '.join(['rm {}'.format(GCchangeBGL_REF)]))
 
 
         return _out
