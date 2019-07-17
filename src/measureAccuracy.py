@@ -11,7 +11,7 @@ def measureAccuracy(answerfile, predictfile, genes, outfile=None, __asSTDOUT = F
             genes = "A B C DRB1 DPA1 DPB1 DQA1 DQB1".split()
     elif isinstance(genes, str):
         if genes == 'all':
-            genes = "A B C DPA1 DPB1 DQA1 DQB1 DRB1".split()
+            genes = "A B C DRB1 DPA1 DPB1 DQA1 DQB1".split()
 
 
     # Accuracy dictionary
