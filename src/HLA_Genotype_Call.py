@@ -33,11 +33,15 @@ p_suffix = re.compile(r'_exon\d$')
 
 
 
-def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __as_VCF=False, __forCheck=True, _out=None):
+def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __forCheck=True, _out=None):
 
-    if _feature != 'DS' and _feature != 'GP':
+    if _feature != 'DS' and _feature != 'GP' and _feature != 'BOTH':
         print(std_ERROR_MAIN_PROCESS_NAME + "Wrong measure to calling genotype.")
         sys.exit()
+
+
+    if _feature == 'BOTH':
+        _feature = 'DSxGP'
 
 
     ###### < Variables > ######
@@ -45,14 +49,18 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __as_VCF=False, __forChec
     # Input
     dict_IMP_vcf = _dict_IMP_Result
     dict_IMP_vcf_LEFT = {_exonN: {_overlap: None for _overlap in __overlap__} for _exonN in __EXON__} # 0 ~ 8 columns (Marker information)
-    dict_IMP_vcf_RIGHT = {_hla: [] for _hla in HLA_names} # 9 ~ columns (Patient genotype information.)
 
     # GP
+    dict_IMP_vcf_RIGHT_GP_raw = {_hla: [] for _hla in HLA_names} # 9 ~ columns (Patient genotype information.)
     dict_IMP_vcf_RIGHT_mean = {_hla: None for _hla in HLA_names}
 
     # DS
+    dict_IMP_vcf_RIGHT_DS_raw = {_hla: [] for _hla in HLA_names} # 9 ~ columns (Patient genotype information.)
     dict_IMP_vcf_RIGHT_DS = {_hla: {_exonN: {_overlap: None for _overlap in __overlap__} for _exonN in __EXON__} for _hla in HLA_names}
     dict_IMP_vcf_RIGHT_DS_Score = {_hla: None for _hla in HLA_names}
+
+    # DS x GP
+    dict_DSxGP = {_hla: None for _hla in HLA_names}
 
     n_row = 0
     n_col = 0
@@ -66,7 +74,8 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __as_VCF=False, __forChec
 
     # Prefix
     OUTPUT_dir = os.path.dirname(dict_IMP_vcf['exon2'][3000])
-    _out = _out if _out else join(OUTPUT_dir, 'IMPUTATION_OUT.{}.single.alleles'.format(_feature))
+    # _out = _out if _out else join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.{}.single.alleles'.format(_feature))
+    # _out_rawcall = join(OUTPUT_dir, 'Receipt.{}.raw_call.txt'.format(_feature))
 
 
 
@@ -74,7 +83,7 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __as_VCF=False, __forChec
     for _exonN in __EXON__:
         for _overlap in __overlap__:
 
-            print("({}, {})".format(_exonN, _overlap))
+            # print("({}, {})".format(_exonN, _overlap))
 
             with open(dict_IMP_vcf[_exonN][_overlap], 'r') as f_vcf, \
                  open(dict_IMP_vcf[_exonN][_overlap]+'.header', 'w') as f_vcf_header, \
@@ -88,6 +97,9 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __as_VCF=False, __forChec
                         f_vcf_body.write(line)
 
             df_temp = pd.read_csv(dict_IMP_vcf[_exonN][_overlap]+'.body', sep='\s+', header=0)
+
+            RUN_Bash('rm {}'.format(dict_IMP_vcf[_exonN][_overlap]+'.header'))
+            RUN_Bash('rm {}'.format(dict_IMP_vcf[_exonN][_overlap]+'.body'))
 
             ### Filtering out HLA allele binary markers.
 
@@ -109,46 +121,60 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __as_VCF=False, __forChec
 
 
 
-            ### Extrating 'GP(Genotpe Probability)' or 'Dose' values.
+            ### Extrating 'GP(Genotype Probability)' or 'Dose' values.
 
             needed_columns = [i for i in range(9, df_temp.shape[1])]
 
-            if _feature == 'GP':
-                df_onlyHLA = pd.concat([ID, df_onlyHLA.iloc[:, needed_columns]], axis=1).set_index('ID').astype(str).applymap(lambda x : x.split(':')[2].split(','))
-                df_onlyHLA = df_onlyHLA.applymap(lambda x : list(map(float, x))).applymap(lambda x : x[0]+x[1]/2)
 
-                df_onlyHLA = pd.concat([df_idx, df_onlyHLA], axis=1)
-                # print("DataFrame of GP value :\n{}".format(df_onlyHLA.head()))
+            if _feature == 'GP' or _feature == 'DSxGP':
 
-            elif _feature == 'DS':
+                df_onlyHLA_GP = pd.concat([ID, df_onlyHLA.iloc[:, needed_columns]], axis=1).set_index('ID').astype(str).applymap(lambda x : x.split(':')[2].split(','))
+                df_onlyHLA_GP = df_onlyHLA_GP.applymap(lambda x : list(map(float, x))).applymap(lambda x : x[0]+x[1]/2)
+
+                df_onlyHLA_GP = pd.concat([df_idx, df_onlyHLA_GP], axis=1)
+                # print("DataFrame of GP value :\n{}".format(df_onlyHLA_GP.head()))
+
+
+                for _hla in HLA_names:
+
+                    if not isClassI[_hla] and _exonN == 'exon4':
+                        continue
+
+                    df_temp = df_onlyHLA_GP.filter(regex='^HLA_{}'.format(_hla), axis=0).reset_index('ID')
+
+                    if df_temp.shape[0] > 0:
+                        dict_IMP_vcf_RIGHT_GP_raw[_hla].append(df_temp)
+
+
+
+            if _feature == 'DS' or _feature == 'DSxGP'\
+                    :
                 """
                 Cf) VCF file works focused on ALT(Alternative allele). Meanwhile, The binary marker 'P(Present)' in CookHLA is located in REF(Reference).
                 So, dose value of given vcf file is 'A(Absent)' marker's value and we will extract min value which corresponds to 'P(Present)'.
                 """
-                df_onlyHLA = pd.concat([ID, df_onlyHLA.iloc[:, needed_columns]], axis=1).set_index('ID').astype(str).applymap(lambda x : x.split(':')[1]).astype(float)
-                df_onlyHLA = pd.concat([df_idx, df_onlyHLA], axis=1)
-                # print("DataFrame of DS value :\n{}".format(df_onlyHLA.head()))
 
-            # print(df_onlyHLA.shape)
-
-            for _hla in HLA_names:
-
-                if not isClassI[_hla] and _exonN == 'exon4':
-                    continue
-
-                df_temp = df_onlyHLA.filter(regex='^HLA_{}'.format(_hla), axis=0).reset_index('ID')
-
-                if df_temp.shape[0] > 0:
-                    dict_IMP_vcf_RIGHT[_hla].append(df_temp)
+                df_onlyHLA_DS = pd.concat([ID, df_onlyHLA.iloc[:, needed_columns]], axis=1).set_index('ID').astype(str).applymap(lambda x : x.split(':')[1]).astype(float)
+                df_onlyHLA_DS = pd.concat([df_idx, df_onlyHLA_DS], axis=1)
+                # print("DataFrame of DS value :\n{}".format(df_onlyHLA_DS.head()))
 
 
+                for _hla in HLA_names:
+
+                    if not isClassI[_hla] and _exonN == 'exon4':
+                        continue
+
+                    df_temp = df_onlyHLA_DS.filter(regex='^HLA_{}'.format(_hla), axis=0).reset_index('ID')
+
+                    if df_temp.shape[0] > 0:
+                        dict_IMP_vcf_RIGHT_DS_raw[_hla].append(df_temp)
 
 
 
 
-    if _feature == 'DS':
+    if _feature == 'DS' or _feature == 'DSxGP':
 
-        dict_IMP_vcf_RIGHT_byHLA = {_hla: pd.concat(dict_IMP_vcf_RIGHT[_hla], axis=0) for _hla in HLA_names}
+        dict_IMP_vcf_RIGHT_byHLA = {_hla: pd.concat(dict_IMP_vcf_RIGHT_DS_raw[_hla], axis=0) for _hla in HLA_names}
 
         for _hla in HLA_names:
 
@@ -198,7 +224,7 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __as_VCF=False, __forChec
             df_acc = pd.DataFrame(arr_acc, index=new_index, columns=new_columns)
             dict_IMP_vcf_RIGHT_DS_Score[_hla] = df_acc
             # print("Vote score accumulated : \n{}".format(df_acc))
-            df_acc.to_csv(join(OUTPUT_dir, 'DOSE_Score.{}.txt'.format(_hla)), sep='\t', header=True, index=True)
+            df_acc.to_csv(join(OUTPUT_dir, 'Receipt.DS.Vote_Score.{}.txt'.format(_hla)), sep='\t', header=True, index=True)
 
 
 
@@ -219,176 +245,21 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __as_VCF=False, __forChec
             df_forCheck = pd.concat(l_forCheck, axis=0)
             # print(df_forCheck.head())
             dict_forCheck_byHLA[_hla] = df_forCheck
-            df_forCheck.to_csv(join(OUTPUT_dir, 'each_Imputation.{}.{}.txt'.format(_hla, _feature)), sep='\t', header=True, index=True)
-
-
-
-        ### Call HLA genotype.
-
-        for _hla in HLA_names:
-
-            # print("{} :".format(_hla))
-
-            curr_DOSE_Score = dict_IMP_vcf_RIGHT_DS_Score[_hla]
-            # print(curr_DOSE_Score.head())
-
-            PID = curr_DOSE_Score.columns.tolist()
-            dict_Call = {}
-
-
-            for j in range(0, curr_DOSE_Score.shape[1], 2):
-
-                sr_chr_1st = curr_DOSE_Score.iloc[:, j]
-                sr_chr_2nd = curr_DOSE_Score.iloc[:, j+1]
-
-                flag_max1 = sr_chr_1st == sr_chr_1st.max()
-                flag_max2 = sr_chr_2nd == sr_chr_2nd.max()
-
-
-                idx1 = sr_chr_1st.loc[flag_max1]
-                if len(idx1) > 0:
-                    idx1 = idx1.index.to_series().str.extract(p_HLA2, expand=False).tolist()
-                else:
-                    idx1 = []
-
-                idx2 = sr_chr_2nd.loc[flag_max2]
-                if len(idx2) > 0:
-                    idx2 = idx2.index.to_series().str.extract(p_HLA2, expand=False).tolist()
-                else:
-                    idx2 = []
-
-
-
-                ## Manual Correction for final genotyping
-
-                if len(idx1) == len(idx2):
-
-                    if len(idx1) == 1:
-                        # Normal Calling
-                        # ex) [['0701'], ['1101']]
-                        idx1 = idx1[0]
-                        idx2 = idx2[0]
-
-                    elif len(idx2) > 1:
-
-                        if set(idx1) == set(idx2):
-                            # Mirror Symmetry
-                            # ex) [['1301', '1302'], ['1301', '1302']]
-                            t = idx1
-                            idx1 = t[0]
-                            idx2 = t[1]
-                        else:
-                            # ex) [['1301', '1302'], ['1301', '0104']]
-                            # ex) DPB1 : NA11992, ['0401,0402', '0202,0401']
-                            # Imputation error -> Just export them as it is, but it will be classified as error in 'measureAccuracy.py.'
-                            idx1 = ','.join(idx1)
-                            idx2 = ','.join(idx2)
-
-                else:
-                    # Assuming len(idx1) > len(idx2)
-                    if len(idx1) < len(idx2):
-                        t = idx1
-                        idx1 = idx2
-                        idx2 = t
-
-
-                    # ex) [['4006', '4403', '5101'], ['4403']]
-                    # ex) [['0201', '0301', '2601'], ['2601']]
-                    # ex) [['0201', '1001'], ['0201', '0901', '1001']]
-
-                    idx1 = list(set(idx1).difference(set(idx2)))
-
-                    idx1 = ','.join(idx1)
-                    idx2 = ','.join(idx2)
-
-
-                # print("PID: {}, {}".format(PID[j], [idx1, idx2]))
-
-                dict_Call[PID[j]] = ','.join([idx1, idx2])
-
-            dict_HLA_Single_allele[_hla] = dict_Call
-
-        # Two chromosome => One patient
-        PID = [PID[i] for i in range(0, len(PID), 2)]
-
-
-
-        with open(_out, 'w') as f_out:
-
-            for pid in PID:
-                for _hla in HLA_names:
-
-                    line = '\t'.join([pid, pid, _hla, ',', dict_HLA_Single_allele[_hla][pid]]) + '\n'
-                    # print(line)
-                    f_out.write(line)
+            df_forCheck.to_csv(join(OUTPUT_dir, 'Receipt.DS.each_Imputation.{}.txt'.format(_hla)), sep='\t', header=True, index=True)
 
 
 
 
+        # GenotypeCalling(dict_IMP_vcf_RIGHT_DS_Score, _out, _out_rawcall)
 
 
 
 
-        # if __as_VCF:
-        #
-        #     ### Output as VCF file. (Under construction)
-        #
-        #     for _hla in HLA_names:
-        #
-        #         ## mean DS
-        #
-        #         df_temp = dict_IMP_vcf_RIGHT_mean[_hla].transpose()
-        #         # print("df_temp : \n{}".format(df_temp.head()))
-        #         # print(df_temp.column)
-        #
-        #
-        #         dict_temp = {
-        #             '#CHROM': ['6' for z in range(0, df_temp.shape[0])],
-        #             'POS': [HLA_mid_position[_hla] for z in range(0, df_temp.shape[0])],
-        #             'ID': df_temp.index,
-        #             'REF': ['G' for z in range(0, df_temp.shape[0])],
-        #             'ALT': ['C' for z in range(0, df_temp.shape[0])],
-        #             'QUAL': ['.' for z in range(0, df_temp.shape[0])],
-        #             'FILTER': ['PASS' for z in range(0, df_temp.shape[0])],
-        #             'INFO': ['.' for z in range(0, df_temp.shape[0])],
-        #             'FORMAT': ['GT' for z in range(0, df_temp.shape[0])]
-        #         }
-        #
-        #         df_temp_LEFT = pd.DataFrame.from_dict(dict_temp)
-        #         pd.concat([df_temp_LEFT, df_temp.reset_index(drop=True)], axis=1).to_csv(join(OUTPUT_dir, 'EXON_VCF_HLA_{}.mean_DS.txt'.format(_hla)), sep='\t', header=True, index=False)
-        #
-        #
-        #         ## GT of mean DS
-        #         df_temp2 = dict_IMP_vcf_RIGHT_DS_Score[_hla]
-        #         # print(df_temp2.head())
-        #
-        #         dict_temp = {
-        #             '#CHROM': ['6' for z in range(0, df_temp.shape[0])],
-        #             'POS': [HLA_mid_position[_hla] for z in range(0, df_temp.shape[0])],
-        #             'ID': df_temp2.index,
-        #             'REF': ['G' for z in range(0, df_temp.shape[0])],
-        #             'ALT': ['C' for z in range(0, df_temp.shape[0])],
-        #             'QUAL': ['.' for z in range(0, df_temp.shape[0])],
-        #             'FILTER': ['PASS' for z in range(0, df_temp.shape[0])],
-        #             'INFO': ['.' for z in range(0, df_temp.shape[0])],
-        #             'FORMAT': ['GT' for z in range(0, df_temp.shape[0])]
-        #         }
-        #
-        #         df_temp_LEFT = pd.DataFrame.from_dict(dict_temp)
-        #
-        #         pd.concat([df_temp_LEFT, df_temp2.reset_index(drop=True)], axis=1).to_csv(join(OUTPUT_dir, 'EXON_VCF_HLA_{}.mean_DS_GT.txt'.format(_hla)), sep='\t', header=True, index=False)
-
-
-
-
-
-
-
-    elif _feature == 'GP':
+    if _feature == 'GP' or _feature == 'DSxGP':
 
         ### Acquring mean posterior GP
 
-        dict_IMP_vcf_RIGHT_byHLA = {_hla: pd.concat(dict_IMP_vcf_RIGHT[_hla], axis=0) for _hla in HLA_names}
+        dict_IMP_vcf_RIGHT_byHLA = {_hla: pd.concat(dict_IMP_vcf_RIGHT_GP_raw[_hla], axis=0) for _hla in HLA_names}
 
         for _hla in HLA_names:
 
@@ -404,156 +275,81 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __as_VCF=False, __forChec
 
             df_HLA_mean = pd.concat(l_HLA_mean, axis=1).transpose()
             df_HLA_mean.index.name = 'ID'
-            print("df_mean : \n{}".format(df_HLA_mean.head()))
+            # print("df_mean : \n{}".format(df_HLA_mean.head()))
 
             dict_IMP_vcf_RIGHT_mean[_hla] = df_HLA_mean
-            df_HLA_mean.to_csv(join(OUTPUT_dir, 'Mean_Posterior.{}.txt'.format(_hla)), sep='\t', header=True, index=True)
+            df_HLA_mean.to_csv(join(OUTPUT_dir, 'Receipt.GP.Avg_Posterior.{}.txt'.format(_hla)), sep='\t', header=True, index=True)
 
 
-        if __as_VCF:
 
-            # new Header
-
-            representative_header = join(OUTPUT_dir, 'representative_header.txt')
-            representative_body = join(OUTPUT_dir, 'representative_body.txt')
-
-            with open(dict_IMP_vcf['exon2'][3000]+'.header', 'r') as f_header, open(representative_header, 'w') as f_header_out:
-
-                l_to_remove = ['ID={}'.format(item) for item in ['AF', 'AR2', 'DR2', 'IMP', 'GT', 'DS']]
-
-                for line in f_header:
-
-                    flag_ommit = False
-
-                    for to_remove in l_to_remove:
-                        if re.search(to_remove, line):
-                            flag_ommit = True
-                            break
-
-                    if not flag_ommit:
-                        f_header_out.write(line)
+        # GenotypeCalling(dict_IMP_vcf_RIGHT_mean, _out, _out_rawcall)
 
 
-            l_temp = []
 
-            for _hla in HLA_names:
+    ### HLA Genotype call
 
-                df_temp = dict_IMP_vcf_RIGHT_mean[_hla]
+    if _feature == 'DS':
+        __RETURN__ = GenotypeCalling(dict_IMP_vcf_RIGHT_DS_Score, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.DS.single.alleles'), join(OUTPUT_dir, 'Receipt.DS.raw_call.txt'))
+    elif _feature == 'GP':
+        __RETURN__ = GenotypeCalling(dict_IMP_vcf_RIGHT_mean, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.GP.single.alleles'), join(OUTPUT_dir, 'Receipt.GP.raw_call.txt'))
+    elif _feature == 'DSxGP':
 
-                dict_temp = {
-                    '#CHROM': ['6' for z in range(0, df_temp.shape[0])],
-                    'POS': [HLA_mid_position[_hla] for z in range(0, df_temp.shape[0])],
-                    'ID': df_temp.index,
-                    'REF': ['G' for z in range(0, df_temp.shape[0])],
-                    'ALT': ['C' for z in range(0, df_temp.shape[0])],
-                    'QUAL': ['.' for z in range(0, df_temp.shape[0])],
-                    'FILTER': ['PASS' for z in range(0, df_temp.shape[0])],
-                    'INFO': ['.' for z in range(0, df_temp.shape[0])],
-                    'FORMAT': ['GP' for z in range(0, df_temp.shape[0])]
-                }
+        ### Element-wise multiplication
 
-                df_temp_LEFT = pd.DataFrame.from_dict(dict_temp)
-                # print(df_temp_LEFT.head())
+        for _hla in HLA_names:
 
-                df_temp = pd.concat([df_temp_LEFT, df_temp.reset_index(drop=True)], axis=1)
-                # print(df_temp.head())
-
-                l_temp.append(df_temp)
+            df_DS = dict_IMP_vcf_RIGHT_DS_Score[_hla]
+            df_GP = dict_IMP_vcf_RIGHT_mean[_hla]
 
 
-            df_new_VCF_body = pd.concat(l_temp, axis=0)
-            df_new_VCF_body.to_csv(representative_body, sep='\t', header=True, index=False)
+            DSxGP = np.multiply(df_DS.to_numpy(), df_GP.to_numpy())
 
-            RUN_Bash('cat {} {} > {}'.format(representative_header, representative_body, join(OUTPUT_dir, 'posterior_probability.vcf')))
-            RUN_Bash('rm {}'.format(representative_header))
-            RUN_Bash('rm {}'.format(representative_body))
+            dict_DSxGP[_hla] = pd.DataFrame(DSxGP, index=df_DS.index, columns=df_DS.columns) # Just using index and columns of `df_DS`.
+            dict_DSxGP[_hla].to_csv(join(OUTPUT_dir, 'Receipt.DSxGP.{}.txt'.format(_hla)), sep='\t', header=True, index=True)
 
 
-        ### Generating '*.alleles` file.
 
-        # Patient_ID = dict_IMP_vcf_RIGHT_mean['A'].columns.tolist() # Using just first one.
-        # # print(Patient_ID)
-        #
-        # for _hla in HLA_names:
-        #
-        #     # print(dict_IMP_vcf_RIGHT_mean[_hla].head())
-        #
-        #     HLA_alleles = dict_IMP_vcf_RIGHT_mean[_hla].index.tolist()
-        #     max_probs = dict_IMP_vcf_RIGHT_mean[_hla].apply(max, axis=0).tolist()
-        #
-        #
-        #
-        #     dict_HLA_allele_called = {pid: None for pid in Patient_ID}
-        #
-        #     for j in range(0, dict_IMP_vcf_RIGHT_mean[_hla].shape[1]):
-        #
-        #         among_probs = dict_IMP_vcf_RIGHT_mean[_hla].iloc[:, j].tolist()
-        #
-        #         idx_maxes = [i for i in range(0, len(among_probs)) if among_probs[i] == max_probs[j]]
-        #
-        #         if len(idx_maxes) > 0:
-        #
-        #             l_temp = []
-        #
-        #             for idx in idx_maxes:
-        #
-        #                 m = p_HLA2.match(HLA_alleles[idx])
-        #
-        #                 if m:
-        #                     l_temp.append(m.group(1))
-        #
-        #             dict_HLA_allele_called[Patient_ID[j]] = ','.join(l_temp)
-        #         else:
-        #             dict_HLA_allele_called[Patient_ID[j]] = ""
-        #
-        #     dict_HLA_Single_allele[_hla] = pd.DataFrame(dict_HLA_allele_called, index=[_hla])
-        #
-        #
-        # # for _hla in HLA_names:
-        # #     print("{}   :\n{}".format(_hla, dict_HLA_Single_allele[_hla]))
-        #
-        # ### Making '*.single.alleles' file.
-        #
-        # df_Single_alleles = pd.concat([dict_HLA_Single_allele[_hla] for _hla in HLA_names], axis=0)
-        # print(df_Single_alleles)
-        # df_Single_alleles.to_csv('single_allele.txt', sep='\t', header=True, index=False)
-        #
-        #
-        #
-        # n_col_single_allele = int(df_Single_alleles.shape[1]/2)
-        #
-        # l_df_one_patient = []
-        #
-        # for i in range(0, df_Single_alleles.shape[1], 2):
-        #
-        #     df_one_patient = df_Single_alleles.iloc[:, [i, i+1]].apply(lambda x : ','.join(x), axis=1)
-        #
-        #     print(df_one_patient)
+        GenotypeCalling(dict_IMP_vcf_RIGHT_DS_Score, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.DS.single.alleles'), join(OUTPUT_dir, 'Receipt.DS.raw_call.txt'))
+        GenotypeCalling(dict_IMP_vcf_RIGHT_mean, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.GP.single.alleles'),join(OUTPUT_dir, 'Receipt.GP.raw_call.txt'))
+        __RETURN__ = GenotypeCalling(dict_DSxGP, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.DSxGP.single.alleles'), join(OUTPUT_dir, 'Receipt.DSxGP.raw_call.txt'))
 
 
 
 
-        ### Call HLA genotype.
+    return __RETURN__
+
+
+
+
+
+def GenotypeCalling(_dict_aggregated, _out, _out_rawcall):
+
+
+    _dict_HLA_Single_allele = {_hla: None for _hla in HLA_names}
+
+
+    ### Call HLA genotype.
+
+    with open(_out_rawcall, 'w') as f_out_rawcall:
 
         for _hla in HLA_names:
 
             # print("{} :".format(_hla))
+            f_out_rawcall.write("{} :\n".format(_hla))
 
-            curr_Posterior_avg = dict_IMP_vcf_RIGHT_mean[_hla]
-            # print(curr_Posterior_avg.head())
+            curr_DOSE_Score = _dict_aggregated[_hla]
+            # print(curr_DOSE_Score.head())
 
-            PID = curr_Posterior_avg.columns.tolist()
+            PID = curr_DOSE_Score.columns.tolist()
             dict_Call = {}
 
+            for j in range(0, curr_DOSE_Score.shape[1], 2):
 
-            for j in range(0, curr_Posterior_avg.shape[1], 2):
-
-                sr_chr_1st = curr_Posterior_avg.iloc[:, j]
-                sr_chr_2nd = curr_Posterior_avg.iloc[:, j+1]
+                sr_chr_1st = curr_DOSE_Score.iloc[:, j]
+                sr_chr_2nd = curr_DOSE_Score.iloc[:, j + 1]
 
                 flag_max1 = sr_chr_1st == sr_chr_1st.max()
                 flag_max2 = sr_chr_2nd == sr_chr_2nd.max()
-
 
                 idx1 = sr_chr_1st.loc[flag_max1]
                 if len(idx1) > 0:
@@ -566,8 +362,6 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __as_VCF=False, __forChec
                     idx2 = idx2.index.to_series().str.extract(p_HLA2, expand=False).tolist()
                 else:
                     idx2 = []
-
-
 
                 ## Manual Correction for final genotyping
 
@@ -601,7 +395,6 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __as_VCF=False, __forChec
                         idx1 = idx2
                         idx2 = t
 
-
                     # ex) [['4006', '4403', '5101'], ['4403']]
                     # ex) [['0201', '0301', '2601'], ['2601']]
                     # ex) [['0201', '1001'], ['0201', '0901', '1001']]
@@ -611,29 +404,32 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __as_VCF=False, __forChec
                     idx1 = ','.join(idx1)
                     idx2 = ','.join(idx2)
 
-
                 # print("PID: {}, {}".format(PID[j], [idx1, idx2]))
+                f_out_rawcall.write("{} : {}\n".format(PID[j], [idx1, idx2]))
 
                 dict_Call[PID[j]] = ','.join([idx1, idx2])
 
-            dict_HLA_Single_allele[_hla] = dict_Call
+            _dict_HLA_Single_allele[_hla] = dict_Call
 
-        # Two chromosome => One patient
-        PID = [PID[i] for i in range(0, len(PID), 2)]
-
-
-
-        with open(_out, 'w') as f_out:
-
-            for pid in PID:
-                for _hla in HLA_names:
-
-                    line = '\t'.join([pid, pid, _hla, ',', dict_HLA_Single_allele[_hla][pid]]) + '\n'
-                    # print(line)
-                    f_out.write(line)
+        f_out_rawcall.write('\n')
 
 
 
+
+    # Two chromosome => One patient
+    PID = [PID[i] for i in range(0, len(PID), 2)]
+
+    with open(_out, 'w') as f_out:
+
+        for pid in PID:
+            for _hla in HLA_names:
+                line = '\t'.join([pid, pid, _hla, ',', _dict_HLA_Single_allele[_hla][pid]]) + '\n'
+                # print(line)
+                f_out.write(line)
+
+
+
+    return _out
 
 
 
@@ -643,6 +439,20 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __as_VCF=False, __forChec
 if __name__ == '__main__':
 
     """
+    
+    _feature := 'DS', 'GP' or 'BOTH'
+    
+    (1) Dose(DS) Score based Voting method
+        - Receipt.each_Imputation
+        - Receipt.Vote_Score
+        - Receipt.raw_call
+        - HLA_IMPUTATION_OUT.single.alleles
+    
+    (2) Average of posterior probability(GP) based method.
+        - Receipt.Avg_Posterior
+        - Receipt.raw_call
+        - HLA_IMPUTATION_OUT.single.alleles
+    
     """
 
     dict_raw_IMP = {_exonN : {_overlap : None for _overlap in __overlap__} for _exonN in __EXON__}
@@ -660,41 +470,16 @@ if __name__ == '__main__':
 
 
     # in OS X
-    dict_raw_IMP['exon2'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_HM_CEU_T1DGC_REF.MHC.exon2.3000.QC.doubled.imputation_out.vcf'
-    dict_raw_IMP['exon2'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_HM_CEU_T1DGC_REF.MHC.exon2.4000.QC.doubled.imputation_out.vcf'
-    dict_raw_IMP['exon2'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_HM_CEU_T1DGC_REF.MHC.exon2.5000.QC.doubled.imputation_out.vcf'
-    dict_raw_IMP['exon3'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_HM_CEU_T1DGC_REF.MHC.exon3.3000.QC.doubled.imputation_out.vcf'
-    dict_raw_IMP['exon3'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_HM_CEU_T1DGC_REF.MHC.exon3.4000.QC.doubled.imputation_out.vcf'
-    dict_raw_IMP['exon3'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_HM_CEU_T1DGC_REF.MHC.exon3.5000.QC.doubled.imputation_out.vcf'
-    dict_raw_IMP['exon4'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_HM_CEU_T1DGC_REF.MHC.exon4.3000.QC.doubled.imputation_out.vcf'
-    dict_raw_IMP['exon4'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_HM_CEU_T1DGC_REF.MHC.exon4.4000.QC.doubled.imputation_out.vcf'
-    dict_raw_IMP['exon4'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_HM_CEU_T1DGC_REF.MHC.exon4.5000.QC.doubled.imputation_out.vcf'
+    dict_raw_IMP['exon2'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190717_BOTH_ph/HM_CEU_T1DGC_REF_ph.MHC.exon2.3000.QC.doubled.imputation_out.vcf'
+    dict_raw_IMP['exon2'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190717_BOTH_ph/HM_CEU_T1DGC_REF_ph.MHC.exon2.4000.QC.doubled.imputation_out.vcf'
+    dict_raw_IMP['exon2'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190717_BOTH_ph/HM_CEU_T1DGC_REF_ph.MHC.exon2.5000.QC.doubled.imputation_out.vcf'
+    dict_raw_IMP['exon3'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190717_BOTH_ph/HM_CEU_T1DGC_REF_ph.MHC.exon3.3000.QC.doubled.imputation_out.vcf'
+    dict_raw_IMP['exon3'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190717_BOTH_ph/HM_CEU_T1DGC_REF_ph.MHC.exon3.4000.QC.doubled.imputation_out.vcf'
+    dict_raw_IMP['exon3'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190717_BOTH_ph/HM_CEU_T1DGC_REF_ph.MHC.exon3.5000.QC.doubled.imputation_out.vcf'
+    dict_raw_IMP['exon4'][3000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190717_BOTH_ph/HM_CEU_T1DGC_REF_ph.MHC.exon4.3000.QC.doubled.imputation_out.vcf'
+    dict_raw_IMP['exon4'][4000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190717_BOTH_ph/HM_CEU_T1DGC_REF_ph.MHC.exon4.4000.QC.doubled.imputation_out.vcf'
+    dict_raw_IMP['exon4'][5000] = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190717_BOTH_ph/HM_CEU_T1DGC_REF_ph.MHC.exon4.5000.QC.doubled.imputation_out.vcf'
 
-    HLA_Genotype_Call(dict_raw_IMP, _feature='GP')
-    # AverageImpResults(dict_raw_IMP, _feature='DS', __as_VCF=True)
-
-
-
-
-
-
-
-
-    # ### Acquiring mean
-    #
-    # for _hla in HLA_names:
-    #
-    #     if len(dict_IMP_vcf_RIGHT[_hla]) > 0:
-    #
-    #         df_acc = dict_IMP_vcf_RIGHT[_hla][0]
-    #
-    #         # accumulation of the values(GP or DS) of each result
-    #         for i in range(1, len(dict_IMP_vcf_RIGHT[_hla])):
-    #             df_acc = df_acc + dict_IMP_vcf_RIGHT[_hla][i]
-    #
-    #         dict_IMP_vcf_RIGHT_mean[_hla] = df_acc / (9 if isClassI[_hla] else 6) # dividing 9 if HLA is Class I else 6.
-    #
-    #         # print("\nHLA_{} mean:\n{}".format(_hla, dict_IMP_vcf_RIGHT_mean[_hla].head()))
-    #
-    #
-    #
+    # HLA_Genotype_Call(dict_raw_IMP, _feature='GP')
+    # HLA_Genotype_Call(dict_raw_IMP, _feature='DS')
+    HLA_Genotype_Call(dict_raw_IMP, _feature='BOTH')
