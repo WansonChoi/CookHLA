@@ -14,6 +14,8 @@ from src.measureAccuracy import measureAccuracy
 from src.redefineBPv1BH import redefineBP
 from src.HLA_MultipleRefs import HLA_MultipleRefs
 
+from src.HLA_Genotype_Call import HLA_Genotype_Call
+
 
 
 ########## < Core Varialbes > ##########
@@ -117,6 +119,9 @@ class HLA_Imputation(object):
         # Only one time of pre-phasing with Exon234 reference panel.
 
 
+
+        ### (3) Imputation
+
         if _MultP == 1:
 
             ## Serial implementation of main.
@@ -146,6 +151,22 @@ class HLA_Imputation(object):
                 for _overlap in __overlap__:
                     self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_exonN][_overlap].get()
 
+
+
+        ### (3) CONVERT_OUT
+
+        IMPUTATION_OUT_single = HLA_Genotype_Call(self.dict_IMP_Result, _feature='BOTH')
+
+        if _answer:
+
+            if not os.path.exists(_answer):
+                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't exist. Please check '--answer/-an' argument again.\n"
+                                                      "Skipping calculating imputation accuracy.")
+            elif os.path.getsize(_answer) == 0:
+                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
+                                                      "Skipping calculating imputation accuracy.")
+            else:
+                measureAccuracy(_answer, IMPUTATION_OUT_single, 'all', outfile=IMPUTATION_OUT_single+'.accuracy')
 
 
 
