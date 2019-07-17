@@ -34,6 +34,14 @@ __overlap__ = [3000, 4000, 5000]
 
 class HLA_Imputation_MM(object):
 
+    """
+
+    (2019. 07. 17.) Deprecated.
+
+    This 'HLA_Imputation_MM.py' has been mereged to 'HLA_Imputation.py'.
+
+    """
+
     def __init__(self, idx_process, MHC, _reference, _out, _hg,
                  _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4,
                  _answer=None, f_save_intermediates=False, _MultP=1):
