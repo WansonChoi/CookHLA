@@ -112,18 +112,31 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
     if _Average_Erate and _AdaptiveGeneticMap:
 
-        if os.path.exists(_Average_Erate) and os.path.exists(_AdaptiveGeneticMap):
+        if os.path.exists(_Average_Erate) and os.path.getsize(_Average_Erate) > 0 and \
+                os.path.exists(_AdaptiveGeneticMap) and os.path.getsize(_AdaptiveGeneticMap) > 0:
             __use_GeneticMap = True     # Using Adaptive Genetic Map.
+
         else:
             if not os.path.exists(_Average_Erate):
                 print(std_ERROR_MAIN_PROCESS_NAME + "The file ('{}') doesn't exist.\n"
                                                     "Please check '--average-erate/-ae' argument again.".format(_Average_Erate))
                 sys.exit()
+            elif os.path.getsize(_Average_Erate) == 0:
+                print(std_ERROR_MAIN_PROCESS_NAME + "The file ('{}') doesn't contain anything.\n"
+                                                    "Please check '--average-erate/-ae' argument again.".format(_Average_Erate))
+                sys.exit()
+
 
             if not os.path.exists(_AdaptiveGeneticMap):
                 print(std_ERROR_MAIN_PROCESS_NAME + "The file ('{}') doesn't exist.\n"
                                                     "Please check '--genetic-map/-gm' argument again.".format(_AdaptiveGeneticMap))
                 sys.exit()
+            elif os.path.getsize(_AdaptiveGeneticMap):
+                print(std_ERROR_MAIN_PROCESS_NAME + "The file ('{}') doesn't contain anything.\n"
+                                                    "Please check '--average-erate/-ae' argument again.".format(_Average_Erate))
+                sys.exit()
+
+
 
     elif not (_Average_Erate or _AdaptiveGeneticMap):
 
@@ -405,28 +418,25 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         idx_process += 1
 
 
-    if __use_Multiple_Markers and __use_GeneticMap:
 
-        # Original CookHLA
+    if __use_Multiple_Markers:
+
+        # [3] Multiple Markers
+        # [6] Multiple Markers + Adaptive Genetic Map
         __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
                                            LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
                                            _answer=_answer, f_save_intermediates=__save_intermediates, _MultP=_MultP,
                                         _given_prephased=_given_prephased)
 
-    elif __use_Multiple_Markers and not __use_GeneticMap:
 
-        # Only Multiple Markers (for Performance Test.)
-        __IMPUTE_OUT__ = HLA_Imputation_MM(idx_process, MHC, _reference, _out, _hg,
-                                           LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4, _answer=_answer,
-                                           f_save_intermediates=__save_intermediates, _MultP=_MultP)
+    elif not __use_Multiple_Markers:
 
-    elif not __use_Multiple_Markers and __use_GeneticMap:
-
-        # Only Adaptive Genetic Map (for Performance Test.)
+        # [2] No Adaptive Genetic Map (Just with Beagle 4.1)
+        # [4] Adaptive Genetic Map (HapMap)
+        # [5] Adaptive Genetic Map
         __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
                                            LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
                                            _answer=_answer, f_save_intermediates=__save_intermediates)
-
 
 
     # if CLEAN_UP:

@@ -49,6 +49,7 @@ class HLA_MultipleRefs():
 
         # general
         self.__save_intermediates = f_save_intermediates
+        self.FLAG_AdaptiveGeneticMap = __AGM__ and _out_AGM
 
         # dependency
         self.BEAGLE2LINKAGE = _BEAGLE2LINKAGE
@@ -59,7 +60,9 @@ class HLA_MultipleRefs():
         self.EXON234_Panel = Make_EXON234_Panel(__REFERENCE__, _out_panel + '.exon234', _BEAGLE2LINKAGE, _PLINK)
         self.ExonN_Panel = {_exonN : None for _exonN in __EXON__}
 
-        if __AGM__ and _out_AGM:
+
+        # Using Adaptive Genetic Map.
+        if self.FLAG_AdaptiveGeneticMap:
 
             if not os.path.exists(self.EXON234_Panel+'.markers'):
                 print(std_ERROR_MAIN_PROCESS_NAME + "Marker file of exon234 panel('{}') can't be found.".format(self.EXON234_Panel+'.exon234.markers'))
@@ -67,6 +70,10 @@ class HLA_MultipleRefs():
 
             self.EXON234_AGM = Make_EXON234_AGM(__AGM__, self.EXON234_Panel+'.markers', _out_AGM+'.exon234.txt')
             self.ExonN_AGM = {_exonN : None for _exonN in __EXON__}
+
+        else:
+            self.EXON234_AGM = None
+            self.ExonN_AGM = None
 
 
 
@@ -95,26 +102,28 @@ class HLA_MultipleRefs():
 
 
 
-        ###### < Generating Exon 2, 3, 4 Adpative Genetic Map > ######
+        if self.FLAG_AdaptiveGeneticMap:
 
-        if _MultP == 1:
+            ###### < Generating Exon 2, 3, 4 Adpative Genetic Map > ######
 
-            for _exonN in __EXON__:
-                self.ExonN_AGM = self.Make_ExonN_AGM(_exonN, self.EXON234_AGM, _out_AGM+'.{}.txt'.format(_exonN))
+            if _MultP == 1:
 
-        else:
+                for _exonN in __EXON__:
+                    self.ExonN_AGM = self.Make_ExonN_AGM(_exonN, self.EXON234_AGM, _out_AGM+'.{}.txt'.format(_exonN))
 
-            ## Multiprocessing
-            pool = mp.Pool(processes=_MultP if _MultP <= 3 else 3)
+            else:
 
-            dict_Pool = {_exonN: pool.apply_async(
-                self.Make_ExonN_AGM, (_exonN, self.EXON234_AGM, _out_AGM+'.{}.txt'.format(_exonN))
-            ) for _exonN in __EXON__}
+                ## Multiprocessing
+                pool = mp.Pool(processes=_MultP if _MultP <= 3 else 3)
 
-            pool.close()
-            pool.join()
+                dict_Pool = {_exonN: pool.apply_async(
+                    self.Make_ExonN_AGM, (_exonN, self.EXON234_AGM, _out_AGM+'.{}.txt'.format(_exonN))
+                ) for _exonN in __EXON__}
 
-            self.ExonN_AGM = {_exonN: _OUT.get() for _exonN, _OUT in dict_Pool.items()}
+                pool.close()
+                pool.join()
+
+                self.ExonN_AGM = {_exonN: _OUT.get() for _exonN, _OUT in dict_Pool.items()}
 
 
 
