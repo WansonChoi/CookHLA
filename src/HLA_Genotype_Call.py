@@ -288,10 +288,12 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __forCheck=True, _out=Non
 
     ### HLA Genotype call
 
+    __RETURN__ = []
+
     if _feature == 'DS':
-        __RETURN__ = GenotypeCalling(dict_IMP_vcf_RIGHT_DS_Score, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.DS.single.alleles'), join(OUTPUT_dir, 'Receipt.DS.raw_call.txt'))
+        __RETURN__.append(GenotypeCalling(dict_IMP_vcf_RIGHT_DS_Score, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.DS.single.alleles'), join(OUTPUT_dir, 'Receipt.DS.raw_call.txt')))
     elif _feature == 'GP':
-        __RETURN__ = GenotypeCalling(dict_IMP_vcf_RIGHT_mean, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.GP.single.alleles'), join(OUTPUT_dir, 'Receipt.GP.raw_call.txt'))
+        __RETURN__.append(GenotypeCalling(dict_IMP_vcf_RIGHT_mean, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.GP.single.alleles'), join(OUTPUT_dir, 'Receipt.GP.raw_call.txt')))
     elif _feature == 'DSxGP':
 
         ### Element-wise multiplication
@@ -309,9 +311,9 @@ def HLA_Genotype_Call(_dict_IMP_Result, _feature='GP', __forCheck=True, _out=Non
 
 
 
-        GenotypeCalling(dict_IMP_vcf_RIGHT_DS_Score, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.DS.single.alleles'), join(OUTPUT_dir, 'Receipt.DS.raw_call.txt'))
-        GenotypeCalling(dict_IMP_vcf_RIGHT_mean, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.GP.single.alleles'),join(OUTPUT_dir, 'Receipt.GP.raw_call.txt'))
-        __RETURN__ = GenotypeCalling(dict_DSxGP, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.DSxGP.single.alleles'), join(OUTPUT_dir, 'Receipt.DSxGP.raw_call.txt'))
+        __RETURN__.append(GenotypeCalling(dict_IMP_vcf_RIGHT_DS_Score, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.DS.single.alleles'), join(OUTPUT_dir, 'Receipt.DS.raw_call.txt')))
+        __RETURN__.append(GenotypeCalling(dict_IMP_vcf_RIGHT_mean, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.GP.single.alleles'),join(OUTPUT_dir, 'Receipt.GP.raw_call.txt')))
+        __RETURN__.append(GenotypeCalling(dict_DSxGP, join(OUTPUT_dir, 'HLA_IMPUTATION_OUT.DSxGP.single.alleles'), join(OUTPUT_dir, 'Receipt.DSxGP.raw_call.txt')))
 
 
 

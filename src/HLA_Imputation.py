@@ -158,7 +158,7 @@ class HLA_Imputation(object):
 
         ### (3) CONVERT_OUT
 
-        IMPUTATION_OUT_single = HLA_Genotype_Call(self.dict_IMP_Result, _feature='BOTH')
+        IMPUTATION_OUT_single = HLA_Genotype_Call(self.dict_IMP_Result, _feature='BOTH') # 'IMPUTATION_OUT_single' is supposed to be a list.
 
         if _answer:
 
@@ -169,7 +169,9 @@ class HLA_Imputation(object):
                 print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
                                                       "Skipping calculating imputation accuracy.")
             else:
-                measureAccuracy(_answer, IMPUTATION_OUT_single, 'all', outfile=IMPUTATION_OUT_single+'.accuracy')
+
+                for item in IMPUTATION_OUT_single:
+                    measureAccuracy(_answer, item, 'all', outfile=item+'.accuracy')
 
 
 
