@@ -329,8 +329,8 @@ class HLA_Imputation_GM(object):
             beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true 
             """
 
-            # overlap : 5000
-            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true overlap=5000'.format(
+            # overlap : 3000 (default)
+            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true'.format(
                 self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT)
             # print(command)
             if not os.system(command):
