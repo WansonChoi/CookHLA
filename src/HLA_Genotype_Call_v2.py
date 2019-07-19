@@ -180,6 +180,8 @@ def HLA_Genotype_Call_v2(_dict_IMP_Result, _out=None):
             # if count > 5 : break;
 
 
+    return _out
+
 
 
 

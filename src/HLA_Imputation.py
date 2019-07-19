@@ -15,6 +15,7 @@ from src.redefineBPv1BH import redefineBP
 from src.HLA_MultipleRefs import HLA_MultipleRefs
 
 from src.HLA_Genotype_Call import HLA_Genotype_Call
+from src.HLA_Genotype_Call_v2 import HLA_Genotype_Call_v2
 
 
 
@@ -156,12 +157,22 @@ class HLA_Imputation(object):
                     self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_exonN][_overlap].get()
 
 
-        print(self.dict_IMP_Result)
-        sys.exit()
+
+
 
         ### (3) CONVERT_OUT
 
-        IMPUTATION_OUT_single = HLA_Genotype_Call(self.dict_IMP_Result, _feature='BOTH') # 'IMPUTATION_OUT_single' is supposed to be a list.
+        if not f_No_prephasing:
+
+            IMPUTATION_OUT = HLA_Genotype_Call(self.dict_IMP_Result, _feature='BOTH') # 'IMPUTATION_OUT' is supposed to be a list.
+
+        else:
+
+            IMPUTATION_OUT = [HLA_Genotype_Call_v2(self.dict_IMP_Result)] # as a list
+
+
+
+        ## Acquring accuracy
 
         if _answer:
 
@@ -173,7 +184,7 @@ class HLA_Imputation(object):
                                                       "Skipping calculating imputation accuracy.")
             else:
 
-                for item in IMPUTATION_OUT_single:
+                for item in IMPUTATION_OUT:
                     measureAccuracy(_answer, item, 'all', outfile=item+'.accuracy')
 
 
@@ -366,9 +377,9 @@ class HLA_Imputation(object):
 
 
 
-    def IMPUTE(self, MHC, _out, _DOUBLED_PHASED_RESULT, _REF_PHASED_VCF, _overlap, _exonN, _aver_erate, _Refined_Genetic_Map):
+    def IMPUTE(self, MHC, _out, _IMPUTATION_INPUT, _REF_PHASED_VCF, _overlap, _exonN, _aver_erate, _Refined_Genetic_Map):
 
-        if os.path.getsize(_DOUBLED_PHASED_RESULT) == 0:
+        if os.path.getsize(_IMPUTATION_INPUT) == 0:
             print(std_ERROR_MAIN_PROCESS_NAME + "Doubled phased file contains nothing. Please check it again.")
             sys.exit()
 
@@ -394,7 +405,7 @@ class HLA_Imputation(object):
 
 
             command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={}'.format(
-                self.BEAGLE4, _DOUBLED_PHASED_RESULT, _REF_PHASED_VCF, OUT, _overlap, aver_erate, _Refined_Genetic_Map)
+                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, OUT, _overlap, aver_erate, _Refined_Genetic_Map)
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
@@ -416,8 +427,7 @@ class HLA_Imputation(object):
             (2019. 07. 17.) 'gprobs' argument will still be used. (for genotype calling based on average of posterior probability.)
             """
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true'.format(
-                self.BEAGLE4, _DOUBLED_PHASED_RESULT, _REF_PHASED_VCF, OUT)
+            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true'.format(self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, OUT)
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
