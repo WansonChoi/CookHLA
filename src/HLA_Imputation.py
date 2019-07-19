@@ -41,7 +41,7 @@ class HLA_Imputation(object):
 
     def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
                  _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4,
-                 _answer=None, f_save_intermediates=False, _MultP=1, _given_prephased=None):
+                 _answer=None, f_save_intermediates=False, _MultP=1, _given_prephased=None, f_No_prephasing=False):
 
         ### General
         self.idx_process = idx_process
@@ -118,7 +118,8 @@ class HLA_Imputation(object):
 
         ### (1) CONVERT_IN
 
-        DOUBLED_PHASED_RESULT = self.CONVERT_IN(MHC, self.Exon234_Panel, _out, _hg, _given_prephased=_given_prephased)
+        IMPUTATION_INPUT = self.CONVERT_IN(MHC, self.Exon234_Panel, _out, _hg, _given_prephased=_given_prephased,
+                                                f_No_prephasing=f_No_prephasing)
         # Only one time of pre-phasing with Exon234 reference panel.
 
 
@@ -132,7 +133,7 @@ class HLA_Imputation(object):
                 for _overlap in __overlap__:
 
                     self.dict_IMP_Result[_exonN][_overlap] = \
-                        self.IMPUTE(MHC, _out, DOUBLED_PHASED_RESULT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf',
+                        self.IMPUTE(MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf',
                                     _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN])
 
 
@@ -142,7 +143,7 @@ class HLA_Imputation(object):
 
             pool = mp.Pool(processes=_MultP if _MultP <= 9 else 9)
 
-            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, DOUBLED_PHASED_RESULT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN]))
+            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN]))
                                   for _overlap in __overlap__}
                          for _exonN in __EXON__}
 
@@ -155,6 +156,8 @@ class HLA_Imputation(object):
                     self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_exonN][_overlap].get()
 
 
+        print(self.dict_IMP_Result)
+        sys.exit()
 
         ### (3) CONVERT_OUT
 
@@ -187,10 +190,10 @@ class HLA_Imputation(object):
 
 
 
-    def CONVERT_IN(self, MHC, _reference, _out, _hg, _given_prephased=None):
+    def CONVERT_IN(self, MHC, _reference, _out, _hg, _given_prephased=None, f_No_prephasing=False):
 
 
-        if _given_prephased:
+        if _given_prephased and not f_No_prephasing:
 
             print("(Test Purpose) Given pre-phased result will be used. ('{}')".format(_given_prephased))
 
@@ -337,24 +340,29 @@ class HLA_Imputation(object):
         """
 
 
+        if not f_No_prephasing:
 
-        ############### < Multiple Markers > ###############
+            ############### < Multiple Markers > ###############
 
-        ### Phasing & Doubling (only on Target Sample.)
+            ### Phasing & Doubling (only on Target Sample.)
 
-        # Phasing
-        PHASED_RESULT = self.Phasing(MHC, MHC_QC_VCF_exonN, REF_PHASED_VCF)
+            # Phasing
+            PHASED_RESULT = self.Phasing(MHC, MHC_QC_VCF_exonN, REF_PHASED_VCF)
 
-        # [Temporary Hardcoding for Phased Result]
-        # PHASED_RESULT = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190716_BOTH/_3_HM_CEU_T1DGC_REF.MHC.QC.phasing_out_not_double"
-        # print("[Temporary Hardcoding]Phased Result:\n{}".format(PHASED_RESULT))
+            # [Temporary Hardcoding for Phased Result]
+            # PHASED_RESULT = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190716_BOTH/_3_HM_CEU_T1DGC_REF.MHC.QC.phasing_out_not_double"
+            # print("[Temporary Hardcoding]Phased Result:\n{}".format(PHASED_RESULT))
 
-        # Doubling
-        DOUBLED_PHASED_RESULT = self.Doubling(MHC, PHASED_RESULT)
+            # Doubling
+            DOUBLED_PHASED_RESULT = self.Doubling(MHC, PHASED_RESULT)
 
 
 
-        return DOUBLED_PHASED_RESULT
+            return DOUBLED_PHASED_RESULT
+
+        else:
+
+            return MHC_QC_VCF_exonN
 
 
 

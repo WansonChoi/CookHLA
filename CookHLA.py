@@ -25,7 +25,16 @@ TOLERATED_DIFF = 0.15
 
 def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Average_Erate=None, _java_memory='2g',
             _MultP=1, _answer=None, __save_intermediates=False, __use_Multiple_Markers=False, _p_src="./src",
-            _p_dependency="./dependency", _given_prephased=None):
+            _p_dependency="./dependency", _given_prephased=None, f_No_prephasing=False):
+
+
+    ### Argument exception
+
+    if _given_prephased and f_No_prephasing:
+        print(std_ERROR_MAIN_PROCESS_NAME + "The arguments '--prephased/-ph' and '--no-prephasing/nph' can't be used simultaneously.\n"
+                                            "Please check them again.")
+        sys.exit()
+
 
     p_src = _p_src
     p_dependency = _p_dependency
@@ -170,6 +179,9 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
     if _given_prephased:
         print("- (Test Purpose) Pre-phased result given.")
+
+    if f_No_prephasing:
+        print("- No prephasing.")
 
 
 
@@ -426,7 +438,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
                                            LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
                                            _answer=_answer, f_save_intermediates=__save_intermediates, _MultP=_MultP,
-                                        _given_prephased=_given_prephased)
+                                        _given_prephased=_given_prephased, f_No_prephasing=f_No_prephasing)
 
 
     elif not __use_Multiple_Markers:
@@ -508,6 +520,8 @@ if __name__ == "__main__":
     parser.add_argument("--average-erate", "-ae", help="\nAverate error rate file.\n\n")
     parser.add_argument("--use-multiple-markers", "-ml", help="\nUsing multiple markers.\n\n", action='store_true')
 
+    parser.add_argument("--no-prephasing", "-nph", help="\nNo prephasing used.\n\n", action='store_true')
+
     parser.add_argument("--answer", "-an", help="\nAnswer file to calculate imputation accuracy.\n\n")
 
     parser.add_argument("--multiprocess", "-mp", help="\nSetting parallel multiprocessing.\n\n", type=int, choices=[2,3,4,5,6,7,8,9], nargs='?', default=1, const=3)
@@ -548,4 +562,5 @@ if __name__ == "__main__":
 
     CookHLA(args.input, args.out, args.reference, args.hg, args.genetic_map, args.average_erate,
             _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer,
-            __use_Multiple_Markers=args.use_multiple_markers, _given_prephased=args.prephased)
+            __use_Multiple_Markers=args.use_multiple_markers, _given_prephased=args.prephased,
+            f_No_prephasing=args.no_prephasing)
