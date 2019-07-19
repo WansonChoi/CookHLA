@@ -34,10 +34,13 @@ class HLA_Imputation_GM(object):
         self.idx_process = idx_process
         self.__save_intermediates = f_save_intermediates
 
+        self.FLAG_AdaptiveGeneticMap = _AdaptiveGeneticMap and _Average_Erate # (***) Deciding whether to use Adaptive genetic map or not.
+
+
         # Prefixes
         self.OUTPUT_dir = os.path.dirname(_out)
         self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
-        self.OUTPUT_dir_GM = join(self.OUTPUT_dir, os.path.basename(_AdaptiveGeneticMap))
+        self.OUTPUT_dir_GM = join(self.OUTPUT_dir, os.path.basename(_AdaptiveGeneticMap)) if self.FLAG_AdaptiveGeneticMap else None
         self.HLA_IMPUTED_Result_MHC = join(os.path.dirname(MHC), "HLA_IMPUTED_Result.{}".format(os.path.basename(MHC)))
 
         # Result
@@ -70,7 +73,7 @@ class HLA_Imputation_GM(object):
         ### (1) CONVERT_IN
 
         # self.CONVERT_IN(MHC, _reference, _out, _hg, _aver_erate=self.__AVER__, _Genetic_Map=self.__AGM__)
-        [MHC_QC_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg, _aver_erate=self.__AVER__, _Genetic_Map=self.__AGM__)
+        [MHC_QC_VCF, REF_PHASED_VCF] = self.CONVERT_IN(MHC, _reference, _out, _hg, _Genetic_Map=self.__AGM__)
 
         # [Temporary Hard coding]
         # MHC_QC_VCF = "/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF.MHC.QC.vcf"
@@ -103,14 +106,14 @@ class HLA_Imputation_GM(object):
 
         ###### < Get Accuracy > ######
 
-        self.accuracy = self.getAccuracy(self.IMP_Result, _answer, self.HLA_IMPUTED_Result_MHC+'.imputed.alleles.accuracy')
+        # self.accuracy = measureAccuracy(_answer, self.IMP_Result, 'all', self.HLA_IMPUTED_Result_MHC+'.imputed.alleles.accuracy')
         # print("Accuracy result :\n{}".format(self.accuracy))
 
 
 
 
 
-    def CONVERT_IN(self, MHC, _reference, _out, _hg, _aver_erate, _Genetic_Map):
+    def CONVERT_IN(self, MHC, _reference, _out, _hg, _Genetic_Map):
 
 
         print("[{}] Converting data to beagle format.".format(self.idx_process))
@@ -237,38 +240,43 @@ class HLA_Imputation_GM(object):
 
 
 
-        ############### < Adaptive Genetic Map > ###############
+
+        if self.FLAG_AdaptiveGeneticMap:
+
+            ############### < Adaptive Genetic Map > ###############
 
 
-        """
-        awk '{print $1" "$2" "$3}' $geneticMap > $geneticMap.first
-        awk '{print $2}' $REFERENCE.GCchange.markers > $geneticMap.second
-        paste -d " " $geneticMap.first $geneticMap.second > $geneticMap.refined.map
+            """
+            awk '{print $1" "$2" "$3}' $geneticMap > $geneticMap.first
+            awk '{print $2}' $REFERENCE.GCchange.markers > $geneticMap.second
+            paste -d " " $geneticMap.first $geneticMap.second > $geneticMap.refined.map
+    
+            rm $geneticMap.first
+            rm $geneticMap.second
+    
+            """
 
-        rm $geneticMap.first
-        rm $geneticMap.second
+            REFINED_GENTIC_MAP = self.OUTPUT_dir_GM + '.refined.map'
 
-        """
-
-        REFINED_GENTIC_MAP = self.OUTPUT_dir_GM + '.refined.map'
-
-        RUN_Bash('awk \'{print $1" "$2" "$3}\' %s > %s' % (_Genetic_Map, self.OUTPUT_dir_GM+'.first'))
-        RUN_Bash('awk \'{print $2}\' %s > %s' % (GCchangeMarkers_REF, self.OUTPUT_dir_GM+'.second'))
-        RUN_Bash('paste -d " " {} {} > {}'.format(self.OUTPUT_dir_GM+'.first', self.OUTPUT_dir_GM+'.second', REFINED_GENTIC_MAP))   # 이렇게 column bind시키는데는 당연히 *.first, *.second 파일의 row수가 같을 거라고 가정하는 상황.
+            RUN_Bash('awk \'{print $1" "$2" "$3}\' %s > %s' % (_Genetic_Map, self.OUTPUT_dir_GM+'.first'))
+            RUN_Bash('awk \'{print $2}\' %s > %s' % (GCchangeMarkers_REF, self.OUTPUT_dir_GM+'.second'))
+            RUN_Bash('paste -d " " {} {} > {}'.format(self.OUTPUT_dir_GM+'.first', self.OUTPUT_dir_GM+'.second', REFINED_GENTIC_MAP))   # 이렇게 column bind시키는데는 당연히 *.first, *.second 파일의 row수가 같을 거라고 가정하는 상황.
 
 
-        if os.path.exists(REFINED_GENTIC_MAP):
+            if os.path.exists(REFINED_GENTIC_MAP):
 
-            self.refined_Genetic_Map = REFINED_GENTIC_MAP
+                self.refined_Genetic_Map = REFINED_GENTIC_MAP
 
-            if not self.__save_intermediates:
-                os.system('rm {}'.format(self.OUTPUT_dir_GM+'.first'))
-                os.system('rm {}'.format(self.OUTPUT_dir_GM+'.second'))
-                os.system('rm {}'.format(GCchangeMarkers_REF)) # (Genetic Map) *.GCchange.markers is removed here.
+                if not self.__save_intermediates:
+                    os.system('rm {}'.format(self.OUTPUT_dir_GM+'.first'))
+                    os.system('rm {}'.format(self.OUTPUT_dir_GM+'.second'))
+                    os.system('rm {}'.format(GCchangeMarkers_REF)) # (Genetic Map) *.GCchange.markers is removed here.
 
-        else:
-            print(std_ERROR_MAIN_PROCESS_NAME + "Failed to generate Refined Genetic Map.")
-            sys.exit()
+            else:
+                print(std_ERROR_MAIN_PROCESS_NAME + "Failed to generate Refined Genetic Map.")
+                sys.exit()
+
+
 
 
 
@@ -291,26 +299,50 @@ class HLA_Imputation_GM(object):
         OUT = _out + '.QC.imputation_out'
 
 
-        """
-        beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true 
-                    map=$geneticMap.refined.map ne=10000 overlap=5000 err=$aver_erate
-        """
 
-        with open(_aver_erate, 'r') as f:
-            aver_erate = f.readline().rstrip('\n')
+        if self.FLAG_AdaptiveGeneticMap:
 
-        command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} ne=10000 overlap=5000 err={} '.format(
-            self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT,
-            _Refined_Genetic_Map, aver_erate)
-        print(command)
-        if not os.system(command):
-            if not self.__save_intermediates:
-                os.system('rm {}'.format(OUT+'.log'))
-                # os.system('rm {}'.format(_MHC_QC_VCF))
-                # os.system('rm {}'.format(_REF_PHASED_VCF)) # These 2 files
+            """
+            beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true 
+                        map=$geneticMap.refined.map ne=10000 overlap=5000 err=$aver_erate
+            """
+
+            with open(_aver_erate, 'r') as f:
+                aver_erate = f.readline().rstrip('\n')
+
+            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} ne=10000 overlap=5000 err={} '.format(
+                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate)
+            # print(command)
+            if not os.system(command):
+                if not self.__save_intermediates:
+                    os.system('rm {}'.format(OUT+'.log'))
+                    # os.system('rm {}'.format(_MHC_QC_VCF))
+                    # os.system('rm {}'.format(_REF_PHASED_VCF)) # These 2 files
+            else:
+                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation with Geneticmap failed.")
+                sys.exit()
+
+
         else:
-            print(std_ERROR_MAIN_PROCESS_NAME + "Imputation with Geneticmap failed.")
-            sys.exit()
+
+            """
+            beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true 
+            """
+
+            # overlap : 5000
+            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true overlap=5000'.format(
+                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT)
+            # print(command)
+            if not os.system(command):
+                if not self.__save_intermediates:
+                    os.system('rm {}'.format(OUT + '.log'))
+                    # os.system('rm {}'.format(_MHC_QC_VCF))
+                    # os.system('rm {}'.format(_REF_PHASED_VCF)) # These 2 files
+            else:
+                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation with Geneticmap failed.")
+                sys.exit()
+
+
 
 
         RUN_Bash('gzip -d -f {}.vcf.gz'.format(OUT))
@@ -385,12 +417,3 @@ class HLA_Imputation_GM(object):
 
         self.idx_process += 1
         return __RETURN__
-
-
-
-    def getAccuracy(self, _IMT_Result, _answer, _out):
-
-        if not _answer:
-            return -1
-        else:
-            return measureAccuracy(_answer, _IMT_Result, 'all', _out)
