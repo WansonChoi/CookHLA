@@ -427,7 +427,8 @@ class HLA_Imputation(object):
             (2019. 07. 17.) 'gprobs' argument will still be used. (for genotype calling based on average of posterior probability.)
             """
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true'.format(self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, OUT)
+            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true overlap={}'.format(
+                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, OUT, _overlap)
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
