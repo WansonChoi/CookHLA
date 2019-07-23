@@ -310,8 +310,11 @@ class HLA_Imputation_GM(object):
             with open(_aver_erate, 'r') as f:
                 aver_erate = f.readline().rstrip('\n')
 
-            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} ne=10000 overlap=5000 err={} '.format(
+            # overlap : 3000 (default)
+            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} ne=10000 err={} '.format(
                 self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate)
+            # command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} ne=10000 overlap=5000 err={} '.format(
+            #     self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate)
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
