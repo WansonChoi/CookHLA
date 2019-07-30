@@ -3,17 +3,19 @@
 import os, sys, re
 from os.path import join
 import multiprocessing as mp
-from statistics import mean
 
 # Both
-from src.GC_tricked_bgl2ori_bgl import GCtricedBGL2OriginalBGL
+# from src.GC_tricked_bgl2ori_bgl import GCtricedBGL2OriginalBGL
 from src.RUN_Bash import RUN_Bash
 from src.measureAccuracy import measureAccuracy
 
 # Multiple Markers
-from src.redefineBPv1BH import redefineBP
+# from src.redefineBPv1BH import redefineBP
 from src.HLA_MultipleRefs import HLA_MultipleRefs
 
+# HLA genotype calling
+HLA_genotype_call_prephasing = 'src/9accuracy_pre.v2.csh'
+HLA_genotype_call_noprephasing = 'src/9accuracy_no.v2.csh'
 
 
 ########## < Core Varialbes > ##########
@@ -155,34 +157,37 @@ class HLA_Imputation(object):
 
 
 
+        # [Temporary Hard-coding]
+        # self.dict_IMP_Result['exon2'][3000] = '/home/wanson/Git_Projects/CookHLA/tests/_3_CookHLA/20190731_MM_AGM/HM_CEU_T1DGC_REF.MM.AGM.noprephasing.exon2.overlap3000.MHC.QC.double.imputation_out.vcf'
+        # self.dict_IMP_Result['exon2'][4000] = '/home/wanson/Git_Projects/CookHLA/tests/_3_CookHLA/20190731_MM_AGM/HM_CEU_T1DGC_REF.MM.AGM.noprephasing.exon2.overlap4000.MHC.QC.double.imputation_out.vcf'
+        # self.dict_IMP_Result['exon2'][5000] = '/home/wanson/Git_Projects/CookHLA/tests/_3_CookHLA/20190731_MM_AGM/HM_CEU_T1DGC_REF.MM.AGM.noprephasing.exon2.overlap5000.MHC.QC.double.imputation_out.vcf'
+        # self.dict_IMP_Result['exon3'][3000] = '/home/wanson/Git_Projects/CookHLA/tests/_3_CookHLA/20190731_MM_AGM/HM_CEU_T1DGC_REF.MM.AGM.noprephasing.exon3.overlap3000.MHC.QC.double.imputation_out.vcf'
+        # self.dict_IMP_Result['exon3'][4000] = '/home/wanson/Git_Projects/CookHLA/tests/_3_CookHLA/20190731_MM_AGM/HM_CEU_T1DGC_REF.MM.AGM.noprephasing.exon3.overlap4000.MHC.QC.double.imputation_out.vcf'
+        # self.dict_IMP_Result['exon3'][5000] = '/home/wanson/Git_Projects/CookHLA/tests/_3_CookHLA/20190731_MM_AGM/HM_CEU_T1DGC_REF.MM.AGM.noprephasing.exon3.overlap5000.MHC.QC.double.imputation_out.vcf'
+        # self.dict_IMP_Result['exon4'][3000] = '/home/wanson/Git_Projects/CookHLA/tests/_3_CookHLA/20190731_MM_AGM/HM_CEU_T1DGC_REF.MM.AGM.noprephasing.exon4.overlap3000.MHC.QC.double.imputation_out.vcf'
+        # self.dict_IMP_Result['exon4'][4000] = '/home/wanson/Git_Projects/CookHLA/tests/_3_CookHLA/20190731_MM_AGM/HM_CEU_T1DGC_REF.MM.AGM.noprephasing.exon4.overlap4000.MHC.QC.double.imputation_out.vcf'
+        # self.dict_IMP_Result['exon4'][5000] = '/home/wanson/Git_Projects/CookHLA/tests/_3_CookHLA/20190731_MM_AGM/HM_CEU_T1DGC_REF.MM.AGM.noprephasing.exon4.overlap5000.MHC.QC.double.imputation_out.vcf'
 
 
-        # ### (3) CONVERT_OUT
-        #
-        # if f_prephasing:
-        #
-        #     IMPUTATION_OUT = HLA_Genotype_Call(self.dict_IMP_Result, _feature='BOTH') # 'IMPUTATION_OUT' is supposed to be a list.
-        #
-        # else:
-        #
-        #     IMPUTATION_OUT = [HLA_Genotype_Call_v2(self.dict_IMP_Result)] # as a list
+
+        ### (3) CONVERT_OUT
+
+        IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, os.path.join(self.OUTPUT_dir, 'HLA_IMPUTATION_OUT'), f_prephasing=f_prephasing)
+        print('IMPUTATION_OUT:\n{}'.format(IMPUTATION_OUT))
 
 
+        ## Acquring accuracy
 
-        # ## Acquring accuracy
-        #
-        # if _answer:
-        #
-        #     if not os.path.exists(_answer):
-        #         print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't exist. Please check '--answer/-an' argument again.\n"
-        #                                               "Skipping calculating imputation accuracy.")
-        #     elif os.path.getsize(_answer) == 0:
-        #         print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
-        #                                               "Skipping calculating imputation accuracy.")
-        #     else:
-        #
-        #         for item in IMPUTATION_OUT:
-        #             measureAccuracy(_answer, item, 'all', outfile=item+'.accuracy')
+        if _answer and IMPUTATION_OUT != '-1':
+
+            if not os.path.exists(_answer):
+                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't exist. Please check '--answer/-an' argument again.\n"
+                                                      "Skipping calculating imputation accuracy.")
+            elif os.path.getsize(_answer) == 0:
+                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
+                                                      "Skipping calculating imputation accuracy.")
+            else:
+                measureAccuracy(_answer, IMPUTATION_OUT, 'all', outfile=IMPUTATION_OUT+'.accuracy', __only4digits=True)
 
 
 
@@ -377,7 +382,7 @@ class HLA_Imputation(object):
     def IMPUTE(self, MHC, _out, _IMPUTATION_INPUT, _REF_PHASED_VCF, _overlap, _exonN, _aver_erate, _Refined_Genetic_Map):
 
         if os.path.getsize(_IMPUTATION_INPUT) == 0:
-            print(std_ERROR_MAIN_PROCESS_NAME + "Doubled phased file contains nothing. Please check it again.")
+            print(std_ERROR_MAIN_PROCESS_NAME + "Input file for imputation('{}') contains nothing. Please check it again.".format(_IMPUTATION_INPUT))
             sys.exit()
 
 
@@ -444,21 +449,28 @@ class HLA_Imputation(object):
 
 
 
-    def CONVERT_OUT(self, _raw_IMP_Result, _reference, _out, _overlap, _exonN):
-
-
-        Prefix_raw_IMP_Result = _raw_IMP_Result.rstrip('.vcf')
-        OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
-        OUT = _out + '.{}.{}'.format(_exonN, _overlap)
+    def CONVERT_OUT(self, _raw_IMP_Result, _out, f_prephasing=False):
 
 
 
+        if f_prephasing:
 
-        __RETURN__ = OUT + '.imputed.alleles'
+            pass
 
 
-        self.idx_process += 1
-        return __RETURN__
+        else:
+
+            to_args = ' '.join([_raw_IMP_Result[_exon][_overlap] for _exon in __EXON__ for _overlap in __overlap__])
+
+            command = 'csh {} {} {}'.format(HLA_genotype_call_noprephasing, to_args, _out)
+            # print(command)
+
+            if RUN_Bash(command) == 0:
+                self.idx_process += 1
+                return _out + '.alleles'
+            else:
+                print(std_ERROR_MAIN_PROCESS_NAME + "Failed to perform final HLA genotype calling.")
+                return '-1'
 
 
 

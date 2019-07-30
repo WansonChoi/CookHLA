@@ -519,7 +519,7 @@ if __name__ == "__main__":
     parser.add_argument("--average-erate", "-ae", help="\nAverate error rate file.\n\n")
     parser.add_argument("--use-multiple-markers", "-ml", help="\nUsing multiple markers.\n\n", action='store_true')
 
-    parser.add_argument("--prephasing", "-ph", help="\nUtilizing prephasing strategy.\n\n", action='store_true')
+    parser.add_argument("--prephasing", "-pr", help="\nUtilizing prephasing strategy.\n\n", action='store_true')
 
     parser.add_argument("--answer", "-an", help="\nAnswer file to calculate imputation accuracy.\n\n")
 

@@ -3,7 +3,7 @@ import sys, os
 
 HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 
-def measureAccuracy(answerfile, predictfile, genes, outfile=None, __asSTDOUT = False):
+def measureAccuracy(answerfile, predictfile, genes, outfile=None, __asSTDOUT = False, __only4digits=False):
 
 
     if isinstance(genes, list):
@@ -63,11 +63,15 @@ def measureAccuracy(answerfile, predictfile, genes, outfile=None, __asSTDOUT = F
 
 
         if __asSTDOUT:
-            sys.stdout.write("%s\t2D\t%.5f\n"%(gene, float(correct2d)/total2d))
+
+            if not __only4digits:
+                sys.stdout.write("%s\t2D\t%.5f\n"%(gene, float(correct2d)/total2d))
             sys.stdout.write("%s\t4D\t%.5f\n"%(gene, float(correct4d)/total4d))
 
         if __asFileWrite:
-            fo.write("%s\t2D\t%.5f\n"%(gene, float(correct2d)/total2d))
+
+            if not __only4digits:
+                fo.write("%s\t2D\t%.5f\n"%(gene, float(correct2d)/total2d))
             fo.write("%s\t4D\t%.5f\n"%(gene, float(correct4d)/total4d))
 
     if __asFileWrite:
