@@ -14,9 +14,6 @@ from src.measureAccuracy import measureAccuracy
 from src.redefineBPv1BH import redefineBP
 from src.HLA_MultipleRefs import HLA_MultipleRefs
 
-from src.HLA_Genotype_Call import HLA_Genotype_Call
-from src.HLA_Genotype_Call_v2 import HLA_Genotype_Call_v2
-
 
 
 ########## < Core Varialbes > ##########
@@ -40,9 +37,9 @@ __overlap__ = [3000, 4000, 5000]
 
 class HLA_Imputation(object):
 
-    def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
-                 _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4,
-                 _answer=None, f_save_intermediates=False, _MultP=1, _given_prephased=None, f_No_prephasing=False):
+    def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate, _LINKAGE2BEAGLE,
+                 _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4, _answer=None, f_save_intermediates=False,
+                 _MultP=1, _given_prephased=None, f_prephasing=False):
 
         ### General
         self.idx_process = idx_process
@@ -120,7 +117,7 @@ class HLA_Imputation(object):
         ### (1) CONVERT_IN
 
         IMPUTATION_INPUT = self.CONVERT_IN(MHC, self.Exon234_Panel, _out, _hg, _given_prephased=_given_prephased,
-                                                f_No_prephasing=f_No_prephasing)
+                                           f_prephasing=f_prephasing)
         # Only one time of pre-phasing with Exon234 reference panel.
 
 
@@ -160,32 +157,32 @@ class HLA_Imputation(object):
 
 
 
-        ### (3) CONVERT_OUT
+        # ### (3) CONVERT_OUT
+        #
+        # if f_prephasing:
+        #
+        #     IMPUTATION_OUT = HLA_Genotype_Call(self.dict_IMP_Result, _feature='BOTH') # 'IMPUTATION_OUT' is supposed to be a list.
+        #
+        # else:
+        #
+        #     IMPUTATION_OUT = [HLA_Genotype_Call_v2(self.dict_IMP_Result)] # as a list
 
-        if not f_No_prephasing:
-
-            IMPUTATION_OUT = HLA_Genotype_Call(self.dict_IMP_Result, _feature='BOTH') # 'IMPUTATION_OUT' is supposed to be a list.
-
-        else:
-
-            IMPUTATION_OUT = [HLA_Genotype_Call_v2(self.dict_IMP_Result)] # as a list
 
 
-
-        ## Acquring accuracy
-
-        if _answer:
-
-            if not os.path.exists(_answer):
-                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't exist. Please check '--answer/-an' argument again.\n"
-                                                      "Skipping calculating imputation accuracy.")
-            elif os.path.getsize(_answer) == 0:
-                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
-                                                      "Skipping calculating imputation accuracy.")
-            else:
-
-                for item in IMPUTATION_OUT:
-                    measureAccuracy(_answer, item, 'all', outfile=item+'.accuracy')
+        # ## Acquring accuracy
+        #
+        # if _answer:
+        #
+        #     if not os.path.exists(_answer):
+        #         print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't exist. Please check '--answer/-an' argument again.\n"
+        #                                               "Skipping calculating imputation accuracy.")
+        #     elif os.path.getsize(_answer) == 0:
+        #         print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
+        #                                               "Skipping calculating imputation accuracy.")
+        #     else:
+        #
+        #         for item in IMPUTATION_OUT:
+        #             measureAccuracy(_answer, item, 'all', outfile=item+'.accuracy')
 
 
 
@@ -201,10 +198,10 @@ class HLA_Imputation(object):
 
 
 
-    def CONVERT_IN(self, MHC, _reference, _out, _hg, _given_prephased=None, f_No_prephasing=False):
+    def CONVERT_IN(self, MHC, _reference, _out, _hg, _given_prephased=None, f_prephasing=False):
 
 
-        if _given_prephased and not f_No_prephasing:
+        if _given_prephased and f_prephasing:
 
             print("(Test Purpose) Given pre-phased result will be used. ('{}')".format(_given_prephased))
 
@@ -351,7 +348,7 @@ class HLA_Imputation(object):
         """
 
 
-        if not f_No_prephasing:
+        if f_prephasing:
 
             ############### < Multiple Markers > ###############
 
@@ -447,160 +444,21 @@ class HLA_Imputation(object):
 
 
 
-    # def CONVERT_OUT(self, _raw_IMP_Result, _reference, _out, _overlap, _exonN):
-    #
-    #
-    #     Prefix_raw_IMP_Result = _raw_IMP_Result.rstrip('.vcf')
-    #     OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
-    #     OUT = _out + '.{}.{}'.format(_exonN, _overlap)
-    #
-    #
-    #     ### vcf2HLAVCF
-    #     for _hla in HLA_names:
-    #         command = 'grep HLA_%s %s > %s' % (_hla, _raw_IMP_Result, Prefix_raw_IMP_Result + '.EXON_VCF_HLA_{}.txt'.format(_hla))
-    #         # print(command)
-    #         os.system(command)
-    #
-    #     # Is file empty? (Introduced by W. Choi)
-    #     vcf2HLAVCF = {_hla: None for _hla in HLA_names}
-    #
-    #     for _hla in HLA_names:
-    #         if os.path.getsize(Prefix_raw_IMP_Result + '.EXON_VCF_HLA_{}.txt'.format(_hla)) > 0:
-    #             # print(Prefix_raw_IMP_Result+'.EXON_VCF_HLA_{}.txt'.format(_hla))
-    #             vcf2HLAVCF[_hla] = Prefix_raw_IMP_Result + '.EXON_VCF_HLA_{}.txt'.format(_hla)
-    #
-    #
-    #     ### DP_min_selection.R
-    #     for _hla in HLA_names:
-    #         if vcf2HLAVCF[_hla]:
-    #             command = 'Rscript src/DP_min_selection.R {} {}'.format(vcf2HLAVCF[_hla],
-    #                                                                     Prefix_raw_IMP_Result + '.EXON_VCF_DP_MIN_VCF_HLA_{}.txt'.format(_hla))
-    #             # print(command)
-    #             if not os.system(command):
-    #                 vcf2HLAVCF[_hla] = Prefix_raw_IMP_Result + '.EXON_VCF_DP_MIN_VCF_HLA_{}.txt'.format(_hla)
-    #                 # Replacing('*.EXON_VCF_HLA{}.txt' -> '*.EXON_VCF_DP_MIN_VCF_HLA_{}.txt')
-    #
-    #         else:
-    #             if isClassI[_hla]:
-    #                 print(std_WARNING_MAIN_PROCESS_NAME + 'No HLA_{} alleles. DP_min_seleciton for HLA_{} will be skipped.'.format(_hla, _hla))
-    #
-    #         # Removing '*.EXON_VCF_HLA_{}.txt'
-    #         os.system('rm {}'.format(Prefix_raw_IMP_Result + '.EXON_VCF_HLA_{}.txt'.format(_hla)))
-    #
-    #
-    #
-    #     # keep vcf header
-    #     command = 'grep "#" {} > {}'.format(_raw_IMP_Result, _raw_IMP_Result + '.header.txt')
-    #     # print(command)
-    #     os.system(command)
-    #
-    #     # Concatenate body part in the genomic position order.
-    #     to_cat = []
-    #     for _hla in HLA_names_gen:
-    #         if vcf2HLAVCF[_hla]:
-    #             to_cat.append(vcf2HLAVCF[_hla])
-    #
-    #     to_cat = ' '.join(to_cat)
-    #
-    #     command = 'cat {} > {}'.format(to_cat, Prefix_raw_IMP_Result + '.DP_MIN_VCF_HLA_all.txt')
-    #     # print(command)
-    #     if not os.system(command):
-    #
-    #         if not self.__save_intermediates:
-    #             for _hla in HLA_names:
-    #                 if vcf2HLAVCF[_hla]:
-    #                     os.system('rm {}'.format(vcf2HLAVCF[_hla]))
-    #
-    #
-    #     # complete_vcf_HLA
-    #     command = 'cat {} {} > {}'.format(_raw_IMP_Result + '.header.txt',
-    #                                       Prefix_raw_IMP_Result + '.DP_MIN_VCF_HLA_all.txt',
-    #                                       Prefix_raw_IMP_Result + '.DP_MIN_VCF_HLA_all_with_header.txt')
-    #     # print(command)
-    #     if not os.system(command):
-    #         # os.system('rm {}'.format(_raw_IMP_Result))
-    #         os.system('rm {}'.format(_raw_IMP_Result + '.header.txt'))
-    #         os.system('rm {}'.format(Prefix_raw_IMP_Result + '.DP_MIN_VCF_HLA_all.txt'))
-    #
-    #
-    #     # Get Marker
-    #     command = 'grep HLA {} > {}'.format(_reference + '.markers', OUTPUT_dir_ref + '.HLA.markers')
-    #     # print(command)
-    #     os.system(command)
-    #
-    #
-    #     #####
-    #
-    #     command = 'cat {} | {} 0 {}'.format(Prefix_raw_IMP_Result + '.DP_MIN_VCF_HLA_all_with_header.txt',
-    #                                         self.VCF2BEAGLE, Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header')
-    #     # print(command)
-    #     if not os.system(command):
-    #         if not self.__save_intermediates:
-    #             os.system('rm {}'.format(Prefix_raw_IMP_Result + '.DP_MIN_VCF_HLA_all_with_header.txt'))
-    #             os.system('rm {}'.format(Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header.int'))
-    #             os.system('rm {}'.format(Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header.markers'))
-    #
-    #
-    #     command = 'gzip -d -f {}'.format(Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header.bgl.gz')
-    #     # print(command)
-    #     os.system(command)
-    #
-    #
-    #     command = 'head -1 {} > {}'.format(Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header.bgl',
-    #                                        Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header.bgl.header.txt')
-    #     # print(command)
-    #     os.system(command)
-    #
-    #     command = 'cat {} {} > {}'.format(Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header.bgl.header.txt',
-    #                                       Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header.bgl',
-    #                                       Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header_with_fid.bgl')  # (2019. 05. 28.) FID라고 적혀있는데 I행만 두 개 더 들어가는게 꺼림찍함.
-    #     # print(command)
-    #     if not os.system(command):
-    #         if not self.__save_intermediates:
-    #             os.system('rm {}'.format(Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header.bgl'))
-    #             os.system('rm {}'.format(Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header.bgl.header.txt'))
-    #
-    #
-    #
-    #     # gc_change_ori_bgl.
-    #
-    #     GC_decodedBGL = GCtricedBGL2OriginalBGL(
-    #         Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header_with_fid.bgl',
-    #         OUTPUT_dir_ref + '.HLA.markers', Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header.notGC.bgl')
-    #     # print(GC_decodedBGL)
-    #
-    #     if not self.__save_intermediates:
-    #         os.system('rm {}'.format(Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_with_header_with_fid.bgl'))
-    #         # os.system('rm {}'.format(OUTPUT_dir_ref+'.HLA.markers')) # This file must be shared between overlap 3000, 4000, 5000 of exon_N
-    #
-    #
-    #     from src.BGL2Alleles_for_merge import BGL2Alleles4Merge
-    #
-    #     DOUBLE_ALLELES = BGL2Alleles4Merge(GC_decodedBGL,
-    #                                        Prefix_raw_IMP_Result + '.DP_MIN_Beagle_HLA_all_double.alleles', 'all')
-    #     # print(DOUBLE_ALLELES)
-    #
-    #     if not self.__save_intermediates:
-    #         os.system('rm {}'.format(GC_decodedBGL))
-    #
-    #
-    #
-    #
-    #     # Double2Single
-    #
-    #     command = 'Rscript src/Double_alleles_decoder.R {} {}'.format(DOUBLE_ALLELES,
-    #                                                                   OUT + '.imputed.alleles')  # single
-    #     # print(command)
-    #     if not os.system(command):
-    #         if not self.__save_intermediates:
-    #             os.system('rm {}'.format(DOUBLE_ALLELES))
-    #
-    #
-    #     __RETURN__ = OUT + '.imputed.alleles'
-    #
-    #
-    #     self.idx_process += 1
-    #     return __RETURN__
+    def CONVERT_OUT(self, _raw_IMP_Result, _reference, _out, _overlap, _exonN):
+
+
+        Prefix_raw_IMP_Result = _raw_IMP_Result.rstrip('.vcf')
+        OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
+        OUT = _out + '.{}.{}'.format(_exonN, _overlap)
+
+
+
+
+        __RETURN__ = OUT + '.imputed.alleles'
+
+
+        self.idx_process += 1
+        return __RETURN__
 
 
 
