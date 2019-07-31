@@ -50,6 +50,10 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
 
     # Control Flags
+    if len(_control_flags) != 5:
+        print(std_ERROR_MAIN_PROCESS_NAME + "Wrong '_control_flags' value. Please check it again.")
+        sys.exit()
+
     if _control_flags == (1,1,1,1,1): # default value
 
         F_2_Plain = 1
@@ -144,28 +148,58 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
         __accuracies__[6] = t_accuracy
 
 
-#     # [Temporary Hard-coding]
-#     __accuracies__[2] = 'tests/accuracy_ex_data/_2_HM_CEU_T1DGC_REF.Plain.overlap3000.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
-#     __accuracies__[3] = 'tests/accuracy_ex_data/_3_HM_CEU_T1DGC_REF.MM.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
-#     __accuracies__[4] = 'tests/accuracy_ex_data/_4_HM_CEU_T1DGC_REF.AGM_HapmapMap.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
-#     __accuracies__[5] = 'tests/accuracy_ex_data/_5_HM_CEU_T1DGC_REF.AGM.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
-#     __accuracies__[6] = 'tests/accuracy_ex_data/_6_HM_CEU_T1DGC_REF.MM.AGM.noprephasing.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
-#     print(__accuracies__)
-#
-#
-#     __RETURN__ = CollectTable(__accuracies__, _control_flags)
-#
-#     return 0
-#
-#
-#
-# def CollectTable(__accuracies__, _control_flags):
-#
-#     for k, v in __accuracies__.items():
-#         print("k : {}\nv : {}".format(k, v))
-#
-#
-#     return 0
+    # [Temporary Hard-coding]
+    # __accuracies__[2] = 'tests/accuracy_ex_data/_2_HM_CEU_T1DGC_REF.Plain.overlap3000.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
+    # __accuracies__[3] = 'tests/accuracy_ex_data/_3_HM_CEU_T1DGC_REF.MM.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
+    # __accuracies__[4] = 'tests/accuracy_ex_data/_4_HM_CEU_T1DGC_REF.AGM_HapmapMap.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
+    # __accuracies__[5] = 'tests/accuracy_ex_data/_5_HM_CEU_T1DGC_REF.AGM.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
+    # __accuracies__[6] = 'tests/accuracy_ex_data/_6_HM_CEU_T1DGC_REF.MM.AGM.noprephasing.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
+    # print(__accuracies__)
+
+
+    __RETURN__ = CollectTable(__accuracies__)
+    __RETURN__.to_csv(join(OUTPUT_dir, "ACCURACY_TABLE.txt"), sep='\t', header=True, index=True)
+
+    return __RETURN__
+
+
+
+def CollectTable(__accuracies__):
+
+    l_df = []
+    l_label = []
+
+    for i in range(2, 7):
+
+        if __accuracies__[i] and os.path.exists(__accuracies__[i]):
+            df_temp = pd.read_csv(__accuracies__[i], sep='\s+', header=None, index_col=[0,1], names=['HLA', 'digit', 'acc'])
+            # print(df_temp)
+            l_df.append(df_temp)
+            l_label.append(Int2Label(i))
+
+
+    df_acc = pd.concat(l_df, axis=1).dropna()
+    df_acc.columns = l_label
+    # print(df_acc)
+
+    return df_acc
+
+
+
+def Int2Label(_x):
+
+    if _x == 2:
+        return '_2_Plain'
+    elif _x == 3:
+        return '_3_MM'
+    elif _x == 4:
+        return '_4_AGM_HapMap_Map'
+    elif _x == 5:
+        return '_5_AGM'
+    elif _x == 6:
+        return '_6_MM_AGM'
+    else:
+        return '-1'
 
 
 
@@ -276,4 +310,4 @@ if __name__ == "__main__":
     # args = parser.parse_args()
     print(args)
 
-    CookHLA_lab(args)
+    CookHLA_lab(args, _control_flags=(0,0,0,0,0))
