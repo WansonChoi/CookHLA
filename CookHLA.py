@@ -160,7 +160,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
     EXTRACT_MHC = 1
     FLIP = 1
-    CLEAN_UP = 0
+    CLEAN_UP = 1
 
 
 
@@ -450,28 +450,34 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
                                            _answer=_answer, f_save_intermediates=__save_intermediates)
 
 
-    # if CLEAN_UP:
-    #
-    #     print("[{}] Clean Up.".format(idx_process))
-    #
-    #
-    #     if not __save_intermediates:
-    #         os.system(' '.join(['rm', MHC + '.QC.nopheno.ped']))
-    #         os.system(' '.join(['rm', MHC + '.QC.dat']))
-    #         os.system(' '.join(['rm', MHC + '.QC.{bed,bim,fam,log}']))
-    #         os.system(' '.join(['rm', _out + '.bgl.log']))
-    #
-    #
-    #
-    #     print("DONE!\n")
-    #
-    #     idx_process += 1
+    idx_process = __IMPUTE_OUT__.idx_process
+
+
+    if CLEAN_UP:
+
+        print("[{}] Clean Up.".format(idx_process))
+        idx_process += 1
+
+
+        if not __save_intermediates:
+            os.system(' '.join(['rm', MHC + '.QC.nopheno.ped']))
+            os.system(' '.join(['rm', MHC + '.QC.dat']))
+            os.system(' '.join(['rm', MHC + '.QC.bed']))
+            os.system(' '.join(['rm', MHC + '.QC.bim']))
+            os.system(' '.join(['rm', MHC + '.QC.fam']))
+            os.system(' '.join(['rm', MHC + '.QC.log']))
+            # os.system(' '.join(['rm', _out + '.bgl.log']))
+            os.system(' '.join(['rm -rf', JAVATMP]))
+
+
+
+        print("DONE!\n")
 
 
 
 
 
-    return 0
+    return [__IMPUTE_OUT__.HLA_IMPUTATION_OUT, __IMPUTE_OUT__.accuracy]
 
 
 

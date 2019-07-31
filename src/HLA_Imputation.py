@@ -41,7 +41,7 @@ class HLA_Imputation(object):
 
     def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate, _LINKAGE2BEAGLE,
                  _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4, _answer=None, f_save_intermediates=False,
-                 _MultP=1, _given_prephased=None, f_prephasing=False):
+                 _MultP=1, _given_prephased=None, f_prephasing=False, f_remove_raw_IMP_results=False):
 
         ### General
         self.idx_process = idx_process
@@ -57,12 +57,12 @@ class HLA_Imputation(object):
 
 
         # Result
-        # self.IMP_Result = None  # Finally consensed Imputation output ('*.imputed.alleles').
         self.Exon234_Panel = None
         self.dict_ExonN_Panel = {_exonN: None for _exonN in __EXON__}
         self.dict_ExonN_AGM = {_exonN: None for _exonN in __EXON__}
         self.dict_IMP_Result = {_exonN: {_overlap: None for _overlap in __overlap__} for _exonN in __EXON__}
         self.accuracy = {_exonN: {_overlap: None for _overlap in __overlap__} for _exonN in __EXON__}
+        self.HLA_IMPUTATION_OUT = None
 
         self.dict_DOUBLED_PHASED_RESULT = {_exonN: None for _exonN in __EXON__}
         self.dict_REF_PHASED_VCF = {_exonN: None for _exonN in __EXON__}
@@ -172,13 +172,13 @@ class HLA_Imputation(object):
 
         ### (3) CONVERT_OUT
 
-        IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, MHC+'.HLA_IMPUTATION_OUT', f_prephasing=f_prephasing)
-        print('IMPUTATION_OUT:\n{}'.format(IMPUTATION_OUT))
+        self.IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, MHC+'.HLA_IMPUTATION_OUT', f_prephasing=f_prephasing)
+        print('IMPUTATION_OUT:\n{}'.format(self.IMPUTATION_OUT))
 
 
         ## Acquring accuracy
 
-        if _answer and IMPUTATION_OUT != '-1':
+        if _answer and self.IMPUTATION_OUT != '-1':
 
             if not os.path.exists(_answer):
                 print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't exist. Please check '--answer/-an' argument again.\n"
@@ -187,7 +187,7 @@ class HLA_Imputation(object):
                 print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
                                                       "Skipping calculating imputation accuracy.")
             else:
-                measureAccuracy(_answer, IMPUTATION_OUT, 'all', outfile=IMPUTATION_OUT+'.accuracy', __only4digits=True)
+                self.accuracy = measureAccuracy(_answer, self.IMPUTATION_OUT, 'all', outfile=self.IMPUTATION_OUT+'.accuracy', __only4digits=True)
 
 
 
@@ -195,10 +195,56 @@ class HLA_Imputation(object):
 
         ### General Removal
         if not self.__save_intermediates:
-            RUN_Bash('rm {}'.format(MHC + '.QC.nopheno.ped'))
-            RUN_Bash('rm {}'.format(MHC + '.QC.dat'))
-            # RUN_Bash('rm {}'.format(join(self.OUTPUT_dir, 'selected_snp.txt')))
 
+            # 'Exon234 panel'
+            RUN_Bash('rm {}'.format(self.Exon234_Panel+'.bed'))
+            RUN_Bash('rm {}'.format(self.Exon234_Panel+'.bim'))
+            RUN_Bash('rm {}'.format(self.Exon234_Panel+'.fam'))
+            RUN_Bash('rm {}'.format(self.Exon234_Panel+'.FRQ.frq'))
+            RUN_Bash('rm {}'.format(self.Exon234_Panel+'.markers'))
+            RUN_Bash('rm {}'.format(self.Exon234_Panel+'.bgl.phased'))
+            RUN_Bash('rm {}'.format(self.Exon234_Panel+'.GCchange.markers'))
+            RUN_Bash('rm {}'.format(self.Exon234_Panel+'.GCchange.bgl.phased'))
+            RUN_Bash('rm {}'.format(self.Exon234_Panel+'.phased.vcf'))
+            RUN_Bash('rm {}'.format(self.Exon234_Panel+'.refined.markers')) # only in Exon234 panel
+
+
+            # 'Exon 2,3,4 panel'
+            for _exonN in __EXON__:
+                RUN_Bash('rm {}'.format(self.dict_ExonN_Panel[_exonN] + '.bed'))
+                RUN_Bash('rm {}'.format(self.dict_ExonN_Panel[_exonN] + '.bim'))
+                RUN_Bash('rm {}'.format(self.dict_ExonN_Panel[_exonN] + '.fam'))
+                RUN_Bash('rm {}'.format(self.dict_ExonN_Panel[_exonN] + '.FRQ.frq'))
+                RUN_Bash('rm {}'.format(self.dict_ExonN_Panel[_exonN] + '.markers'))
+                RUN_Bash('rm {}'.format(self.dict_ExonN_Panel[_exonN] + '.bgl.phased'))
+                RUN_Bash('rm {}'.format(self.dict_ExonN_Panel[_exonN] + '.GCchange.markers'))
+                RUN_Bash('rm {}'.format(self.dict_ExonN_Panel[_exonN] + '.GCchange.bgl.phased'))
+                RUN_Bash('rm {}'.format(self.dict_ExonN_Panel[_exonN] + '.phased.vcf'))
+
+
+            # 'Exon 2,3,4 AGM'
+            RUN_Bash('rm {}'.format(multiple_panels.EXON234_AGM))
+            for _exonN in __EXON__:
+                RUN_Bash('rm {}'.format(self.dict_ExonN_AGM[_exonN]))
+
+
+            # # 'CONVERT_IN'
+            # RUN_Bash('rm {}'.format(MHC + '.QC.nopheno.ped'))
+            # RUN_Bash('rm {}'.format(MHC + '.QC.dat'))
+
+
+            # 'CONVERT_OUT'
+            for _exonN in __EXON__:
+                for _overlap in __overlap__:
+                    for _hla in HLA_names:
+                        RUN_Bash('rm {}'.format(self.dict_IMP_Result[_exonN][_overlap]+'.HLA_{}'.format(_hla)))
+                        if f_remove_raw_IMP_results:
+                            RUN_Bash('rm {}'.format(self.dict_IMP_Result[_exonN][_overlap]))
+                            RUN_Bash('rm {}'.format(self.dict_IMP_Result[_exonN][_overlap].rstrip('.vcf') + '.log'))
+
+            # '*.alleles'
+            for _hla in HLA_names:
+                RUN_Bash('rm {}'.format(self.dict_IMP_Result['exon2'][3000]+'.HLA_{}.alleles'.format(_hla))) # based on HJ's way.
 
 
 
@@ -452,6 +498,10 @@ class HLA_Imputation(object):
 
 
     def CONVERT_OUT(self, _raw_IMP_Result, _out, f_prephasing=False):
+
+
+        print("[{}] Converting out imputation result(s).".format(self.idx_process, _out))
+        self.idx_process += 1
 
 
 
