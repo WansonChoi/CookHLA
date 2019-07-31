@@ -78,7 +78,7 @@ def measureAccuracy(answerfile, predictfile, genes, outfile=None, __asSTDOUT = F
         fo.close()
 
 
-    return __RETURN__
+    return outfile
 
 
 
