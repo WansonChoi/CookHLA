@@ -172,7 +172,7 @@ class HLA_Imputation(object):
 
         ### (3) CONVERT_OUT
 
-        IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, os.path.join(self.OUTPUT_dir, 'HLA_IMPUTATION_OUT'), f_prephasing=f_prephasing)
+        IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, MHC+'.HLA_IMPUTATION_OUT', f_prephasing=f_prephasing)
         print('IMPUTATION_OUT:\n{}'.format(IMPUTATION_OUT))
 
 
@@ -389,8 +389,6 @@ class HLA_Imputation(object):
         print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
         self.idx_process += 1
 
-        OUT = MHC + '.{}.{}.QC.doubled.imputation_out'.format(_exonN, _overlap)
-
 
 
         if self.FLAG_AdaptiveGeneticMap: # With Adatpive Genetic Map
@@ -400,6 +398,8 @@ class HLA_Imputation(object):
             java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=5000 err=$aver_erate map=$geneticMap.refined.map  
             """
 
+            raw_HLA_IMPUTATION_OUT = MHC + '.{}.{}.QC.doubled.raw_imputation_out'.format(_exonN, _overlap)
+
             # aver_erate
             with open(_aver_erate, 'r') as f:
                 aver_erate = f.readline().rstrip('\n')
@@ -407,11 +407,11 @@ class HLA_Imputation(object):
 
 
             command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={}'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, OUT, _overlap, aver_erate, _Refined_Genetic_Map)
+                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map)
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
-                    # os.system(' '.join(['rm', OUT + '.log'])) # Imputation Log file will be saved.
+                    # os.system(' '.join(['rm', raw_HLA_IMPUTATION_OUT + '.log'])) # Imputation Log file will be saved.
                     # os.system(' '.join(['rm', _DOUBLED_PHASED_RESULT]))
                     # os.system(' '.join(['rm', _REF_PHASED_VCF]))
                     pass  # for temporarily
@@ -429,12 +429,14 @@ class HLA_Imputation(object):
             (2019. 07. 17.) 'gprobs' argument will still be used. (for genotype calling based on average of posterior probability.)
             """
 
+            raw_HLA_IMPUTATION_OUT = MHC + '.{}.{}.QC.raw_imputation_out'.format(_exonN, _overlap)
+
             command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true overlap={}'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, OUT, _overlap)
+                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap)
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
-                    # os.system(' '.join(['rm', OUT + '.log'])) # Imputation Log file will be saved.
+                    # os.system(' '.join(['rm', raw_HLA_IMPUTATION_OUT + '.log'])) # Imputation Log file will be saved.
                     # os.system(' '.join(['rm', _DOUBLED_PHASED_RESULT]))
                     # os.system(' '.join(['rm', _REF_PHASED_VCF]))
                     pass  # for temporarily
@@ -443,9 +445,9 @@ class HLA_Imputation(object):
                 sys.exit()
 
 
-        RUN_Bash('gzip -d -f {}.vcf.gz'.format(OUT))
+        RUN_Bash('gzip -d -f {}.vcf.gz'.format(raw_HLA_IMPUTATION_OUT))
 
-        return OUT + '.vcf'
+        return raw_HLA_IMPUTATION_OUT + '.vcf'
 
 
 
