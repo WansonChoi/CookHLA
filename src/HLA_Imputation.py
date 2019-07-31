@@ -447,8 +447,14 @@ class HLA_Imputation(object):
         if self.FLAG_AdaptiveGeneticMap: # With Adatpive Genetic Map
 
             """
-            # multiple_map
-            java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=5000 err=$aver_erate map=$geneticMap.refined.map  
+            ### MM + AGM
+            
+            # prephasing
+            java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=${OVERLAP} err=$aver_erate map=$geneticMap.refined.map
+            
+            # No-prephasing
+            java -jar beagle4.jar gt=$MHC.QC.vcf                    ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=${OVERLAP} err=$aver_erate map=$geneticMap.refined.map
+            
             """
 
 
@@ -475,14 +481,18 @@ class HLA_Imputation(object):
         else: # Without Adaptive Genetic Map
 
             """
-            # multiple_nomap
-            java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true
+            ### MM
             
-            (2019. 07. 17.) 'gprobs' argument will still be used. (for genotype calling based on average of posterior probability.)
+            # prephasing
+            java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true overlap=$OVERLAP gprobs=true
+            
+            # No-prephasing
+            java -jar beagle4.jar gt=$MHC.QC.vcf                    ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true overlap=$OVERLAP gprobs=true
+
             """
 
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true overlap={}'.format(
+            command = '{} gt={} ref={} out={} impute=true lowmem=true overlap={} gprobs=true'.format(
                 self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap)
             # print(command)
             if not os.system(command):

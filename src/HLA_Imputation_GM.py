@@ -300,21 +300,26 @@ class HLA_Imputation_GM(object):
 
 
 
-        if self.FLAG_AdaptiveGeneticMap:
+        if self.FLAG_AdaptiveGeneticMap: # With Adatpive Genetic Map
 
             """
-            beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true 
-                        map=$geneticMap.refined.map ne=10000 overlap=5000 err=$aver_erate
+            ### AGM
+            
+            beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true ne=10000 map=$geneticMap.refined.map err=$aver_erate overlap=3000
+            
+            
+            ### AGM - HapMap_map.txt
+            
+            beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true          map=HapMap_Map.txt                          overlap=3000
+            
             """
 
             with open(_aver_erate, 'r') as f:
                 aver_erate = f.readline().rstrip('\n')
 
             # overlap : 3000 (default)
-            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} ne=10000 err={} '.format(
+            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true ne=10000 map={} err={} overlap=3000'.format(
                 self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate)
-            # command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} ne=10000 overlap=5000 err={} '.format(
-            #     self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate)
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
@@ -326,14 +331,17 @@ class HLA_Imputation_GM(object):
                 sys.exit()
 
 
-        else:
+        else: # Plain
 
             """
-            beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true 
+            ### Plain
+            
+            beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true overlap=3000
+            
             """
 
             # overlap : 3000 (default)
-            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true'.format(
+            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true overlap=3000'.format(
                 self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT)
             # print(command)
             if not os.system(command):
