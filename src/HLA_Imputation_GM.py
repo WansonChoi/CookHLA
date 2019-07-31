@@ -25,7 +25,7 @@ class HLA_Imputation_GM(object):
 
     def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
                  _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4,
-                 _answer=None, f_save_intermediates=False):
+                 _answer=None, f_save_intermediates=False, _HapMap_Map=None):
 
 
         ### Class variables
@@ -41,11 +41,12 @@ class HLA_Imputation_GM(object):
         self.OUTPUT_dir = os.path.dirname(_out)
         self.OUTPUT_dir_ref = join(self.OUTPUT_dir, os.path.basename(_reference))
         self.OUTPUT_dir_GM = join(self.OUTPUT_dir, os.path.basename(_AdaptiveGeneticMap)) if self.FLAG_AdaptiveGeneticMap else None
-        self.HLA_IMPUTED_Result_MHC = join(os.path.dirname(MHC), "HLA_IMPUTED_Result.{}".format(os.path.basename(MHC)))
+        # self.HLA_IMPUTED_Result_MHC = join(os.path.dirname(MHC), "HLA_IMPUTED_Result.{}".format(os.path.basename(MHC)))
+        self.HLA_IMPUTED_Result_MHC = MHC + '.HLA_IMPUTATION_OUT'
 
         # Result
         self.raw_IMP_Reuslt = None
-        self.IMP_Result = None  # Final Imputation output ('*.imputed.alleles').
+        self.HLA_IMPUTATION_OUT = None  # Final Imputation output ('*.imputed.alleles').
         self.accuracy = None
 
         # Dependencies
@@ -64,6 +65,13 @@ class HLA_Imputation_GM(object):
         self.refined_REF_markers = None # used in 'CONVERT_OUT'
         self.refined_Genetic_Map = None # used in 'IMPUTE'
         self.GCchangeBGL = None # used in 'CONVERT_OUT'
+
+
+        # HapMap_Map
+        if _HapMap_Map:
+            self.HapMap_Map = _HapMap_Map
+            self.OUTPUT_dir_GM = join(self.OUTPUT_dir, os.path.basename(_HapMap_Map))
+
 
 
 
@@ -85,7 +93,10 @@ class HLA_Imputation_GM(object):
 
         ### (2) IMPUTE
 
-        self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, self.__AVER__, self.refined_Genetic_Map)
+        if self.HapMap_Map:
+            self.raw_IMP_Reuslt = self.IMPUTE_HapMap_Map(_out, MHC_QC_VCF, REF_PHASED_VCF)
+        else:
+            self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, self.__AVER__, self.refined_Genetic_Map)
 
         # [Temporary Hard coding]
         # self.raw_IMP_Reuslt = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF.QC.imputation_out.vcf'
@@ -96,7 +107,7 @@ class HLA_Imputation_GM(object):
 
         ### (3) CONVERT_OUT
 
-        self.IMP_Result = self.CONVERT_OUT(MHC, _reference, _out, self.raw_IMP_Reuslt)
+        self.HLA_IMPUTATION_OUT = self.CONVERT_OUT(MHC, _reference, _out, self.raw_IMP_Reuslt)
 
         # [Temporary Hard coding]
         # self.IMP_Result = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/HLA_IMPUTED_Result._3_HM_CEU_T1DGC_REF.MHC.imputed.alleles'
@@ -106,9 +117,18 @@ class HLA_Imputation_GM(object):
 
         ###### < Get Accuracy > ######
 
-        # self.accuracy = measureAccuracy(_answer, self.IMP_Result, 'all', self.HLA_IMPUTED_Result_MHC+'.imputed.alleles.accuracy')
-        # print("Accuracy result :\n{}".format(self.accuracy))
+        if _answer and self.HLA_IMPUTATION_OUT:
+            self.accuracy = measureAccuracy(_answer, self.HLA_IMPUTATION_OUT, 'all', self.HLA_IMPUTATION_OUT+'.accuracy', __only4digits=True)
+            # print("Accuracy result :\n{}".format(self.accuracy))
 
+
+
+        ###### < Get Accuracy > ######
+
+        # Reference panel
+        RUN_Bash('rm {}'.format(REF_PHASED_VCF))
+        RUN_Bash('rm {}'.format(self.OUTPUT_dir_ref + '.GCchange.bgl.phased'))
+        RUN_Bash('rm {}'.format(self.OUTPUT_dir_ref + '.GCchange.markers'))
 
 
 
@@ -117,14 +137,16 @@ class HLA_Imputation_GM(object):
 
 
         print("[{}] Converting data to beagle format.".format(self.idx_process))
+        self.idx_process += 1
+
 
         RUN_Bash(self.LINKAGE2BEAGLE + ' pedigree={} data={} beagle={} standard=true > {}'.format(
             MHC + '.QC.nopheno.ped', MHC + '.QC.dat', MHC + '.QC.bgl', _out+'.bgl.log'))
 
-        if not self.__save_intermediates:
-            os.system('rm {}'.format(MHC + '.QC.nopheno.ped'))
-            os.system('rm {}'.format(MHC + '.QC.dat'))
-            os.system('rm {}'.format(_out+'.bgl.log'))
+        # if not self.__save_intermediates:
+        #     os.system('rm {}'.format(MHC + '.QC.nopheno.ped'))
+        #     os.system('rm {}'.format(MHC + '.QC.dat'))
+        #     os.system('rm {}'.format(_out+'.bgl.log'))
 
 
 
@@ -270,7 +292,7 @@ class HLA_Imputation_GM(object):
                 if not self.__save_intermediates:
                     os.system('rm {}'.format(self.OUTPUT_dir_GM+'.first'))
                     os.system('rm {}'.format(self.OUTPUT_dir_GM+'.second'))
-                    os.system('rm {}'.format(GCchangeMarkers_REF)) # (Genetic Map) *.GCchange.markers is removed here.
+                    # os.system('rm {}'.format(GCchangeMarkers_REF)) # (Genetic Map) *.GCchange.markers is removed here.
 
             else:
                 print(std_ERROR_MAIN_PROCESS_NAME + "Failed to generate Refined Genetic Map.")
@@ -282,10 +304,6 @@ class HLA_Imputation_GM(object):
 
         __RETURN__ = [MHC_QC_VCF, REF_PHASED_VCF]
 
-
-
-        self.idx_process += 1
-
         return __RETURN__
 
 
@@ -294,24 +312,20 @@ class HLA_Imputation_GM(object):
 
 
         print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
+        self.idx_process += 1
 
 
-        OUT = _out + '.QC.imputation_out'
+        OUT = _out + '.MHC.QC.raw_imputation_out'
 
 
 
-        if self.FLAG_AdaptiveGeneticMap: # With Adatpive Genetic Map
+        if self.FLAG_AdaptiveGeneticMap: ### With Adatpive Genetic Map
 
             """
             ### AGM
             
             beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true ne=10000 map=$geneticMap.refined.map err=$aver_erate overlap=3000
-            
-            
-            ### AGM - HapMap_map.txt
-            
-            beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true          map=HapMap_Map.txt                          overlap=3000
-            
+                        
             """
 
             with open(_aver_erate, 'r') as f:
@@ -331,7 +345,7 @@ class HLA_Imputation_GM(object):
                 sys.exit()
 
 
-        else: # Plain
+        else: ### Plain
 
             """
             ### Plain
@@ -350,7 +364,7 @@ class HLA_Imputation_GM(object):
                     # os.system('rm {}'.format(_MHC_QC_VCF))
                     # os.system('rm {}'.format(_REF_PHASED_VCF)) # These 2 files
             else:
-                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation with Geneticmap failed.")
+                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation with Adaptive Genetic Map failed.")
                 sys.exit()
 
 
@@ -359,7 +373,44 @@ class HLA_Imputation_GM(object):
         RUN_Bash('gzip -d -f {}.vcf.gz'.format(OUT))
 
         __RETURN__ = OUT + '.vcf'
+
+        return __RETURN__
+
+
+
+    def IMPUTE_HapMap_Map(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF):
+
+        # Imputation function for only HapMap_Map.txt
+
+        print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
         self.idx_process += 1
+
+
+        OUT = _out + '.MHC.QC.raw_imputation_out'
+
+        """
+        ### AGM - HapMap_map.txt
+
+        beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true map=HapMap_Map.txt overlap=3000
+
+        """
+
+        command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} overlap=3000'.format(
+            self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map)
+        # print(command)
+        if not os.system(command):
+            if not self.__save_intermediates:
+                os.system('rm {}'.format(OUT + '.log'))
+                # os.system('rm {}'.format(_MHC_QC_VCF))
+                # os.system('rm {}'.format(_REF_PHASED_VCF)) # These 2 files
+        else:
+            print(std_ERROR_MAIN_PROCESS_NAME + "Imputation with HapMap_Map.txt(Adaptive Genetic Map) failed.")
+            sys.exit()
+
+
+        RUN_Bash('gzip -d -f {}.vcf.gz'.format(OUT))
+
+        __RETURN__ = OUT + '.vcf'
 
         return __RETURN__
 
@@ -407,7 +458,7 @@ class HLA_Imputation_GM(object):
 
         # Create PLINK bed format
         RUN_Bash('{} --ped {} --map {} --make-bed --out {}'.format(self.PLINK, HLA_IMPUTED_Result_MHC+'.ped', HLA_IMPUTED_Result_MHC+'.map', HLA_IMPUTED_Result_MHC))
-        RUN_Bash('rm {}'.format(HLA_IMPUTED_Result_MHC + '.fam'))
+        # RUN_Bash('rm {}'.format(HLA_IMPUTED_Result_MHC + '.fam'))
         RUN_Bash('cp {} {}'.format(_reference+'.bim', HLA_IMPUTED_Result_MHC+'.bim'))
 
 
@@ -418,12 +469,13 @@ class HLA_Imputation_GM(object):
 
             RUN_Bash('rm {}'.format(self.raw_IMP_Reuslt))
             RUN_Bash('rm {}'.format(self.refined_REF_markers))
-            RUN_Bash('rm {}'.format(self.GCchangeBGL))
+            # RUN_Bash('rm {}'.format(self.GCchangeBGL))
+            RUN_Bash('rm {}'.format(MHC + '.fam'))
 
 
 
         # BGL2Allele.py
-        __RETURN__ = BGL2Alleles(HLA_IMPUTED_Result_MHC+'.bgl.phased', HLA_IMPUTED_Result_MHC+'.imputed.alleles', 'all')
+        __RETURN__ = BGL2Alleles(HLA_IMPUTED_Result_MHC+'.bgl.phased', HLA_IMPUTED_Result_MHC+'.alleles', 'all')
 
 
         self.idx_process += 1

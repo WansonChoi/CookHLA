@@ -24,14 +24,18 @@ TOLERATED_DIFF = 0.15
 
 def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Average_Erate=None, _java_memory='2g',
             _MultP=1, _answer=None, __save_intermediates=False, __use_Multiple_Markers=False, _p_src="./src",
-            _p_dependency="./dependency", _given_prephased=None, f_prephasing=False):
+            _p_dependency="./dependency", _given_prephased=None, f_prephasing=False, _HapMap_Map=None):
 
 
     ### Argument exception
 
     if _given_prephased and not f_prephasing:
-        print(std_ERROR_MAIN_PROCESS_NAME + "The arguments '--prephased/-ph' must be used with '--prephasing/nph'.\n"
-                                            "Please check them again.")
+        print(std_ERROR_MAIN_PROCESS_NAME + "The arguments '--prephased/-ph' must be used with '--prephasing/nph'. Please check them again.")
+        sys.exit()
+
+
+    if (_AdaptiveGeneticMap and _Average_Erate) and _HapMap_Map:
+        print(std_ERROR_MAIN_PROCESS_NAME + "The arguments '--hapmap-map/-hm' can't be used with '--genetic-map/-gm' and '--average-erate/-ae'. Please check them again.")
         sys.exit()
 
 
@@ -156,6 +160,22 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         sys.exit()
 
 
+
+    ## Hapmap Map
+
+    __use_HapMap_Map = False
+
+    if _HapMap_Map:
+
+        if os.path.exists(_HapMap_Map) and os.path.getsize(_HapMap_Map) > 0:
+            __use_HapMap_Map = True
+        else:
+            print(std_ERROR_MAIN_PROCESS_NAME + "Given HapMap map file is wrong. Please check it again.")
+            sys.exit()
+
+
+
+
     ###### < Control Flags > ######
 
     EXTRACT_MHC = 1
@@ -175,6 +195,9 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
     if __use_GeneticMap:
         print("- Using Adaptive Genetic Map.")
+
+    if __use_HapMap_Map:
+        print("- (Test Purpose) Using HapMap Map")
 
     if _given_prephased:
         print("- (Test Purpose) Pre-phased result given.")
@@ -442,12 +465,12 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
     elif not __use_Multiple_Markers:
 
-        # [2] No Adaptive Genetic Map (Just with Beagle 4.1)
+        # [2] Plain (Just with Beagle 4.1)
         # [4] Adaptive Genetic Map (HapMap)
         # [5] Adaptive Genetic Map
         __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
                                            LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
-                                           _answer=_answer, f_save_intermediates=__save_intermediates)
+                                           _answer=_answer, f_save_intermediates=__save_intermediates, _HapMap_Map=_HapMap_Map)
 
 
     idx_process = __IMPUTE_OUT__.idx_process
@@ -469,7 +492,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
             os.system(' '.join(['rm', MHC + '.QC.GCchange.bgl']))
             os.system(' '.join(['rm', MHC + '.QC.GCchange.markers']))
             os.system(' '.join(['rm', MHC + '.QC.log']))
-            # os.system(' '.join(['rm', _out + '.bgl.log']))
+            os.system(' '.join(['rm', _out + '.bgl.log']))
             os.system(' '.join(['rm -rf', JAVATMP]))
 
 
@@ -540,6 +563,9 @@ if __name__ == "__main__":
                         help="\n(For Testing Purpose) Passing prephased result manually to control the error rate of prephasing. "
                              "If given, Imputation will be done based on this phased file.\n\n")
 
+    parser.add_argument("--hapmap-map", "-hm",
+                        help="\n(For Testing Purpose) Hapmap Map(Adaptive Genetic Map).\n\n")
+
 
 
 
@@ -571,4 +597,4 @@ if __name__ == "__main__":
     CookHLA(args.input, args.out, args.reference, args.hg, args.genetic_map, args.average_erate,
             _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer,
             __use_Multiple_Markers=args.use_multiple_markers, _given_prephased=args.prephased,
-            f_prephasing=args.prephasing)
+            f_prephasing=args.prephasing, _HapMap_Map=args.hapmap_map)
