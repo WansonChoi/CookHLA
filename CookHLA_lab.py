@@ -90,7 +90,8 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
         OUT_3_MM = join(OUTPUT_dir, '_3_MM', OUTPUT_prefix+'.MM')
 
         [t_HLA_Imptation_out, t_accuracy] = \
-            CookHLA(INPUT, OUT_3_MM, REFRENCE, __use_Multiple_Markers=True,
+            CookHLA(INPUT, OUT_3_MM, REFRENCE,
+                    __use_Multiple_Markers=True, _MultP=_args.multiprocess,
                     _answer=ANSWER2, _java_memory=JAVA_MEM)
 
         __accuracies__[3] = t_accuracy
@@ -136,18 +137,35 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_6_MM_AGM, REFRENCE,
-                    __use_Multiple_Markers=True, _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
+                    __use_Multiple_Markers=True, _MultP=_args.multiprocess,
+                    _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
                     _answer=ANSWER2, _java_memory=JAVA_MEM)
 
         __accuracies__[6] = t_accuracy
 
 
-    print(__accuracies__)
-
-
-
-
-    return 0
+#     # [Temporary Hard-coding]
+#     __accuracies__[2] = 'tests/accuracy_ex_data/_2_HM_CEU_T1DGC_REF.Plain.overlap3000.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
+#     __accuracies__[3] = 'tests/accuracy_ex_data/_3_HM_CEU_T1DGC_REF.MM.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
+#     __accuracies__[4] = 'tests/accuracy_ex_data/_4_HM_CEU_T1DGC_REF.AGM_HapmapMap.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
+#     __accuracies__[5] = 'tests/accuracy_ex_data/_5_HM_CEU_T1DGC_REF.AGM.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
+#     __accuracies__[6] = 'tests/accuracy_ex_data/_6_HM_CEU_T1DGC_REF.MM.AGM.noprephasing.MHC.HLA_IMPUTATION_OUT.alleles.accuracy'
+#     print(__accuracies__)
+#
+#
+#     __RETURN__ = CollectTable(__accuracies__, _control_flags)
+#
+#     return 0
+#
+#
+#
+# def CollectTable(__accuracies__, _control_flags):
+#
+#     for k, v in __accuracies__.items():
+#         print("k : {}\nv : {}".format(k, v))
+#
+#
+#     return 0
 
 
 
@@ -215,7 +233,7 @@ if __name__ == "__main__":
     parser.add_argument("--answer", "-an", help="\nAnswer file to calculate imputation accuracy.\n\n")
     parser.add_argument("--answer2", "-an2", help="\nAnswer file to calculate imputation accuracy(Fam colum fixed).\n\n")
 
-    # parser.add_argument("--multiprocess", "-mp", help="\nSetting parallel multiprocessing.\n\n", type=int, choices=[2,3,4,5,6,7,8,9], nargs='?', default=1, const=3)
+    parser.add_argument("--multiprocess", "-mp", help="\nSetting parallel multiprocessing.\n\n", type=int, choices=[2,3,4,5,6,7,8,9], nargs='?', default=1, const=3)
 
     parser.add_argument("--java-memory", "-mem", help="\nMemory requried for beagle(ex. 12g).\n\n", default="2g")
 
@@ -239,7 +257,9 @@ if __name__ == "__main__":
                               "-ae", "data/HLA_PANEL/Genetic_map/CEU_T1DGC.aver.erate",
                               "-an", "data/answer/HM_CEU_REF.bgl.phased.alleles.answer",
                               "-an2", "data/answer/HM_CEU_REF.bgl.phased.FIDadj.alleles.answer",
-                              "-hm", "data/HapMap_Map.txt"])
+                              "-hm", "data/HapMap_Map.txt",
+                              "-mp", "9",
+                              "-mem", "4g"])
 
     ## Only MM.
     # args = parser.parse_args(["--input", "data/Target/HM_CEU.FOUNDERS.filt",
