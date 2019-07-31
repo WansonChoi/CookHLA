@@ -93,7 +93,7 @@ class HLA_Imputation_GM(object):
 
         ### (2) IMPUTE
 
-        if self.HapMap_Map:
+        if _HapMap_Map:
             self.raw_IMP_Reuslt = self.IMPUTE_HapMap_Map(_out, MHC_QC_VCF, REF_PHASED_VCF)
         else:
             self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, self.__AVER__, self.refined_Genetic_Map)
