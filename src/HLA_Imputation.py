@@ -61,7 +61,7 @@ class HLA_Imputation(object):
         self.dict_ExonN_Panel = {_exonN: None for _exonN in __EXON__}
         self.dict_ExonN_AGM = {_exonN: None for _exonN in __EXON__}
         self.dict_IMP_Result = {_exonN: {_overlap: None for _overlap in __overlap__} for _exonN in __EXON__}
-        self.accuracy = {_exonN: {_overlap: None for _overlap in __overlap__} for _exonN in __EXON__}
+        self.accuracy = None
         self.HLA_IMPUTATION_OUT = None
 
         self.dict_DOUBLED_PHASED_RESULT = {_exonN: None for _exonN in __EXON__}
@@ -134,7 +134,7 @@ class HLA_Imputation(object):
 
                     self.dict_IMP_Result[_exonN][_overlap] = \
                         self.IMPUTE(MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf',
-                                    _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN])
+                                    _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing=f_prephasing)
 
 
         else:
@@ -143,7 +143,7 @@ class HLA_Imputation(object):
 
             pool = mp.Pool(processes=_MultP if _MultP <= 9 else 9)
 
-            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN]))
+            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing))
                                   for _overlap in __overlap__}
                          for _exonN in __EXON__}
 
@@ -155,6 +155,8 @@ class HLA_Imputation(object):
                 for _overlap in __overlap__:
                     self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_exonN][_overlap].get()
 
+
+        self.idx_process += 1
 
 
         # [Temporary Hard-coding]
@@ -425,7 +427,7 @@ class HLA_Imputation(object):
 
 
 
-    def IMPUTE(self, MHC, _out, _IMPUTATION_INPUT, _REF_PHASED_VCF, _overlap, _exonN, _aver_erate, _Refined_Genetic_Map):
+    def IMPUTE(self, MHC, _out, _IMPUTATION_INPUT, _REF_PHASED_VCF, _overlap, _exonN, _aver_erate, _Refined_Genetic_Map, f_prephasing=False):
 
         if os.path.getsize(_IMPUTATION_INPUT) == 0:
             print(std_ERROR_MAIN_PROCESS_NAME + "Input file for imputation('{}') contains nothing. Please check it again.".format(_IMPUTATION_INPUT))
@@ -433,7 +435,12 @@ class HLA_Imputation(object):
 
 
         print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
-        self.idx_process += 1
+        # self.idx_process += 1
+
+
+
+        raw_HLA_IMPUTATION_OUT = MHC + ('.QC.{}.{}.doubled.raw_imputation_out'.format(_exonN, _overlap) if f_prephasing else '.QC.{}.{}.raw_imputation_out'.format(_exonN, _overlap))
+
 
 
 
@@ -444,7 +451,6 @@ class HLA_Imputation(object):
             java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=5000 err=$aver_erate map=$geneticMap.refined.map  
             """
 
-            raw_HLA_IMPUTATION_OUT = MHC + '.{}.{}.QC.doubled.raw_imputation_out'.format(_exonN, _overlap)
 
             # aver_erate
             with open(_aver_erate, 'r') as f:
@@ -475,7 +481,6 @@ class HLA_Imputation(object):
             (2019. 07. 17.) 'gprobs' argument will still be used. (for genotype calling based on average of posterior probability.)
             """
 
-            raw_HLA_IMPUTATION_OUT = MHC + '.{}.{}.QC.raw_imputation_out'.format(_exonN, _overlap)
 
             command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true overlap={}'.format(
                 self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap)
