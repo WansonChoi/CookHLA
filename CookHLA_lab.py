@@ -19,7 +19,9 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 
 
 
-def CookHLA_lab(_args):
+def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
+
+    # Arguments assignment.
 
     INPUT = _args.input
     OUT = _args.out
@@ -28,13 +30,18 @@ def CookHLA_lab(_args):
     GeneticMap = _args.genetic_map
     AverageErate = _args.average_erate
     ANSWER = _args.answer
-    ANSWER2 = _args.answer2
+    ANSWER2 = _args.answer2 if _args.answer2 else ANSWER
     HapMap_Map = _args.hapmap_map
 
     JAVA_MEM = _args.java_memory
 
 
-    __accuracies__ = []
+    # Accuracy outputs.
+    __accuracies__ = {2: None,
+                      3: None,
+                      4: None,
+                      5: None,
+                      6: None}
 
 
     # Output directory processing
@@ -42,48 +49,100 @@ def CookHLA_lab(_args):
     OUTPUT_prefix = os.path.basename(OUT)
 
 
-    ###### < 2_Plain > ######
-    print("<Imputation : _2_Plain>")
+    # Control Flags
+    if _control_flags == (1,1,1,1,1): # default value
 
-    OUT_2_Plain = join(OUTPUT_dir, '_2_Plain', OUTPUT_prefix+'.Plain')
+        F_2_Plain = 1
+        F_3_MM = 1
+        F_4_AGM_HapMap_Map = 1
+        F_5_AGM = 1
+        F_6_MM_AGM = 1
 
-    [t_HLA_Imptation_out, t_accuracy] = \
-        CookHLA(INPUT, OUT_2_Plain, REFRENCE, _answer=ANSWER, _java_memory=JAVA_MEM)
-
-    print("HLA_IMPUTATION_OUT : {}".format(t_HLA_Imptation_out))
-    print("Accuracy : {}".format(t_accuracy))
-
-
-
-    ###### _3_MM ######
-    print("<Imputation : _3_MM>")
-
-    OUT_3_MM = join(OUTPUT_dir, '_3_MM', OUTPUT_prefix+'.MM')
+    else:
+        [F_2_Plain, F_3_MM, F_4_AGM_HapMap_Map, F_5_AGM, F_6_MM_AGM] = _control_flags
 
 
 
+    ### Main Imputations.
 
-    ###### _4_AGM_HapMap_Map ######
-    print("<Imputation : _4_AGM_HapMap_Map>")
+    if F_2_Plain:
 
-    OUT_4_AGM_HapMap_Map = join(OUTPUT_dir, '_4_AGM_HapMap_Map', OUTPUT_prefix+'.AGM_HapMap_Map')
+        ###### < 2_Plain > ######
+        print("<Imputation : _2_Plain>")
 
+        OUT_2_Plain = join(OUTPUT_dir, '_2_Plain', OUTPUT_prefix+'.Plain')
 
+        [t_HLA_Imptation_out, t_accuracy] = \
+            CookHLA(INPUT, OUT_2_Plain, REFRENCE, _answer=ANSWER, _java_memory=JAVA_MEM)
 
-    ###### _5_AGM ######
-    print("<Imputation : _5_AGM>")
+        # print("HLA_IMPUTATION_OUT : {}".format(t_HLA_Imptation_out))
+        # print("Accuracy : {}".format(t_accuracy))
 
-    OUT_5_AGM = join(OUTPUT_dir, '_5_AGM', OUTPUT_prefix+'.AGM')
-
-
-
-    ###### _6_AGM_MM ######
-    print("<Imputation : _6_MM_AGM>")
-
-    OUT_6_MM_AGM = join(OUTPUT_dir, '_6_MM_AGM', OUTPUT_prefix+'.MM.AGM')
+        __accuracies__[2] = t_accuracy
 
 
 
+    if F_3_MM:
+
+        ###### _3_MM ######
+        print("<Imputation : _3_MM>")
+
+        OUT_3_MM = join(OUTPUT_dir, '_3_MM', OUTPUT_prefix+'.MM')
+
+        [t_HLA_Imptation_out, t_accuracy] = \
+            CookHLA(INPUT, OUT_3_MM, REFRENCE, __use_Multiple_Markers=True,
+                    _answer=ANSWER2, _java_memory=JAVA_MEM)
+
+        __accuracies__[3] = t_accuracy
+
+
+
+    if F_4_AGM_HapMap_Map:
+
+        ###### _4_AGM_HapMap_Map ######
+        print("<Imputation : _4_AGM_HapMap_Map>")
+
+        OUT_4_AGM_HapMap_Map = join(OUTPUT_dir, '_4_AGM_HapMap_Map', OUTPUT_prefix+'.AGM_HapMap_Map')
+
+        [t_HLA_Imptation_out, t_accuracy] = \
+            CookHLA(INPUT, OUT_4_AGM_HapMap_Map, REFRENCE, _HapMap_Map=HapMap_Map,
+                    _answer=ANSWER, _java_memory=JAVA_MEM)
+
+        __accuracies__[4] = t_accuracy
+
+
+
+    if F_5_AGM:
+
+        ###### _5_AGM ######
+        print("<Imputation : _5_AGM>")
+
+        OUT_5_AGM = join(OUTPUT_dir, '_5_AGM', OUTPUT_prefix+'.AGM')
+
+        [t_HLA_Imptation_out, t_accuracy] = \
+            CookHLA(INPUT, OUT_5_AGM, REFRENCE, _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
+                    _answer=ANSWER, _java_memory=JAVA_MEM)
+
+        __accuracies__[5] = t_accuracy
+
+
+
+    if F_6_MM_AGM:
+
+        ###### _6_MM_AGM ######
+        print("<Imputation : _6_MM_AGM>")
+
+        OUT_6_MM_AGM = join(OUTPUT_dir, '_6_MM_AGM', OUTPUT_prefix+'.MM.AGM')
+
+        [t_HLA_Imptation_out, t_accuracy] = \
+            CookHLA(INPUT, OUT_6_MM_AGM, REFRENCE,
+                    __use_Multiple_Markers=True, _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
+                    _answer=ANSWER2, _java_memory=JAVA_MEM)
+
+        __accuracies__[6] = t_accuracy
+
+
+    print(__accuracies__)
 
 
 
@@ -178,7 +237,8 @@ if __name__ == "__main__":
                               "-ref", "data/HLA_PANEL/T1DGC/T1DGC_REF",
                               "-gm", "data/HLA_PANEL/Genetic_map/CEU_T1DGC.mach_step.avg.clpsB",
                               "-ae", "data/HLA_PANEL/Genetic_map/CEU_T1DGC.aver.erate",
-                              "-an", "tests/HM_CEU_REF.bgl.phased.alleles.answer",
+                              "-an", "data/answer/HM_CEU_REF.bgl.phased.alleles.answer",
+                              "-an2", "data/answer/HM_CEU_REF.bgl.phased.FIDadj.alleles.answer",
                               "-hm", "data/HapMap_Map.txt"])
 
     ## Only MM.
