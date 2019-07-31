@@ -174,13 +174,13 @@ class HLA_Imputation(object):
 
         ### (3) CONVERT_OUT
 
-        self.IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, MHC+'.HLA_IMPUTATION_OUT', f_prephasing=f_prephasing)
-        print('IMPUTATION_OUT:\n{}'.format(self.IMPUTATION_OUT))
+        self.HLA_IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, MHC + '.HLA_IMPUTATION_OUT', f_prephasing=f_prephasing)
+        print('IMPUTATION_OUT:\n{}'.format(self.HLA_IMPUTATION_OUT))
 
 
         ## Acquring accuracy
 
-        if _answer and self.IMPUTATION_OUT != '-1':
+        if _answer and self.HLA_IMPUTATION_OUT != '-1':
 
             if not os.path.exists(_answer):
                 print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't exist. Please check '--answer/-an' argument again.\n"
@@ -189,7 +189,7 @@ class HLA_Imputation(object):
                 print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
                                                       "Skipping calculating imputation accuracy.")
             else:
-                self.accuracy = measureAccuracy(_answer, self.IMPUTATION_OUT, 'all', outfile=self.IMPUTATION_OUT+'.accuracy', __only4digits=True)
+                self.accuracy = measureAccuracy(_answer, self.HLA_IMPUTATION_OUT, 'all', outfile=self.HLA_IMPUTATION_OUT + '.accuracy', __only4digits=True)
 
 
 
@@ -282,10 +282,10 @@ class HLA_Imputation(object):
         RUN_Bash(self.LINKAGE2BEAGLE + ' pedigree={} data={} beagle={} standard=true > {}'.format(
             MHC + '.QC.nopheno.ped', MHC + '.QC.dat', MHC + '.QC.bgl', _out + '.bgl.log'))
 
-        if not self.__save_intermediates:
-            # os.system('rm {}'.format(MHC + '.QC.nopheno.ped'))
-            # os.system('rm {}'.format(MHC + '.QC.dat'))
-            os.system('rm {}'.format(_out + '.bgl.log'))
+        # if not self.__save_intermediates:
+        #     os.system('rm {}'.format(MHC + '.QC.nopheno.ped'))
+        #     os.system('rm {}'.format(MHC + '.QC.dat'))
+        #     os.system('rm {}'.format(_out + '.bgl.log'))
 
 
 
