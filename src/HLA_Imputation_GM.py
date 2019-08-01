@@ -335,8 +335,8 @@ class HLA_Imputation_GM(object):
                 aver_erate = f.readline().rstrip('\n')
 
             # overlap : 3000 (default)
-            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true ne=10000 map={} err={} overlap=3000'.format(
-                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate)
+            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true ne=10000 map={} err={} overlap=3000 > {}.log'.format(
+                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate, OUT)
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
@@ -358,8 +358,8 @@ class HLA_Imputation_GM(object):
             """
 
             # overlap : 3000 (default)
-            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true overlap=3000'.format(
-                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT)
+            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true overlap=3000 > {}.log'.format(
+                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, OUT)
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
@@ -398,8 +398,8 @@ class HLA_Imputation_GM(object):
 
         """
 
-        command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} overlap=3000'.format(
-            self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map)
+        command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} overlap=3000 > {}.log'.format(
+            self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map, OUT)
         # print(command)
         if not os.system(command):
             if not self.__save_intermediates:

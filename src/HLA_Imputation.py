@@ -464,8 +464,8 @@ class HLA_Imputation(object):
 
 
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={}'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map)
+            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={} > {}.log'.format(
+                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map, raw_HLA_IMPUTATION_OUT)
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
@@ -492,8 +492,8 @@ class HLA_Imputation(object):
             """
 
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true overlap={} gprobs=true'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap)
+            command = '{} gt={} ref={} out={} impute=true lowmem=true overlap={} gprobs=true > {}.log'.format(
+                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, raw_HLA_IMPUTATION_OUT)
             # print(command)
             if not os.system(command):
                 if not self.__save_intermediates:
