@@ -130,6 +130,9 @@ class HLA_Imputation_GM(object):
         RUN_Bash('rm {}'.format(self.OUTPUT_dir_ref + '.GCchange.bgl.phased'))
         RUN_Bash('rm {}'.format(self.OUTPUT_dir_ref + '.GCchange.markers'))
 
+        if self.FLAG_AdaptiveGeneticMap:
+            RUN_Bash('rm {}'.format(self.refined_Genetic_Map))
+
 
 
 
