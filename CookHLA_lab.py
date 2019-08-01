@@ -158,7 +158,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
 
     __RETURN__ = CollectTable(__accuracies__)
-    __RETURN__.to_csv(join(OUTPUT_dir, "ACCURACY_TABLE.txt"), sep='\t', header=True, index=True)
+    __RETURN__.to_csv(OUT+".ACCURACY_TABLE.txt", sep='\t', header=True, index=True)
 
     return __RETURN__
 
@@ -278,22 +278,26 @@ if __name__ == "__main__":
     parser.add_argument("--hapmap-map", "-hm",
                         help="\n(For Testing Purpose) Hapmap Map(Adaptive Genetic Map).\n\n")
 
+    parser.add_argument("--control-flags", "-cf",
+                        help="\nBoolean sequence to nominate which imputations are to be done.\n\n", nargs=5, default=(1,1,1,1,1), type=int)
+
 
 
 
 
     ##### < for Testing > #####
 
-    args = parser.parse_args(["--input", "data/Target/HM_CEU.FOUNDERS.filt",
-                              "--out", "tests/CookHLA_lab/20190731/HM_CEU_T1DGC_REF",
-                              "-ref", "data/HLA_PANEL/T1DGC/T1DGC_REF",
-                              "-gm", "data/HLA_PANEL/Genetic_map/CEU_T1DGC.mach_step.avg.clpsB",
-                              "-ae", "data/HLA_PANEL/Genetic_map/CEU_T1DGC.aver.erate",
-                              "-an", "data/answer/HM_CEU_REF.bgl.phased.alleles.answer",
-                              "-an2", "data/answer/HM_CEU_REF.bgl.phased.FIDadj.alleles.answer",
-                              "-hm", "data/HapMap_Map.txt",
-                              "-mp", "9",
-                              "-mem", "4g"])
+    # args = parser.parse_args(["--input", "data/Target/HM_CEU.FOUNDERS.filt",
+    #                           "--out", "tests/CookHLA_lab/20190731/HM_CEU_T1DGC_REF",
+    #                           "-ref", "data/HLA_PANEL/T1DGC/T1DGC_REF",
+    #                           "-gm", "data/HLA_PANEL/Genetic_map/CEU_T1DGC.mach_step.avg.clpsB",
+    #                           "-ae", "data/HLA_PANEL/Genetic_map/CEU_T1DGC.aver.erate",
+    #                           "-an", "data/answer/HM_CEU_REF.bgl.phased.alleles.answer",
+    #                           "-an2", "data/answer/HM_CEU_REF.bgl.phased.FIDadj.alleles.answer",
+    #                           "-hm", "data/HapMap_Map.txt",
+    #                           "-mp", "9",
+    #                           "-mem", "4g",
+    #                           "-cf", "1", "1", "0", "0", "1"])
 
     ## Only MM.
     # args = parser.parse_args(["--input", "data/Target/HM_CEU.FOUNDERS.filt",
@@ -307,7 +311,26 @@ if __name__ == "__main__":
 
 
     ##### < for Publish > #####
-    # args = parser.parse_args()
+    args = parser.parse_args()
     print(args)
 
-    CookHLA_lab(args, _control_flags=(0,0,0,0,0))
+
+    ### Manual Argument Checking
+    l_control_flags = args.control_flags
+
+    checked = True
+
+    for i in range(0, len(l_control_flags)):
+        if not (l_control_flags[i] == 0 or l_control_flags[i] == 1):
+            checked = False
+            break
+
+    if checked:
+        l_control_flags = tuple(l_control_flags)
+        # print(l_control_flags)
+    else:
+        print(std_ERROR_MAIN_PROCESS_NAME + "The value of '--control-flags/-cf' must be five 0 or 1s. Please check it again.")
+        sys.exit()
+
+
+    CookHLA_lab(args, _control_flags=l_control_flags)
