@@ -83,7 +83,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
             CookHLA(INPUT, OUT_2_Plain, REFRENCE, _answer=ANSWER, _java_memory=JAVA_MEM)
 
         time_end_2_Plain = time()
-        print("Implementation time of _2_Plain : {}(s)".format(time_end_2_Plain - time_start_2_Plain))
+        print("Implementation time of _2_Plain : {}(min)".format((time_end_2_Plain - time_start_2_Plain)/60))
 
         # print("HLA_IMPUTATION_OUT : {}".format(t_HLA_Imptation_out))
         # print("Accuracy : {}".format(t_accuracy))
@@ -107,7 +107,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
                     _answer=ANSWER2, _java_memory=JAVA_MEM)
 
         time_end_3_MM = time()
-        print("Implementation time of _3_MM : {}(s)".format(time_end_3_MM - time_start_3_MM))
+        print("Implementation time of _3_MM : {}(min)".format((time_end_3_MM - time_start_3_MM)/60))
 
 
         __accuracies__[3] = t_accuracy
@@ -128,7 +128,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
                     _answer=ANSWER, _java_memory=JAVA_MEM)
 
         time_end_4_HapMap_Map = time()
-        print("Implementation time of _4_HapMap_Map : {}(s)".format(time_end_4_HapMap_Map - time_start_4_HapMap_Map))
+        print("Implementation time of _4_HapMap_Map : {}(min)".format((time_end_4_HapMap_Map - time_start_4_HapMap_Map)/60))
 
 
         __accuracies__[4] = t_accuracy
@@ -149,7 +149,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
                     _answer=ANSWER, _java_memory=JAVA_MEM)
 
         time_end_5_AGM = time()
-        print("Implementation time of _5_AGM : {}(s)".format(time_end_5_AGM - time_start_5_AGM))
+        print("Implementation time of _5_AGM : {}(min)".format((time_end_5_AGM - time_start_5_AGM)/60))
 
 
         __accuracies__[5] = t_accuracy
@@ -173,7 +173,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
         time_end_6_MM_AGM = time()
 
-        print("Implementation time of _6_MM_AGM : {}(s)".format(time_end_6_MM_AGM - time_start_6_MM_AGM))
+        print("Implementation time of _6_MM_AGM : {}(min)".format((time_end_6_MM_AGM - time_start_6_MM_AGM)/60))
 
 
         __accuracies__[6] = t_accuracy
