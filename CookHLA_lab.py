@@ -4,6 +4,7 @@ import os, sys, re
 from os.path import join
 import argparse, textwrap
 import pandas as pd
+from time import time
 
 from CookHLA import CookHLA
 
@@ -72,12 +73,17 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
     if F_2_Plain:
 
         ###### < 2_Plain > ######
-        print("<Imputation : _2_Plain>")
+        print(std_MAIN_PROCESS_NAME + "<Imputation : _2_Plain>")
 
         OUT_2_Plain = join(OUTPUT_dir, '_2_Plain', OUTPUT_prefix+'.Plain')
 
+        time_start_2_Plain = time()
+
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_2_Plain, REFRENCE, _answer=ANSWER, _java_memory=JAVA_MEM)
+
+        time_end_2_Plain = time()
+        print("Implementation time of _2_Plain : {}(s)".format(time_end_2_Plain - time_start_2_Plain))
 
         # print("HLA_IMPUTATION_OUT : {}".format(t_HLA_Imptation_out))
         # print("Accuracy : {}".format(t_accuracy))
@@ -89,14 +95,20 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
     if F_3_MM:
 
         ###### _3_MM ######
-        print("<Imputation : _3_MM>")
+        print(std_MAIN_PROCESS_NAME + "<Imputation : _3_MM>")
 
         OUT_3_MM = join(OUTPUT_dir, '_3_MM', OUTPUT_prefix+'.MM')
+
+        time_start_3_MM = time()
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_3_MM, REFRENCE,
                     __use_Multiple_Markers=True, _MultP=_args.multiprocess,
                     _answer=ANSWER2, _java_memory=JAVA_MEM)
+
+        time_end_3_MM = time()
+        print("Implementation time of _3_MM : {}(s)".format(time_end_3_MM - time_start_3_MM))
+
 
         __accuracies__[3] = t_accuracy
 
@@ -105,13 +117,19 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
     if F_4_AGM_HapMap_Map:
 
         ###### _4_AGM_HapMap_Map ######
-        print("<Imputation : _4_AGM_HapMap_Map>")
+        print(std_MAIN_PROCESS_NAME + "<Imputation : _4_AGM_HapMap_Map>")
 
         OUT_4_AGM_HapMap_Map = join(OUTPUT_dir, '_4_AGM_HapMap_Map', OUTPUT_prefix+'.AGM_HapMap_Map')
+
+        time_start_4_HapMap_Map = time()
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_4_AGM_HapMap_Map, REFRENCE, _HapMap_Map=HapMap_Map,
                     _answer=ANSWER, _java_memory=JAVA_MEM)
+
+        time_end_4_HapMap_Map = time()
+        print("Implementation time of _4_HapMap_Map : {}(s)".format(time_end_4_HapMap_Map - time_start_4_HapMap_Map))
+
 
         __accuracies__[4] = t_accuracy
 
@@ -120,13 +138,19 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
     if F_5_AGM:
 
         ###### _5_AGM ######
-        print("<Imputation : _5_AGM>")
+        print(std_MAIN_PROCESS_NAME + "<Imputation : _5_AGM>")
 
         OUT_5_AGM = join(OUTPUT_dir, '_5_AGM', OUTPUT_prefix+'.AGM')
+
+        time_start_5_AGM = time()
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_5_AGM, REFRENCE, _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
                     _answer=ANSWER, _java_memory=JAVA_MEM)
+
+        time_end_5_AGM = time()
+        print("Implementation time of _5_AGM : {}(s)".format(time_end_5_AGM - time_start_5_AGM))
+
 
         __accuracies__[5] = t_accuracy
 
@@ -135,15 +159,22 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
     if F_6_MM_AGM:
 
         ###### _6_MM_AGM ######
-        print("<Imputation : _6_MM_AGM>")
+        print(std_MAIN_PROCESS_NAME + "<Imputation : _6_MM_AGM>")
 
         OUT_6_MM_AGM = join(OUTPUT_dir, '_6_MM_AGM', OUTPUT_prefix+'.MM.AGM')
+
+        time_start_6_MM_AGM = time()
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_6_MM_AGM, REFRENCE,
                     __use_Multiple_Markers=True, _MultP=_args.multiprocess,
                     _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
                     _answer=ANSWER2, _java_memory=JAVA_MEM)
+
+        time_end_6_MM_AGM = time()
+
+        print("Implementation time of _6_MM_AGM : {}(s)".format(time_end_6_MM_AGM - time_start_6_MM_AGM))
+
 
         __accuracies__[6] = t_accuracy
 
