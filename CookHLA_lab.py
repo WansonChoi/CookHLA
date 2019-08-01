@@ -209,11 +209,25 @@ def CollectTable(__accuracies__):
             l_label.append(Int2Label(i))
 
 
-    df_acc = pd.concat(l_df, axis=1).dropna()
+    df_acc = pd.concat(l_df, axis=1).applymap(lambda x : None if x == 0 else x).dropna()
     df_acc.columns = l_label
     # print(df_acc)
 
-    return df_acc
+    ## Acquiring average accuracy.
+    sr_mean = df_acc.mean(axis=0)
+    # print(sr_mean)
+
+    df_acc2 = df_acc.append(sr_mean, ignore_index=True)
+    # print(df_acc2)
+
+    ## New index
+    idx_df_acc2 = df_acc.index.to_frame().loc[:, 'HLA'].tolist()
+    idx_df_acc2.append('avg')
+    df_acc2.index = idx_df_acc2
+    df_acc2.index.name = 'HLA'
+    # print(df_acc2)
+
+    return df_acc2
 
 
 
@@ -328,7 +342,7 @@ if __name__ == "__main__":
     #                           "-hm", "data/HapMap_Map.txt",
     #                           "-mp", "9",
     #                           "-mem", "4g",
-    #                           "-cf", "1", "1", "0", "0", "1"])
+    #                           "-cf", "0", "0", "0", "0", "0"])
 
     ## Only MM.
     # args = parser.parse_args(["--input", "data/Target/HM_CEU.FOUNDERS.filt",
