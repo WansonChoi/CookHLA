@@ -258,13 +258,13 @@ if __name__ == "__main__":
 
 
     # For Testing
-    parser.add_argument("--genetic-map", "-gm", help="\nGenetic Map file.\n\n")
-    parser.add_argument("--average-erate", "-ae", help="\nAverate error rate file.\n\n")
-    parser.add_argument("--use-multiple-markers", "-ml", help="\nUsing multiple markers.\n\n", action='store_true')
+    parser.add_argument("--genetic-map", "-gm", help="\nGenetic Map file.\n\n", required=True)
+    parser.add_argument("--average-erate", "-ae", help="\nAverate error rate file.\n\n", required=True)
+    # parser.add_argument("--use-multiple-markers", "-ml", help="\nUsing multiple markers.\n\n", action='store_true')
 
     # parser.add_argument("--prephasing", "-pr", help="\nUtilizing prephasing strategy.\n\n", action='store_true')
 
-    parser.add_argument("--answer", "-an", help="\nAnswer file to calculate imputation accuracy.\n\n")
+    parser.add_argument("--answer", "-an", help="\nAnswer file to calculate imputation accuracy.\n\n", required=True)
     parser.add_argument("--answer2", "-an2", help="\nAnswer file to calculate imputation accuracy(Fam colum fixed).\n\n")
 
     parser.add_argument("--multiprocess", "-mp", help="\nSetting parallel multiprocessing.\n\n", type=int, choices=[2,3,4,5,6,7,8,9], nargs='?', default=1, const=3)
@@ -276,7 +276,7 @@ if __name__ == "__main__":
     #                          "If given, Imputation will be done based on this phased file.\n\n")
 
     parser.add_argument("--hapmap-map", "-hm",
-                        help="\n(For Testing Purpose) Hapmap Map(Adaptive Genetic Map).\n\n")
+                        help="\n(For Testing Purpose) Hapmap Map(Adaptive Genetic Map).\n\n", required=True)
 
     parser.add_argument("--control-flags", "-cf",
                         help="\nBoolean sequence to nominate which imputations are to be done.\n\n", nargs=5, default=(1,1,1,1,1), type=int)
