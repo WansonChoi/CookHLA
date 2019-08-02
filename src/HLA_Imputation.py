@@ -531,9 +531,9 @@ class HLA_Imputation(object):
 
             command = 'csh {} {} {}'.format(HLA_genotype_call_noprephasing, to_args, _out)
             # print(command)
+            RUN_Bash(command)
 
-            if RUN_Bash(command) == 0:
-                self.idx_process += 1
+            if os.path.exists(_out + '.alleles') and os.path.getsize(_out + '.alleles') > 0:
                 return _out + '.alleles'
             else:
                 print(std_ERROR_MAIN_PROCESS_NAME + "Failed to perform final HLA genotype calling.")
