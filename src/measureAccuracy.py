@@ -58,8 +58,19 @@ def measureAccuracy(answerfile, predictfile, genes, outfile=None, __asSTDOUT = F
                         total4d+=total
 
 
-        __RETURN__['2D'][gene] = float(correct2d)/total2d
-        __RETURN__['4D'][gene] = float(correct4d)/total4d
+        if not __only4digits:
+
+            try:
+                __RETURN__['2D'][gene] = float(correct2d)/total2d
+            except ZeroDivisionError:
+                print("[measureAccuracy.py::Error] No 2-digit alleles.")
+                return "-1"
+
+        try:
+            __RETURN__['4D'][gene] = float(correct4d)/total4d
+        except ZeroDivisionError:
+            print("[measureAccuracy.py::Error] No 4-digit alleles.")
+            return "-1"
 
 
         if __asSTDOUT:
