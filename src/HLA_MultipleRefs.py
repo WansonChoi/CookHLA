@@ -109,7 +109,7 @@ class HLA_MultipleRefs():
             if _MultP == 1:
 
                 for _exonN in __EXON__:
-                    self.ExonN_AGM = self.Make_ExonN_AGM(_exonN, self.EXON234_AGM, _out_AGM+'.{}.txt'.format(_exonN))
+                    self.ExonN_AGM[_exonN] = self.Make_ExonN_AGM(_exonN, self.EXON234_AGM, _out_AGM+'.{}.txt'.format(_exonN))
 
             else:
 
