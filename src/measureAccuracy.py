@@ -49,11 +49,13 @@ def measureAccuracy(answerfile, predictfile, genes, outfile=None, __asSTDOUT = F
                     predict2d=c[3].split(',')
                     predict4d=c[4].split(',')
                     if ID in answers2d:
-                        (correct, total)=compare_and_score(predict2d, answers2d[ID])
+                        # (correct, total)=compare_and_score(predict2d, answers2d[ID])
+                        (correct, total)=compare_and_score2(predict2d, answers2d[ID])
                         correct2d+=correct
                         total2d+=total
                     if ID in answers4d:
-                        (correct, total)=compare_and_score(predict4d, answers4d[ID])
+                        # (correct, total)=compare_and_score(predict4d, answers4d[ID])
+                        (correct, total)=compare_and_score2(predict4d, answers4d[ID])
                         correct4d+=correct
                         total4d+=total
 
@@ -110,6 +112,25 @@ def compare_and_score(predict, answer):
     return(correct,2)
 
 
+def compare_and_score2(predict, answer):
+
+    # Made by Wanson.
+
+    if answer[0] == '' or answer[1] == '':
+        return (0, 0)
+
+    if predict[0] == '':
+        predict[0]='predict1'
+    if predict[1] == '':
+        predict[1]='predict2'
+
+    correct=max((answer[0]==predict[0])+(answer[1]==predict[1]), \
+            (answer[0]==predict[1])+(answer[1]==predict[0]))
+
+    return(correct, 2)
+
+
+
 
 if __name__ == "__main__":
 
@@ -126,4 +147,39 @@ if __name__ == "__main__":
     genes = sys.argv[3:]
 
     measureAccuracy(answerfile, predictfile, genes, __asSTDOUT=True)
+
+    ### < Manual Testing >
+
+    # # 1958BC / T1DGC_REF
+    #
+    # #_2_Plain
+    # measureAccuracy(answerfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/data/answer/1958BC_IC.maf0.001.alleles',
+    #                 predictfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/Figure/AccuracyTables/1958BC_T1DGC_REF/trial1/_2_Plain/1958BC_T1DGC_REF.Plain.MHC.HLA_IMPUTATION_OUT.alleles',
+    #                 genes='all', __only4digits=True, outfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/Figure/AccuracyTables/1958BC_T1DGC_REF/trial1/_2_Plain/1958BC_T1DGC_REF.Plain.MHC.HLA_IMPUTATION_OUT.alleles.fixed.accuracy')
+    #
+    # # _3_MM
+    # measureAccuracy(answerfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/data/answer/1958BC_IC.maf0.001.alleles',
+    #                 predictfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/Figure/AccuracyTables/1958BC_T1DGC_REF/trial1/_3_MM/1958BC_T1DGC_REF.MM.MHC.HLA_IMPUTATION_OUT.alleles',
+    #                 genes='all', __only4digits=True, outfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/Figure/AccuracyTables/1958BC_T1DGC_REF/trial1/_3_MM/1958BC_T1DGC_REF.MM.MHC.HLA_IMPUTATION_OUT.alleles.fixed.accuracy')
+    #
+    # # _4_AGM_HapMap_Map
+    # measureAccuracy(answerfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/data/answer/1958BC_IC.maf0.001.alleles',
+    #                 predictfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/Figure/AccuracyTables/1958BC_T1DGC_REF/trial1/_4_AGM_HapMap_Map/1958BC_T1DGC_REF.AGM_HapMap_Map.MHC.HLA_IMPUTATION_OUT.alleles',
+    #                 genes='all', __only4digits=True, outfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/Figure/AccuracyTables/1958BC_T1DGC_REF/trial1/_4_AGM_HapMap_Map/1958BC_T1DGC_REF.AGM_HapMap_Map.MHC.HLA_IMPUTATION_OUT.alleles.fixed.accuracy')
+    #
+    # # _5_AGM
+    # measureAccuracy(answerfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/data/answer/1958BC_IC.maf0.001.alleles',
+    #                 predictfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/Figure/AccuracyTables/1958BC_T1DGC_REF/trial1/_5_AGM/1958BC_T1DGC_REF.AGM.MHC.HLA_IMPUTATION_OUT.alleles',
+    #                 genes='all', __only4digits=True, outfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/Figure/AccuracyTables/1958BC_T1DGC_REF/trial1/_5_AGM/1958BC_T1DGC_REF.AGM.MHC.HLA_IMPUTATION_OUT.alleles.fixed.accuracy')
+    #
+    # # _6_MM_AGM
+    # measureAccuracy(answerfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/data/answer/1958BC_IC.maf0.001.alleles',
+    #                 predictfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/Figure/AccuracyTables/1958BC_T1DGC_REF/trial1/_6_MM_AGM/1958BC_T1DGC_REF.MM.AGM.MHC.HLA_IMPUTATION_OUT.alleles',
+    #                 genes='all', __only4digits=True, outfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/Figure/AccuracyTables/1958BC_T1DGC_REF/trial1/_6_MM_AGM/1958BC_T1DGC_REF.MM.AGM.MHC.HLA_IMPUTATION_OUT.alleles.fixed.accuracy')
+    #
+    #
+    # # HM_CEU / T1DGC_REF
+    # measureAccuracy(answerfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/data/answer/HM_CEU_REF.bgl.phased.FIDadj.alleles.answer',
+    #                 predictfile='/Users/wansun/Dropbox/_Sync_MyLaptop/Projects/CookHLA/Figure/AccuracyTables/HM_CEU_T1DGC_REF/trial3/HM_CEU_T1DGC_REF.MM.AGM.MHC.HLA_IMPUTATION_OUT.alleles',
+    #                 genes='all', __asSTDOUT=True, __only4digits=True)
 
