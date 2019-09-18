@@ -24,7 +24,7 @@ TOLERATED_DIFF = 0.15
 
 def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Average_Erate=None, _java_memory='2g',
             _MultP=1, _answer=None, __save_intermediates=False, __use_Multiple_Markers=False, _p_src="./src",
-            _p_dependency="./dependency", _given_prephased=None, f_prephasing=False, _HapMap_Map=None, _p_beagle5=None):
+            _p_dependency="./dependency", _given_prephased=None, f_prephasing=False, _HapMap_Map=None):
 
 
     ### Argument exception
@@ -36,11 +36,6 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
     if (_AdaptiveGeneticMap and _Average_Erate) and _HapMap_Map:
         print(std_ERROR_MAIN_PROCESS_NAME + "The arguments '--hapmap-map/-hm' can't be used with '--genetic-map/-gm' and '--average-erate/-ae'. Please check them again.")
-        sys.exit()
-
-
-    if bool(_p_beagle5) and not os.path.exists(_p_beagle5):
-        print(std_ERROR_MAIN_PROCESS_NAME + "Given Beagle5.1({}) doesn't exist. Please check '--beagle5' argument again.".format(_p_beagle5))
         sys.exit()
 
 
@@ -110,7 +105,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
 
     PLINK = ' '.join([_p_plink, "--noweb", "--silent", '--allow-no-sex'])
-    BEAGLE4 = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", (_p_beagle4 if not bool(_p_beagle5) else _p_beagle5)])
+    BEAGLE4 = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_beagle4])
     LINKAGE2BEAGLE = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_linkage2beagle])
     BEAGLE2LINKAGE = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_beagle2linkage])
     BEAGLE2VCF = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_beagle2vcf])
@@ -571,9 +566,6 @@ if __name__ == "__main__":
     parser.add_argument("--hapmap-map", "-hm",
                         help="\n(For Testing Purpose) Hapmap Map(Adaptive Genetic Map).\n\n")
 
-    parser.add_argument("--beagle5",
-                        help="\n(For Testing Purpose) Path to 'beagle5.1.jar' file. (To use it instead of 'beagle4.1.jar'.\n\n")
-
 
 
 
@@ -605,4 +597,4 @@ if __name__ == "__main__":
     CookHLA(args.input, args.out, args.reference, args.hg, args.genetic_map, args.average_erate,
             _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer,
             __use_Multiple_Markers=args.use_multiple_markers, _given_prephased=args.prephased,
-            f_prephasing=args.prephasing, _HapMap_Map=args.hapmap_map, _p_beagle5=args.beagle5)
+            f_prephasing=args.prephasing, _HapMap_Map=args.hapmap_map)
