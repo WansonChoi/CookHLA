@@ -519,25 +519,20 @@ class HLA_Imputation(object):
         self.idx_process += 1
 
 
+        to_args = ' '.join([_raw_IMP_Result[_exon][_overlap] for _exon in __EXON__ for _overlap in __overlap__])
 
         if f_prephasing:
-
-            pass
-
-
+            command = 'csh {} {} {}'.format(HLA_genotype_call_prephasing, to_args, _out)
         else:
-
-            to_args = ' '.join([_raw_IMP_Result[_exon][_overlap] for _exon in __EXON__ for _overlap in __overlap__])
-
             command = 'csh {} {} {}'.format(HLA_genotype_call_noprephasing, to_args, _out)
-            # print(command)
-            RUN_Bash(command)
+        # print(command)
+        RUN_Bash(command)
 
-            if os.path.exists(_out + '.alleles') and os.path.getsize(_out + '.alleles') > 0:
-                return _out + '.alleles'
-            else:
-                print(std_ERROR_MAIN_PROCESS_NAME + "Failed to perform final HLA genotype calling.")
-                return '-1'
+        if os.path.exists(_out + '.alleles') and os.path.getsize(_out + '.alleles') > 0:
+            return _out + '.alleles'
+        else:
+            print(std_ERROR_MAIN_PROCESS_NAME + "Failed to perform final HLA genotype calling.")
+            return '-1'
 
 
 
