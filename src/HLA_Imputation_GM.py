@@ -470,7 +470,7 @@ class HLA_Imputation_GM(object):
             RUN_Bash('rm {}'.format(_out+'.tmp.ped'))
             RUN_Bash('rm {}'.format(_out+'.tmp.dat'))
 
-            RUN_Bash('rm {}'.format(self.raw_IMP_Reuslt))
+            # RUN_Bash('rm {}'.format(self.raw_IMP_Reuslt)) # Saving the single vcf result. (2020.01.03)
             RUN_Bash('rm {}'.format(self.refined_REF_markers))
             # RUN_Bash('rm {}'.format(self.GCchangeBGL))
             RUN_Bash('rm {}'.format(MHC + '.fam'))
