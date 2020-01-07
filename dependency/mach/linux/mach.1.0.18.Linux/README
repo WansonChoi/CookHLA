@@ -1,0 +1,194 @@
+INPUT FILES
+===========
+
+Mach 1.0 needs a Merlin format data and pedigree files as input.
+
+The data file should look like this:
+
+ M marker1
+ M marker2
+ ...
+
+The pedigree file should list one individual per row. Each row 
+should start with an family id and individual id, followed by a
+father and mother id (which should both be 0, 'zero', since
+mach1 assumes individuals are unrelated), and sex. These initial
+columns are followed by a series of marker genotypes, each with 
+two alleles. Alleles can be coded as 1, 2, 3, 4 or A, C, T, G.
+
+For example:
+
+ FAM1001   ID1234  0   0   M   1 1   1 2   2 2
+ FAM1002   ID1234  0   0   F   1 2   2 2   3 3
+
+Or:
+
+  FAM1001   ID1234  0   0   M  A A   A C   C C
+  FAM1002   ID1234  0   0   F  A C   C C   G G
+ 
+
+
+USING MACH 1.0 for HAPLOTYPING
+==============================
+
+To use Mach 1.0 to haplotype a sample of unrelated individuals, you'll 
+need a MERLIN format pedigree and data file (the names of these files are 
+specified with the --pedfile and --datfile command line options, 
+abbreviated as -p and -d, respectively). You should make sure that 
+markers are ordered according to their physical position and use the 
+--phase command line option to request the output of phased chromosomes.
+
+The key parameters for managing the quality of inferred haplotypes
+and the amount of computational effort expended in generating them
+are the --rounds and --states parameters. If missing data is not 
+distributed evenly among the available individuals, you should 
+also consider the --weighted parameter (which favors using individuals 
+with more genotype data as templates for haplotyping other individuals).
+
+The parameter --rounds K specifies how many iterations of the Markov 
+sampler should be run. Larger numbers will result in better 
+solutions. If there isn't much missing data, a value of 50 should 
+give a reasonable solution. Larger values will provide even better
+solutions.
+
+The parameter --states K specifies how many haplotypes should be
+considered when updating each individual. Larger values will generate
+more accurate solutions, but may slow things down a bit (as well as
+requiring more memory). A value of 200 or larger typically provides
+quite good solutions. The default is to use all available haplotypes
+for each update (but this can require a lot of memory and time!).
+
+Other important parameters are --compact (reduces memory use) and
+--poll K (to request intermediate solutions every K iterations).
+
+Example Usage:
+
+   mach -d sample.dat -p sample.ped --rounds 50 --states 200 --phase
+
+
+USING MACH 1.0 to INFER UNTYPED MARKERS
+=======================================
+
+To use Mach 1.0 to infer genotypes at untyped markers, you should use the 
+--geno command line option. Genotypes at untyped markers for each 
+individual are inferred by comparing the available genotypes to those in 
+other individuals that have been typed at higher density. Individuals 
+typed at high density will often come from public resources, such as the 
+HapMap. There are two main strategies for imputation:
+
+INCLUDE REFERENCE (e.g. HAPMAP) GENOTYPES TO YOUR DATASET: 
+
+A simple way to infer missing genotypes is to create one large
+pooled dataset. Some individuals will have missing data and 
+others will have much more complete genotyping information. 
+
+In addition to estimating the most likely genotype for 
+each individual, you can use the command line options --dosage and
+--quality options to request additional information about each 
+inferred genotype.
+
+USE REFERENCE (e.g. HAPMAP) HAPLOTYPES AS INPUT:
+
+If you select this option, you should generate a file that 
+includes a set of reference haplotypes. These can be typed 
+at more markers than are available in your sample. You will
+also need a small file that lists all the markers that appear
+in the phased haplotypes.
+
+Then, to estimate missing genotypes, you'll need to provide the Merlin 
+format data and pedigree files, the reference haplotypes and the list of 
+SNPs in the reference haplotypes. The reference haplotype and snp list 
+files are named in the command line through the --snps and --haps options 
+(these can be abbreviated as -s and -h, respectively). 
+
+It is very important to ensure that alleles are labelled consistently in 
+your sample and in the reference panel. Mach 1.0 will automatically warn 
+you about alleles that differ in frequency greatly between your sample 
+and the reference panel or that have different allele names in the two 
+subsets of data. However, these checks will not catch all inconsistently 
+labelled alleles.
+
+If you use the --autoFlip option, Mach 1.0 will try to automatically 
+resolve problems with alleles that are inconsistently labelled in your
+sample and the reference panel (by flipping strands and dropping markers
+where this trivial solution does not help).
+
+Most of the time, you'll get good estimates of genotypes at untyped 
+markers using the --rounds N and --greedy option.
+
+If you don't use the --greedy option, you can control computational
+effort with the --weighted and --states options. However, this
+alternative strategy generally requires quite a few more iterations
+before converging to a good solution.
+
+Examples:
+
+   mach -d sample.dat -p sample.ped -h hapmap.haplos -s hapmap.snps --rounds 50 --greedy --geno
+
+   mach -d sample.dat -p sample.ped -h hapmap.haplos -s hapmap.snps --rounds 500 --states 200 --geno
+
+   mach -d sample.dat -p sample.ped -h hapmap.haplos -s hapmap.snps --rounds 500 --states 200 --weighted --geno
+
+SPEEDING UP IMPUTATION
+
+The standard genotype imputation approach, described in the 
+preceding section works best when you execute a large
+number of iterations of the Markov Chain (50-100). These iterations 
+are used to simultaneously update the crossover map (which determines
+the likely locations for haplotype transitions), to update the error
+rate map (which flags unusual markers), and to estimate the 
+missing genotypes. 
+
+An alternative approach is to use a single set of estimates for
+the crossover and error rate maps and, conditional on these, to 
+find the most likely genotypes. This approach seems to work quite
+well. To use it, use the --crossovermap and --errormap options to
+specify estimates of error and crossover rates from a previous
+mach run, and request the --mle option instead of --genos. 
+
+If you don't have an available set of map estimates, you can 
+request that Mach estimate them using a small number of iterations
+of the Markov Chain with the rounds option.
+
+Examples:
+
+   mach -d sample.dat -p sample.ped -h hapmap.haplos -s hapmap.snps --crossovermap mach.rec --errormap mach.erate --greedy --mle
+
+   mach -d sample.dat -p sample.ped -h hapmap.haplos -s hapmap.snps --greedy --mle --rounds 5
+
+
+MACH1 OUTPUT KEY
+================
+
+Mach 1.0 generates a table that provides useful information
+about each marker. The filename for the table has the extension
+.info or .mlinfo, depending on whether the --mle option is used.
+ 
+This table includes the marker name, allele labels, minor allele 
+frequency for each marker. In addition, the estimated probability 
+that an average imputed genotype will match an experimental 
+genotype is output (this should be 1.0 for genotyped markers, and
+will often be less for untyped markers). You will also get an
+estimate of the r-squared correlation between an estimated
+genotype scores and true genotypes.
+
+ASSESSING QUALITY OF SOLUTIONS
+==============================
+
+One simple way to empirically assess quality of the solutions 
+generated by Mach 1.0 is to use the mask option. This option 
+hides a small proportion of genotypes from the haplotyper and 
+then compares the imputed genotypes at these locations with 
+the actual genotypes.
+
+Example:
+
+  mach -d sample.dat -p sample.ped --rounds 50 --states 200 --mask 0.02
+
+  mach -d sample.dat -p sample.ped -h hapmap.haplos -s hapmap.snps --rounds 50 --greedy --mask 0.02
+
+
+
+
+
+
