@@ -2,6 +2,7 @@
 
 import os, sys, re
 from os.path import join
+from shutil import which
 import argparse, textwrap
 
 
@@ -42,7 +43,8 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     p_src = _p_src
     p_dependency = _p_dependency
 
-    _p_plink = os.path.join(p_dependency, "plink")
+    # _p_plink = os.path.join(p_dependency, "plink")
+    _p_plink = which('plink')
     _p_beagle4 = os.path.join(p_dependency, "beagle4.jar")
     _p_linkage2beagle = os.path.join(p_dependency, "linkage2beagle.jar")
     _p_beagle2linkage = os.path.join(p_dependency, "beagle2linkage.jar")
