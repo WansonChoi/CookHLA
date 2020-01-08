@@ -175,7 +175,7 @@ class HLA_Imputation(object):
         ### (3) CONVERT_OUT
 
         self.HLA_IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, MHC + '.HLA_IMPUTATION_OUT', f_prephasing=f_prephasing)
-        print('IMPUTATION_OUT:\n{}'.format(self.HLA_IMPUTATION_OUT))
+        print(std_MAIN_PROCESS_NAME+'IMPUTATION_OUT:\n{}'.format(self.HLA_IMPUTATION_OUT))
 
 
         ## Acquring accuracy
@@ -434,7 +434,8 @@ class HLA_Imputation(object):
             sys.exit()
 
 
-        print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
+        # print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
+        print("[{}] Performing HLA imputation({} / overlap:{}).".format(self.idx_process, _exonN, _overlap))
         # self.idx_process += 1
 
 
@@ -522,9 +523,9 @@ class HLA_Imputation(object):
         to_args = ' '.join([_raw_IMP_Result[_exon][_overlap] for _exon in __EXON__ for _overlap in __overlap__])
 
         if f_prephasing:
-            command = 'csh {} {} {}'.format(HLA_genotype_call_prephasing, to_args, _out)
+            command = 'tcsh {} {} {}'.format(HLA_genotype_call_prephasing, to_args, _out)
         else:
-            command = 'csh {} {} {}'.format(HLA_genotype_call_noprephasing, to_args, _out)
+            command = 'tcsh {} {} {}'.format(HLA_genotype_call_noprephasing, to_args, _out)
         # print(command)
         RUN_Bash(command)
 
