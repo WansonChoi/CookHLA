@@ -45,7 +45,8 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
     # _p_plink = os.path.join(p_dependency, "plink")
     _p_plink = which('plink')
-    _p_beagle4 = os.path.join(p_dependency, "beagle4.jar")
+    # _p_beagle4 = os.path.join(p_dependency, "beagle4.jar")
+    _p_beagle4 = which('beagle')    # replaced by the one of Anaconda(Bioconda).
     _p_linkage2beagle = os.path.join(p_dependency, "linkage2beagle.jar")
     _p_beagle2linkage = os.path.join(p_dependency, "beagle2linkage.jar")
     _p_beagle2vcf = os.path.join(p_dependency, "beagle2vcf.jar")
@@ -107,7 +108,8 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
 
     PLINK = ' '.join([_p_plink, "--noweb", "--silent", '--allow-no-sex'])
-    BEAGLE4 = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_beagle4])
+    # BEAGLE4 = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_beagle4])
+    BEAGLE4 = ' '.join([_p_beagle4, '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory)])
     LINKAGE2BEAGLE = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_linkage2beagle])
     BEAGLE2LINKAGE = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_beagle2linkage])
     BEAGLE2VCF = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_beagle2vcf])

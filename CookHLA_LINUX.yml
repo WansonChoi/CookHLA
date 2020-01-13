@@ -8,6 +8,7 @@ channels:
 dependencies:
   - _libgcc_mutex=0.1=main
   - _r-mutex=1.0.1=anacondar_1
+  - beagle=4.1_21Jan17.6cc.jar=0
   - binutils_impl_linux-64=2.33.1=he1b5a44_7
   - binutils_linux-64=2.33.1=h9595d00_16
   - bwidget=1.9.14=0
