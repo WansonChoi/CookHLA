@@ -1,7 +1,8 @@
 #-*- coding: utf-8 -*-
 
 import os, sys, re
-
+import subprocess
+from shutil import which
 import pandas as pd
 
 
@@ -10,6 +11,11 @@ std_ERROR_MAIN_PROCESS_NAME = "\n[%s::ERROR]: " % (os.path.basename(__file__))
 std_WARNING_MAIN_PROCESS_NAME = "\n[%s::WARNING]: " % (os.path.basename(__file__))
 
 HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
+
+# dependent software
+_p_plink = which('plink')
+_p_beagle4 = which('beagle')
+
 
 class REFERENCE():
 
@@ -140,9 +146,37 @@ class REFERENCE():
 
 
 
-    def get_PLINK_subset(self, _out, _toKeep=None, _toRemove=None, _toExtract=None, _toExclude=None):
+    def PLINK_subset(self, _out, _toKeep=None, _toRemove=None, _toExtract=None, _toExclude=None):
 
-        return 0
+        if not (bool(_toKeep) or bool(_toRemove) or bool(_toExtract) or bool(_toExclude)):
+            print("Nothing to subset. (Samples or Markers not given.)")
+            return -1
+
+        command = [
+            _p_plink, '--make-bed',
+            '--bfile', self.prefix,
+            '--out', _out
+        ]
+
+        if bool(_toKeep):
+            command.extend(['--keep', _toKeep])
+        elif bool(_toRemove):
+            command.extend(['--remove', _toRemove])
+
+        if bool(_toExtract):
+            command.extend(['--extract', _toExtract])
+        elif bool(_toExclude):
+            command.extend(['--exclude', _toExclude])
+
+        # print(command)
+        sub = subprocess.call(command, stdout=subprocess.DEVNULL)
+
+        if sub == 0:
+            return _out
+        else:
+            return -1
+
+
 
     def getArtificialGDBIM(self, _start_offset = 0, _interval=1E-5, __writeFile=False):
 
