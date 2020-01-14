@@ -3,6 +3,7 @@
 import os, sys, re
 import subprocess
 from shutil import which
+import random
 import pandas as pd
 
 
@@ -156,6 +157,20 @@ class REFERENCE():
 
 
 
+    def getRandom_N_Samples(self, _N, _out=None):
+
+        N = random.sample(range(self.fam.shape[0]), _N)
+
+        random_N_fam = self.fam.iloc[N, [0,1]]
+
+        if bool(_out):
+            random_N_fam.to_csv(_out, sep='\t', header=True, index=False)
+            return _out
+        else:
+            return random_N_fam
+
+
+
     def PLINK_subset(self, _out, _toKeep=None, _toRemove=None, _toExtract=None, _toExclude=None):
 
         if not (bool(_toKeep) or bool(_toRemove) or bool(_toExtract) or bool(_toExclude)):
@@ -187,6 +202,9 @@ class REFERENCE():
             return -1
 
 
+
+    def hasGD(self):
+        return not (self.bim['GD'] == 0).all()
 
 
 
