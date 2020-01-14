@@ -123,7 +123,7 @@ def MakeGeneticMap(_input, _reference, _out,
 
     if MAKING_MACH_INPUT:
 
-        RUN_Bash(BGL2BED+' {} {} {} {}'.format(OUTPUT_INPUT+'.subset.GCchange', OUTPUT_INPUT+'.subset.GCchange', _p_beagle2linkage, _p_plink))
+        RUN_Bash('bash {} {} {} {} {}'.format(BGL2BED, OUTPUT_INPUT+'.subset.GCchange', OUTPUT_INPUT+'.subset.GCchange', _p_beagle2linkage, _p_plink))
         RUN_Bash(PLINK+' --bfile {} --recode --out {}'.format(OUTPUT_INPUT+'.subset.GCchange', OUTPUT_INPUT+'.subset.GCchange'))
 
         RUN_Bash('awk \'{print "M", $2}\' %s > %s' % (OUTPUT_INPUT+'.subset.GCchange.map', OUTPUT_INPUT+'.subset.GCchange.dat'))    # -d
@@ -170,7 +170,7 @@ def MakeGeneticMap(_input, _reference, _out,
 
 
 
-    return 0
+    return _out
 
 
 
