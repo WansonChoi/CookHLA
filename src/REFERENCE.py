@@ -178,7 +178,7 @@ class REFERENCE():
 
 
 
-    def getArtificialGDBIM(self, _start_offset = 0, _interval=1E-5, __writeFile=False):
+    def getArtificialGDBIM(self, _out=None, _start_offset = 0, _interval=1E-5):
 
         t_bim = self.bim.copy()
 
@@ -188,9 +188,9 @@ class REFERENCE():
 
         t_bim['GD'] = sr_GD
 
-        if __writeFile:
-            # t_bim.to_csv(self.prefix+'.')
-            pass
+        if bool(_out):
+            t_bim.to_csv(_out, sep='\t', header=False, index=False)
+            return _out
         else:
             return t_bim
 
