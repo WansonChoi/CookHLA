@@ -29,6 +29,7 @@ class REFERENCE():
 
         ### Main data
         self.prefix = _reference
+        self.to_Handle = []
 
         self.bed = None
         self.bim = None
@@ -48,6 +49,9 @@ class REFERENCE():
                                                     "Please check the '--reference/-ref' argument again.".format(_reference+'.bed'))
                 sys.exit()
 
+            else:
+                self.to_Handle.append(_reference+'.bed')
+
 
         if _which[1]:
 
@@ -60,6 +64,8 @@ class REFERENCE():
             else:
                 self.bim = pd.read_csv(_reference+'.bim', sep='\s+', header=None, names=['Chr', 'Label', 'GD', 'BP', 'al1', 'al2'])
                 # print(self.bim.head())
+                self.to_Handle.append(_reference + '.bim')
+
 
         if _which[2]:
 
@@ -71,6 +77,7 @@ class REFERENCE():
 
             else:
                 self.fam = pd.read_csv(_reference+'.fam', sep='\s+', header=None, names=['FID', 'IID', 'PID', 'MID', 'Sex', 'Phe'])
+                self.to_Handle.append(_reference + '.fam')
 
 
         if _which[3]:
@@ -83,6 +90,7 @@ class REFERENCE():
 
             else:
                 self.bgl_phased = pd.read_csv(_reference+'.bgl.phased', '\s+', header=None)
+                self.to_Handle.append(_reference + '.bgl.phased')
 
 
         if _which[4]:
@@ -95,6 +103,7 @@ class REFERENCE():
 
             else:
                 self.markers = pd.read_csv(_reference+'.markers', sep='\s+', header=None)
+                self.to_Handle.append(_reference + '.markers')
 
 
         if _which[5]:
@@ -107,6 +116,7 @@ class REFERENCE():
 
             else:
                 self.FRQ = pd.read_csv(_reference+'.FRQ.frq', sep='\s+', header=0)
+                self.to_Handle.append(_reference + '.FRQ.frq')
 
 
 
@@ -178,20 +188,14 @@ class REFERENCE():
 
 
 
-    def getArtificialGDBIM(self, _out=None, _start_offset = 0, _interval=1E-5):
-
-        t_bim = self.bim.copy()
-
-        sr_GD = pd.Series([
-            (_start_offset + _interval * i) for i in range(t_bim.shape[0])
-        ], name='GD')
-
-        t_bim['GD'] = sr_GD
-
-        if bool(_out):
-            t_bim.to_csv(_out, sep='\t', header=False, index=False)
-            return _out
-        else:
-            return t_bim
 
 
+    def LINKAGE2BEAGLE(self):
+
+        """
+        PLINK (*.ped, *.map) (or (*.bed, *.bim, *.fam)) to Beagle file format.
+        """
+
+
+
+        return 0
