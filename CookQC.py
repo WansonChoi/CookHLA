@@ -1,6 +1,7 @@
 #-*- coding: utf-8 -*-
 
 import os, sys, re
+import subprocess
 from os.path import join
 from shutil import which
 import argparse, textwrap
@@ -9,7 +10,10 @@ import pandas as pd
 
 from src.REFERENCE import REFERENCE
 from MakeGeneticMap import MakeGeneticMap
-
+from src.redefineBPv1BH import redefineBP
+from src.bgl2GC_trick_bgl import Bgl2GC
+from src.GC_tricked_bgl2ori_bgl import GCtricedBGL2OriginalBGL
+from src.BGL2Alleles import BGL2Alleles
 
 
 std_MAIN_PROCESS_NAME = "\n[%s]: " % (os.path.basename(__file__))
@@ -23,10 +27,11 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 
 
 def CookQC(_input, _reference, _out,
-           _p_src='./src', _p_dependency='./dependency', _mem='2g'):
+           _p_src='./src', _p_dependency='./dependency', _mem='2g',
+           _given_AGM=None, _given_phased=None):
 
 
-    if not (bool(re.match(r'\d[Mm]$', _mem)) or bool(re.match(r'\d[Gg]$', _mem))):
+    if not (bool(re.match(r'\d+[Mm]$', _mem)) or bool(re.match(r'\d+[Gg]$', _mem))):
         print(std_ERROR_MAIN_PROCESS_NAME + "Wrong value for Memry('{}').\n"
                                             "Please check the '-mem' argument again.".format(_mem))
         sys.exit()
@@ -42,7 +47,9 @@ def CookQC(_input, _reference, _out,
 
     # Command
     PLINK = "{} --silent --allow-no-sex".format(_p_plink)
-    LINKAGE2BEAGLE = 'java -jar {}'.format(_p_linkage2beagle)
+    LINKAGE2BEAGLE = 'java -Xmx{} -jar {}'.format(_mem, _p_linkage2beagle)
+    BEAGLE2VCF = 'java -Xmx{} -jar {}'.format(_mem, _p_beagle2vcf)
+    VCF2BEAGLE = 'java -Xmx{} -jar {}'.format(_mem, _p_vcf2beagle)
 
 
     # Intermediate path.
@@ -72,30 +79,220 @@ def CookQC(_input, _reference, _out,
 
     ########## < [0] Loading Reference panel data > ##########
 
-    REF = REFERENCE(_reference, _which=(0,1,1,0,0,0))
+    myREF = REFERENCE(_reference, _which=(0,1,1,0,0,0))   # 'myREF' class instance.
 
     """
-    if hasGD => Just collapse
-    if not => MakeGenetic Map
+    It will be assumed that given reference panel doesn't have genetic distance.
+    
+    [1] Remove markers from 'MakeReference'.
+    [2] Use 'MakeGeneticMap' to get genetic distance information. (ex. Target: T1DGC(No MakeReference markers) / Reference : T1DGC_REF)
+        - Remove 'MakeReference' markers except HLA markers. (i.e. remove 'AA_', 'SNP_', 'INS_' not 'HLA_')
+            - By '--extract' 'T1DGC_REF'.
+    [3] Perform Phasing
+        - PLINK to Beagle (linakge2beagle.jar)
+        - GCtrick
+    [4] Find wrongly phased samples
+        - vcf(phased) to Beagle (vcf2beagle.jar)
+        - BGL2Alleles.py
+    
+    [5] Split (1) wrongly phased samples PLINK dataset(K), (2) Rightly phased samples PLINK dataset(N-K)
+        - Just remove samples in the output phased file. (Newly phased file). =>
+        - CookHLA with prephasing strategy
+        
+    [6] Analyze Posterior probability of Haplotypes.
+    
     """
 
-    # if REF.hasGD():
-    #     # Just collapse
-    #     pass
-    #
-    # else:
-    #     pass
+    if bool(_given_phased) and os.path.exists(_given_phased):
+
+        ### Using given Phased file.
+        myBGL_Phased = _given_phased
+        print(std_MAIN_PROCESS_NAME + "Using given Phased file('{}').".format(_given_phased))
+
+    else:
 
 
-    toExclude_MKREF = REF.get_MKref_markers(_out=join(OUTPUT_dir, 'ToExclude.ExceptHLA.txt'))
+        if bool(_given_AGM) and os.path.exists(_given_AGM+'.mach_step.avg.clpsB'):
 
-    REF_only_Variants = REF.PLINK_subset(_toExclude=toExclude_MKREF, _out=OUTPUT_REF+'.ONLY_Variants')
-    print(REF_only_Variants)
+            ### Using given AGM.
+            GM = _given_AGM
+            print("Using given Adaptive Genetic Map : '{}'".format(GM))
+
+        else:
+            # have to be newly created.
+
+            ##### < Remove markers from 'MakeReference'. > #####
+            toExclude_MKREF = myREF.get_MKref_markers(_out=join(OUTPUT_dir, 'ToExclude.MKREF.txt'))
+
+            ##### < [2] Use 'MakeGeneticMap' to get genetic distance information. > #####
+            REF_only_Variants = myREF.PLINK_subset(_toExclude=toExclude_MKREF,
+                                                   _out=OUTPUT_REF + '.ONLY_Variants')  # Removing markers originated from 'MakeReference'.
+            # print(REF_only_Variants)
+
+            GM = MakeGeneticMap(REF_only_Variants, myREF.prefix, _out=join(OUTPUT_dir, 'AGM.{}+{}'.format(os.path.basename(REF_only_Variants), os.path.basename(myREF.prefix))))
+            print(GM)
 
 
-    GM = MakeGeneticMap(REF_only_Variants, REF.prefix, _out=join(OUTPUT_dir, 'AGM.{}+{}'.format(os.path.basename(REF_only_Variants), os.path.basename(REF.prefix))))
+            # removal
+            subprocess.call(['rm', REF_only_Variants+'.bed'])
+            subprocess.call(['rm', REF_only_Variants+'.bim'])
+            subprocess.call(['rm', REF_only_Variants+'.fam'])
+            subprocess.call(['rm', REF_only_Variants+'.log'])
+            subprocess.call(['rm', toExclude_MKREF])
 
-    print(GM)
+
+
+
+        df_clpsB = pd.read_csv(GM+'.mach_step.avg.clpsB', sep='\s+', header=None, names=['Chr', 'Label', 'GD', 'BP'])
+        # print("df_clpsB :\n{}\n".format(df_clpsB))
+
+        p_AA_SNP_INS = re.compile(r'AA_|SNP_|INS_')
+        f_AA_SNP_INS = df_clpsB['Label'].str.match(p_AA_SNP_INS)
+
+        df_clpsB = df_clpsB[~f_AA_SNP_INS]
+        # print("df_clpsB :\n{}\n".format(df_clpsB))
+
+
+        ToExtract_VariantsAndHLA = join(OUTPUT_dir, 'ToExtract.VariantsAndHLA.txt')
+        df_clpsB['Label'].to_csv(ToExtract_VariantsAndHLA, header=False, index=False)
+
+        REF_VariantsAndHLA = myREF.PLINK_subset(OUTPUT_REF+'.ONLY_Variants_HLA', _toExtract=ToExtract_VariantsAndHLA)
+
+        df_bim_REF_VariantsAndHLA = pd.read_csv(REF_VariantsAndHLA+'.bim', sep='\s+', header=None, names=['Chr', 'Label', 'GD', 'BP', 'al1', 'al2'])
+
+        # Just replacing
+        df_bim_REF_VariantsAndHLA['GD'] = df_clpsB['GD'].reset_index(drop=True) # *** Potentially error-proun.
+        df_bim_REF_VariantsAndHLA.to_csv(REF_VariantsAndHLA+'.bim', sep='\t', header=False, index=False)
+
+
+        # # Using pd.merge()
+        # df_merge0 = df_bim_REF_VariantsAndHLA.merge(df_clpsB, on='Label')
+        # df_merge0 = df_merge0[['Chr_x', 'Label', 'GD_y', 'BP_x', 'al1', 'al2']]
+        # df_merge0.to_csv(REF_VariantsAndHLA+'.bim', sep='\t', header=False, index=False)
+        # print("df_merge0:\n{}\n".format(df_merge0))
+        # print(df_clpsB.shape[0])
+        # print(df_bim_REF_VariantsAndHLA.shape[0])
+
+
+        # removal
+        subprocess.call(['rm', ToExtract_VariantsAndHLA])
+        del(df_bim_REF_VariantsAndHLA)
+
+        # subprocess.call(['rm', GM+'.aver.erate'])
+        # subprocess.call(['rm', GM+'.mach_step.avg.clpsA'])
+        # subprocess.call(['rm', GM+'.mach_step.avg.clpsB'])
+        # subprocess.call(['rm', GM+'.mach_step.erate'])
+        # subprocess.call(['rm', GM+'.mach_step.gmap.avg'])
+        # subprocess.call(['rm', GM+'.mach_step.gmap.last'])
+        # subprocess.call(['rm', GM+'.mach_step.rec'])
+
+
+
+
+        ##### < [3] Perform Phasing > #####
+
+        subprocess.check_output([_p_plink, '--recode', '--keep-allele-order', '--bfile', REF_VariantsAndHLA, '--out', REF_VariantsAndHLA])
+
+        # Making '*.markers'
+        os.system(' '.join(['awk \'{print $2 " " $4 " " $5 " " $6}\'', REF_VariantsAndHLA+'.bim', '>', REF_VariantsAndHLA+'.markers']))
+        # Making '*.nopheno.ped'
+        os.system(' '.join(['awk \'{print "M " $2}\'', REF_VariantsAndHLA+'.map', '>', REF_VariantsAndHLA+'.dat']))
+        # Making '*.dat'
+        os.system(' '.join(["cut -d ' ' -f1-5,7-", REF_VariantsAndHLA+'.ped', '>', REF_VariantsAndHLA+'.nopheno.ped']))
+
+        # Converting PLINK file to Beagle file with 'linkage2beagle.jar'
+        os.system(' '.join([LINKAGE2BEAGLE,
+                             'pedigree={}'.format(REF_VariantsAndHLA+'.nopheno.ped'),
+                             'data={}'.format(REF_VariantsAndHLA+'.dat'),
+                             'beagle={}'.format(REF_VariantsAndHLA+'.bgl'),
+                             'standard=true', '>', REF_VariantsAndHLA+'.bgl.l2b.log']))
+
+        myBGL = REF_VariantsAndHLA+'.bgl' # (***) the beagle file generated by the above linkage2beagle.jar
+        myMarkers = REF_VariantsAndHLA+'.markers'
+
+        # Removal
+        subprocess.call(['rm', REF_VariantsAndHLA+'.nopheno.ped'])
+        subprocess.call(['rm', REF_VariantsAndHLA+'.dat'])
+        subprocess.call(['rm', REF_VariantsAndHLA+'.ped'])
+        subprocess.call(['rm', REF_VariantsAndHLA+'.map'])
+
+
+        ### GCtrick
+
+        # 1. redefineBPv1BH.py
+        redefineBP(myMarkers, REF_VariantsAndHLA+'.redefined.markers')
+        # 2. GCchange trick
+        [myBGL_GCtrick, myMarkers_redefined_GCtrcik] = \
+            Bgl2GC(myBGL, REF_VariantsAndHLA+'.redefined.markers',
+                   REF_VariantsAndHLA+'.GCtrick.bgl', REF_VariantsAndHLA+'.GCtrick.redefined.markers')
+
+        # Removal
+        subprocess.call(['rm', REF_VariantsAndHLA+'.redefined.markers'])
+
+
+        ### beagle2vcf
+        """
+        usage: java -jar beagle2vcf.jar [chrom] [markers] [bgl] [missing] > [vcf]
+        """
+        command = ' '.join([BEAGLE2VCF, '6', myMarkers_redefined_GCtrcik, myBGL_GCtrick, '0', '>', REF_VariantsAndHLA+'.GCtrick.bgl.vcf'])
+        os.system(command)
+
+
+        ### Phasing
+        """
+        java -jar beagle.27Jan18.7e1.jar gl=test.27Jan18.7e1.vcf.gz out=out.gl
+        """
+
+        # print("Performing Phasing.")
+        SP = subprocess.call([_p_beagle4, '-Xmx{}'.format(_mem),
+                            'gt={}'.format(REF_VariantsAndHLA+'.GCtrick.bgl.vcf'),
+                            'out={}'.format(REF_VariantsAndHLA+'.GCtrick.bgl.phased')],
+                             stdout=open(REF_VariantsAndHLA+'.GCtrick.bgl.phased.vcf.log', 'w'))
+
+        # Phasing output check.
+        if not (SP == 0 and os.path.exists(REF_VariantsAndHLA+'.GCtrick.bgl.phased.vcf.gz')):
+            print(std_ERROR_MAIN_PROCESS_NAME + "Phasing ('{}') failed.".format(REF_VariantsAndHLA+'.GCtrick.bgl.phased.vcf.gz'))
+            return -1
+        else:
+            # removal
+            subprocess.call(['rm', REF_VariantsAndHLA+'.GCtrick.bgl.vcf'])
+
+        myBGL_Phased_vcfgz = REF_VariantsAndHLA+'.GCtrick.bgl.phased.vcf.gz'
+
+
+        ### vcf2beagle
+        """
+        usage: cat [vcf file] | java -jar vcf2beagle.jar [missing] [prefix]
+        """
+        command = ' '.join(['gunzip -c', myBGL_Phased_vcfgz, '|', VCF2BEAGLE, '0', REF_VariantsAndHLA+'.GCtrick.phased'])
+        os.system(command)
+
+        if not os.path.exists(REF_VariantsAndHLA + '.GCtrick.phased.bgl.gz'):
+            print(std_ERROR_MAIN_PROCESS_NAME + "Failed to generate Beagle file by vcf2beagle.jar.")
+            sys.exit()
+        else:
+            command = ' '.join(['gunzip -c', REF_VariantsAndHLA + '.GCtrick.phased.bgl.gz', '>', REF_VariantsAndHLA + '.GCtrick.bgl.phased'])
+            os.system(command)
+
+            # removal
+            subprocess.call(['rm', REF_VariantsAndHLA + '.GCtrick.phased.bgl.gz'])
+            subprocess.call(['rm', REF_VariantsAndHLA + '.GCtrick.phased.int'])
+            subprocess.call(['rm', REF_VariantsAndHLA + '.GCtrick.phased.markers'])
+
+        myBGL_Phased = (REF_VariantsAndHLA + '.GCtrick.bgl.phased') # Generated by 'vcf2begale.jar' and gunziped.
+        myBGL_Phased = GCtricedBGL2OriginalBGL(myBGL_Phased, myMarkers, REF_VariantsAndHLA+'.bgl.phased')
+
+
+
+
+    ##### < [] Find wrongly phased samples. > #####
+    print(myBGL_Phased)
+
+
+
+
+    ##### < Remove markers from 'MakeReference'. > #####
+    ##### < Remove markers from 'MakeReference'. > #####
 
 
     return 0
@@ -145,6 +342,13 @@ if __name__ == "__main__":
 
     parser.add_argument("--java-memory", "-mem", help="\nMemory requried for beagle(ex. 12g).\n\n", default="2g")
 
+    parser.add_argument("--given-phased", "-ph",
+                        help="\n(For Testing Purpose) Passing prephased result manually(Not VCF, No GCtrick).\n"
+                             "If given, the process will be done to this phased file.\n\n")
+
+    parser.add_argument("--given-GM", "-gGM",
+                        help="\n(For Testing Purpose) Passing the prefix of already created AGM.\n"
+                             "If given, the process will be done to this AGM file.\n\n")
 
 
 
@@ -153,11 +357,15 @@ if __name__ == "__main__":
     ##### < for Testing > #####
 
     args = parser.parse_args(["-ref", "tests/T1DGC/T1DGC_REF",
-                              "-o", "tests/T1DGC_CookQC/T1DGC_REF.CookQC"])
+                              "-o", "tests/T1DGC_CookQC/T1DGC_REF.CookQC",
+                              '-mem', '12g',
+                              '-ph', 'tests/T1DGC_CookQC/T1DGC_REF.ONLY_Variants_HLA.bgl.phased',
+                              '-gGM', 'tests/T1DGC_CookQC/AGM.T1DGC_REF.ONLY_Variants+T1DGC_REF'])
 
 
     ##### < for Publish > #####
     # args = parser.parse_args()
     print(args)
 
-    CookQC(args.input, args.reference, args.out)
+    CookQC(args.input, args.reference, args.out, _mem=args.java_memory,
+           _given_phased=args.given_phased, _given_AGM=args.given_GM)
