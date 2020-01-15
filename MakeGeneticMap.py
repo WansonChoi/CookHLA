@@ -168,9 +168,35 @@ def MakeGeneticMap(_input, _reference, _out,
 
 
 
+    # Final output check
+    Flag_OUTPUT = True
 
+    if not os.path.exists(_out+'.aver.erate'):
+        print(std_WARNING_MAIN_PROCESS_NAME + "'{}' wasn't created.".format(_out+'.aver.erate'))
+        Flag_OUTPUT = False
+    if not os.path.exists(_out+'.mach_step.avg.clpsA'):
+        print(std_WARNING_MAIN_PROCESS_NAME + "'{}' wasn't created.".format(_out+'.mach_step.avg.clpsA'))
+        Flag_OUTPUT = False
+    if not os.path.exists(_out+'.mach_step.avg.clpsB'):
+        print(std_WARNING_MAIN_PROCESS_NAME + "'{}' wasn't created.".format(_out+'.mach_step.avg.clpsB'))
+        Flag_OUTPUT = False
+    if not os.path.exists(_out+'.mach_step.erate'):
+        print(std_WARNING_MAIN_PROCESS_NAME + "'{}' wasn't created.".format(_out+'.mach_step.erate'))
+        Flag_OUTPUT = False
+    if not os.path.exists(_out+'.mach_step.gmap.avg'):
+        print(std_WARNING_MAIN_PROCESS_NAME + "'{}' wasn't created.".format(_out+'.mach_step.gmap.avg'))
+        Flag_OUTPUT = False
+    if not os.path.exists(_out+'.mach_step.gmap.last'):
+        print(std_WARNING_MAIN_PROCESS_NAME + "'{}' wasn't created.".format(_out+'.mach_step.gmap.last'))
+        Flag_OUTPUT = False
+    if not os.path.exists(_out+'.mach_step.rec'):
+        print(std_WARNING_MAIN_PROCESS_NAME + "'{}' wasn't created.".format(_out+'.mach_step.rec'))
+        Flag_OUTPUT = False
 
-    return _out
+    if Flag_OUTPUT:
+        return _out
+    else:
+        return -1
 
 
 
