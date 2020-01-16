@@ -22,7 +22,9 @@ std_WARNING_MAIN_PROCESS_NAME = "\n[%s::WARNING]: " % (os.path.basename(__file__
 
 HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 
-
+# Patterns
+p_ONLY_4digit = re.compile(r'^\d{4},\d{4}$')
+p_4to5digit = re.compile(r'^\d{4,5},\d{4,5}$')
 
 
 
@@ -122,10 +124,10 @@ def CookQC(_input, _reference, _out,
             # have to be newly created.
 
             ##### < Remove markers from 'MakeReference'. > #####
-            toExclude_MKREF = myREF.get_MKref_markers(_out=join(OUTPUT_dir, 'ToExclude.MKREF.txt'))
+            toExclude_MKref = myREF.get_MKref_markers(_out=join(OUTPUT_dir, 'ToExclude.MKREF.txt'))
 
             ##### < [2] Use 'MakeGeneticMap' to get genetic distance information. > #####
-            REF_only_Variants = myREF.PLINK_subset(_toExclude=toExclude_MKREF,
+            REF_only_Variants = myREF.PLINK_subset(_toExclude=toExclude_MKref,
                                                    _out=OUTPUT_REF + '.ONLY_Variants')  # Removing markers originated from 'MakeReference'.
             # print(REF_only_Variants)
 
@@ -138,7 +140,7 @@ def CookQC(_input, _reference, _out,
             subprocess.call(['rm', REF_only_Variants+'.bim'])
             subprocess.call(['rm', REF_only_Variants+'.fam'])
             subprocess.call(['rm', REF_only_Variants+'.log'])
-            subprocess.call(['rm', toExclude_MKREF])
+            subprocess.call(['rm', toExclude_MKref])
 
 
 
@@ -286,12 +288,36 @@ def CookQC(_input, _reference, _out,
 
 
     ##### < [] Find wrongly phased samples. > #####
-    print(myBGL_Phased)
+
+    myAlleles = BGL2Alleles(myBGL_Phased, OUTPUT_REF+'.alleles', 'all')
+    # myAlleles = 'tests/T1DGC_CookQC/T1DGC_REF.alleles'
+
+    wrong_samples = WronglyPhased(myAlleles, _out=join(OUTPUT_dir, 'WronglyPhased.samples.txt'), _fam=myREF.fam)
+    # print(wrong_samples)
+
+    # removal
+    # subprocess.call(['rm', myAlleles])
+    # subprocess.call(['rm', myBGL_Phased])
 
 
 
 
-    ##### < Remove markers from 'MakeReference'. > #####
+    ##### < [] Split (1) wrongly phased samples PLINK dataset(K), (2) Rightly phased samples PLINK dataset(N-K) > #####
+
+    ### (1) K wrongly phased PLINK data. => (Target)
+    toExclude_MKref = myREF.get_MKref_markers(_out=join(OUTPUT_dir, 'ToExclude.MKref.txt'))
+    myREF_K = myREF.PLINK_subset(_toExclude=toExclude_MKref, _toKeep=wrong_samples, _out=OUTPUT_REF+'.WrongPhase')
+
+
+    ### (2) N-K rightly phased PLINK data. => (Reference)
+    myREF_N_K = myREF.PLINK_subset(_toRemove=wrong_samples, _out=OUTPUT_REF+'.RightPhase')
+    
+    # BGL subset
+
+
+
+
+
     ##### < Remove markers from 'MakeReference'. > #####
 
 
@@ -300,9 +326,36 @@ def CookQC(_input, _reference, _out,
 
 
 
-def PHASING():
+def WronglyPhased(_alleles, _only4digit=True, _out=None, _fam=None):
 
-    return 0
+    df_alleles = pd.read_csv(_alleles, sep='\s+', header=None, usecols=[1,2,4], names=['IID', 'HLA', '4digit']) \
+                    .pivot('IID', 'HLA', '4digit')
+
+    p_toUse = p_ONLY_4digit if _only4digit else p_4to5digit
+
+    f = df_alleles.applymap(lambda x : bool(p_toUse.match(x))).apply(lambda x : x.all(), axis=1)
+
+    df_wronglyPhased = df_alleles[~f]
+
+    # To retrieve 'FID' info, *.fam file must be given.
+    if isinstance(_fam, pd.DataFrame):
+
+        f2 = _fam['IID'].isin(df_wronglyPhased.index.tolist())
+
+        df_RETURN = _fam[f2].loc[:, ['FID', 'IID']]
+
+    else:
+
+        df_RETURN = pd.concat([df_wronglyPhased.index.to_series(), df_wronglyPhased.index.to_series()], axis=1)
+        df_RETURN.columns = ['FID', 'IID']
+
+    # print("df_RETURN:\n{}\n".format(df_RETURN))
+
+    if bool(_out):
+        df_RETURN.to_csv(_out, sep='\t', index=False, header=True)
+        return _out
+    else:
+        return df_RETURN
 
 
 
@@ -361,6 +414,10 @@ if __name__ == "__main__":
                               '-mem', '12g',
                               '-ph', 'tests/T1DGC_CookQC/T1DGC_REF.ONLY_Variants_HLA.bgl.phased',
                               '-gGM', 'tests/T1DGC_CookQC/AGM.T1DGC_REF.ONLY_Variants+T1DGC_REF'])
+
+    # args = parser.parse_args(["-ref", "tests/PAN-ASIAN/Pan-Asian_REF",
+    #                           "-o", "tests/PAN-ASIAN_CookQC/Pan-Asian_REF.CookQC",
+    #                           '-mem', '12g'])
 
 
     ##### < for Publish > #####
