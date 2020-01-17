@@ -9,11 +9,14 @@ import argparse, textwrap
 import pandas as pd
 
 from src.REFERENCE import REFERENCE
+from src.VCF import VCF
 from MakeGeneticMap import MakeGeneticMap
 from src.redefineBPv1BH import redefineBP
 from src.bgl2GC_trick_bgl import Bgl2GC
 from src.GC_tricked_bgl2ori_bgl import GCtricedBGL2OriginalBGL
 from src.BGL2Alleles import BGL2Alleles
+from src.SubsetBGLPhased import SubsetBGLPhased
+from CookHLA import CookHLA
 
 
 std_MAIN_PROCESS_NAME = "\n[%s]: " % (os.path.basename(__file__))
@@ -25,12 +28,12 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 # Patterns
 p_ONLY_4digit = re.compile(r'^\d{4},\d{4}$')
 p_4to5digit = re.compile(r'^\d{4,5},\d{4,5}$')
+p_1stColumn = re.compile(r'^(\S+)\s+')
 
 
 
-def CookQC(_input, _reference, _out,
-           _p_src='./src', _p_dependency='./dependency', _mem='2g',
-           _given_AGM=None, _given_phased=None):
+def CookQC(_input, _reference, _out, _p_src='./src', _p_dependency='./dependency', _mem='2g',
+           _given_AGM=None, _given_phased_vcf=None, _MultP=1):
 
 
     if not (bool(re.match(r'\d+[Mm]$', _mem)) or bool(re.match(r'\d+[Gg]$', _mem))):
@@ -42,6 +45,7 @@ def CookQC(_input, _reference, _out,
     # dependent software
     _p_plink = which('plink')
     _p_beagle4 = which('beagle')
+    _p_Rscript = which('Rscript')
     _p_linkage2beagle = os.path.join(_p_dependency, "linkage2beagle.jar")
     _p_beagle2linkage = os.path.join(_p_dependency, "beagle2linkage.jar")
     _p_beagle2vcf = os.path.join(_p_dependency, "beagle2vcf.jar")
@@ -50,6 +54,7 @@ def CookQC(_input, _reference, _out,
     # Command
     PLINK = "{} --silent --allow-no-sex".format(_p_plink)
     LINKAGE2BEAGLE = 'java -Xmx{} -jar {}'.format(_mem, _p_linkage2beagle)
+    BEAGLE2LINKAGE = 'java -Xmx{} -jar {}'.format(_mem, _p_beagle2linkage)
     BEAGLE2VCF = 'java -Xmx{} -jar {}'.format(_mem, _p_beagle2vcf)
     VCF2BEAGLE = 'java -Xmx{} -jar {}'.format(_mem, _p_vcf2beagle)
 
@@ -105,11 +110,15 @@ def CookQC(_input, _reference, _out,
     
     """
 
-    if bool(_given_phased) and os.path.exists(_given_phased):
+    if bool(_given_phased_vcf) and os.path.exists(_given_phased_vcf):
 
         ### Using given Phased file.
-        myBGL_Phased = _given_phased
-        print(std_MAIN_PROCESS_NAME + "Using given Phased file('{}').".format(_given_phased))
+        myBGL_Phased_vcfgz = _given_phased_vcf
+        print(std_MAIN_PROCESS_NAME + "Using given Phased vcf file('{}').".format(_given_phased_vcf))
+
+
+        REF_VariantsAndHLA = OUTPUT_REF+'.ONLY_Variants_HLA'
+        myMarkers = REF_VariantsAndHLA + '.markers'
 
     else:
 
@@ -262,28 +271,58 @@ def CookQC(_input, _reference, _out,
         myBGL_Phased_vcfgz = REF_VariantsAndHLA+'.GCtrick.bgl.phased.vcf.gz'
 
 
-        ### vcf2beagle
-        """
-        usage: cat [vcf file] | java -jar vcf2beagle.jar [missing] [prefix]
-        """
-        command = ' '.join(['gunzip -c', myBGL_Phased_vcfgz, '|', VCF2BEAGLE, '0', REF_VariantsAndHLA+'.GCtrick.phased'])
+
+
+
+    print("Hello")
+
+
+    ### gunzip
+
+    if myBGL_Phased_vcfgz.endswith('vcf.gz'):
+
+        myBGL_Phased_vcf = join(OUTPUT_dir, os.path.basename(myBGL_Phased_vcfgz.rstrip('.gz')))
+
+        command = ['gunzip -c', myBGL_Phased_vcfgz, '>', myBGL_Phased_vcf]
+        sub = os.system(' '.join(command))
+
+        if not (sub == 0 and os.path.exists(myBGL_Phased_vcf)):
+            print(std_ERROR_MAIN_PROCESS_NAME + "Failed to gunzip '{}' file.".format(myBGL_Phased_vcfgz))
+            return -1
+
+    else:
+        myBGL_Phased_vcf = myBGL_Phased_vcfgz  # when already gunziped
+
+
+    myBGL_Phased_vcf = VCF(myBGL_Phased_vcf)
+
+
+    #########################################
+
+    ### vcf2beagle
+    """
+    usage: cat [vcf file] | java -jar vcf2beagle.jar [missing] [prefix]
+    """
+    command = ' '.join(['cat', myBGL_Phased_vcf.filepath, '|', VCF2BEAGLE, '0', REF_VariantsAndHLA + '.GCtrick.phased'])
+    os.system(command)
+
+    if not os.path.exists(REF_VariantsAndHLA + '.GCtrick.phased.bgl.gz'):
+        print(std_ERROR_MAIN_PROCESS_NAME + "Failed to generate Beagle file by vcf2beagle.jar.")
+        sys.exit()
+    else:
+        command = ' '.join(['gunzip -c', REF_VariantsAndHLA + '.GCtrick.phased.bgl.gz', '>', REF_VariantsAndHLA + '.GCtrick.bgl.phased'])
         os.system(command)
 
-        if not os.path.exists(REF_VariantsAndHLA + '.GCtrick.phased.bgl.gz'):
-            print(std_ERROR_MAIN_PROCESS_NAME + "Failed to generate Beagle file by vcf2beagle.jar.")
-            sys.exit()
-        else:
-            command = ' '.join(['gunzip -c', REF_VariantsAndHLA + '.GCtrick.phased.bgl.gz', '>', REF_VariantsAndHLA + '.GCtrick.bgl.phased'])
-            os.system(command)
+        # removal
+        subprocess.call(['rm', REF_VariantsAndHLA + '.GCtrick.phased.bgl.gz'])
+        subprocess.call(['rm', REF_VariantsAndHLA + '.GCtrick.phased.int'])
+        subprocess.call(['rm', REF_VariantsAndHLA + '.GCtrick.phased.markers'])
 
-            # removal
-            subprocess.call(['rm', REF_VariantsAndHLA + '.GCtrick.phased.bgl.gz'])
-            subprocess.call(['rm', REF_VariantsAndHLA + '.GCtrick.phased.int'])
-            subprocess.call(['rm', REF_VariantsAndHLA + '.GCtrick.phased.markers'])
+    myBGL_Phased = (REF_VariantsAndHLA + '.GCtrick.bgl.phased') # Generated by 'vcf2begale.jar' and gunziped.
+    myBGL_Phased = GCtricedBGL2OriginalBGL(myBGL_Phased, myMarkers, REF_VariantsAndHLA+'.bgl.phased')
 
-        myBGL_Phased = (REF_VariantsAndHLA + '.GCtrick.bgl.phased') # Generated by 'vcf2begale.jar' and gunziped.
-        myBGL_Phased = GCtricedBGL2OriginalBGL(myBGL_Phased, myMarkers, REF_VariantsAndHLA+'.bgl.phased')
 
+    ######################################### => Move this part to VCF.py later.
 
 
 
@@ -292,29 +331,132 @@ def CookQC(_input, _reference, _out,
     myAlleles = BGL2Alleles(myBGL_Phased, OUTPUT_REF+'.alleles', 'all')
     # myAlleles = 'tests/T1DGC_CookQC/T1DGC_REF.alleles'
 
-    wrong_samples = WronglyPhased(myAlleles, _out=join(OUTPUT_dir, 'WronglyPhased.samples.txt'), _fam=myREF.fam)
-    # print(wrong_samples)
+    wrong_samples = WronglyPhased(myAlleles, _out=join(OUTPUT_dir, 'WronglyPhased.samples.txt'), _fam=myREF.fam,
+                                  _only4digit=False, _FIDeqIID=True)
+    print(wrong_samples)
 
     # removal
     # subprocess.call(['rm', myAlleles])
     # subprocess.call(['rm', myBGL_Phased])
 
 
+    ##### < [] Split (1) Rightly phased samples PLINK dataset(N-K) and (2) Wrongly phased Doubled samples(K). > #####
 
-
-    ##### < [] Split (1) wrongly phased samples PLINK dataset(K), (2) Rightly phased samples PLINK dataset(N-K) > #####
-
-    ### (1) K wrongly phased PLINK data. => (Target)
-    toExclude_MKref = myREF.get_MKref_markers(_out=join(OUTPUT_dir, 'ToExclude.MKref.txt'))
-    myREF_K = myREF.PLINK_subset(_toExclude=toExclude_MKref, _toKeep=wrong_samples, _out=OUTPUT_REF+'.WrongPhase')
-
-
-    ### (2) N-K rightly phased PLINK data. => (Reference)
+    ### (1) N-K rightly phased PLINK data. => (Reference)
     myREF_N_K = myREF.PLINK_subset(_toRemove=wrong_samples, _out=OUTPUT_REF+'.RightPhase')
-    
+
     # BGL subset
+    myBGL_Phased_subset = SubsetBGLPhased(myREF.prefix+'.bgl.phased', _out=OUTPUT_REF+'.RightPhase.bgl.phased',
+                                          _toRemove=wrong_samples)
+    print(myBGL_Phased_subset)
+
+    # *.markers
+    myREF.bim.loc[:, ['Label', 'BP', 'al1', 'al2']].to_csv(OUTPUT_REF+'.RightPhase.markers', sep=' ', header=False, index=False)
+
+    # *.FRQ.frq
+    command = [PLINK, '--freq', '--bfile', myREF_N_K, '--out', myREF_N_K+'.FRQ.frq']
+
+    # removal
+    # subprocess.call(['rm', wrong_samples])
+    # subprocess.call(['rm', toExclude_MKref])
 
 
+
+
+
+    ### (2) Wrongly phased Doubled samples(K). => (Target)
+
+    myBGL_Phased_vcf_Doubled = myBGL_Phased_vcf.DoubleVCF(_out=myBGL_Phased_vcf.filepath.rstrip('.vcf')+'.DOUBLED.vcf')
+    # myBGL_Phased_vcf_Doubled = 'tests/T1DGC_CookQC/T1DGC_REF.ONLY_Variants_HLA.GCtrick.bgl.phased.DOUBLED.vcf'
+    print(myBGL_Phased_vcf_Doubled)
+
+
+
+    ### Doubled VCF (to Beagle) to PLINK file.
+
+    prefix_Doubled = myBGL_Phased_vcf_Doubled.rstrip('.vcf')
+
+    # VCF to Beagle
+    """
+    usage: cat [vcf file] | java -jar vcf2beagle.jar [missing] [prefix]
+    """
+    command = ['cat', myBGL_Phased_vcf_Doubled, '|', VCF2BEAGLE, '0', prefix_Doubled]
+    os.system(' '.join(command))
+
+    myBGL_Phased_Doubled_gz = prefix_Doubled + '.bgl.gz'
+
+    # removal
+    subprocess.call(['rm', prefix_Doubled + '.int'])
+    subprocess.call(['rm', prefix_Doubled + '.markers'])
+
+
+    # Un-GCtrick
+    command = ['gzip -d -f', myBGL_Phased_Doubled_gz]
+    os.system(' '.join(command))
+
+
+    # Beagle to PLINK ped
+    """
+    usage: cat [bgl] | java -jar beagle2linkage.jar [prefix]
+    """
+    command = ['cat', prefix_Doubled + '.bgl', '|', BEAGLE2LINKAGE, prefix_Doubled]
+    os.system(' '.join(command))
+
+    DOUBLED_PED = prefix_Doubled + '.ped'
+
+    # removal
+    subprocess.call(['rm', prefix_Doubled + '.dat'])
+
+
+    DOUBLED_PED = CompletePED(DOUBLED_PED, prefix_Doubled + '.comeplete.ped')
+    print(DOUBLED_PED)
+
+
+    # map file from original Reference panel data.
+    # command = ['awk \'{print $1" "$2" "$3" "$4}\'', myREF.bim, '>', prefix_Doubled + '.comeplete.map']
+    # os.system(' '.join(command))
+    myREF.bim[['Chr', 'Label', 'GD', 'BP']].to_csv(prefix_Doubled + '.comeplete.map', sep='\t', header=False, index=False)
+    ToExclude_MKref_HLAs = myREF.get_MKref_markers(prefix_Doubled+'.MKref_HLA.ToExclude.txt', _AA=False, _SNP=False, _INS=False)
+
+    command = [PLINK, '--make-bed', '--ped', DOUBLED_PED, '--map', prefix_Doubled + '.comeplete.map',
+               '--keep', wrong_samples, '--exclude', ToExclude_MKref_HLAs,'--out', prefix_Doubled]
+    os.system(' '.join(command))
+
+    print(prefix_Doubled)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    #
+    #
+    #
+    #
+    # ### CookHLA with prephasing strategy.
+    #
+    # IMP_out = CookHLA(_input=myREF_K, _reference=myREF_N_K, _out=OUTPUT_REF+'.T1DGC.RandW.prephasing',
+    #                   _AdaptiveGeneticMap=_given_AGM+'.mach_step.avg.clpsB', _Average_Erate=_given_AGM+'.aver.erate',
+    #                   f_prephasing=True, __use_Multiple_Markers=True,
+    #                   _java_memory=_mem, _MultP=_MultP)
+    #
+    # print(IMP_out[0])
 
 
 
@@ -326,7 +468,7 @@ def CookQC(_input, _reference, _out,
 
 
 
-def WronglyPhased(_alleles, _only4digit=True, _out=None, _fam=None):
+def WronglyPhased(_alleles, _only4digit=True, _out=None, _fam=None, _FIDeqIID=False):
 
     df_alleles = pd.read_csv(_alleles, sep='\s+', header=None, usecols=[1,2,4], names=['IID', 'HLA', '4digit']) \
                     .pivot('IID', 'HLA', '4digit')
@@ -351,11 +493,35 @@ def WronglyPhased(_alleles, _only4digit=True, _out=None, _fam=None):
 
     # print("df_RETURN:\n{}\n".format(df_RETURN))
 
+
+    if _FIDeqIID:
+        df_RETURN['FID'] = df_RETURN['IID']
+
     if bool(_out):
         df_RETURN.to_csv(_out, sep='\t', index=False, header=True)
         return _out
     else:
         return df_RETURN
+
+
+
+def CompletePED(_raw_ped, _out):
+
+    with open(_raw_ped, 'r')as f_raw_ped, open(_out, 'w') as f_complete_ped:
+
+        for line in f_raw_ped:
+
+            m = p_1stColumn.match(line)
+
+            IID = m.group(1)
+
+            left_meta = ' '.join([IID, IID, '0', '0', '0', '-9'])
+            right = line.lstrip(m.group(0))
+
+            f_complete_ped.write(' '.join([left_meta, right]))
+
+
+    return _out
 
 
 
@@ -395,14 +561,15 @@ if __name__ == "__main__":
 
     parser.add_argument("--java-memory", "-mem", help="\nMemory requried for beagle(ex. 12g).\n\n", default="2g")
 
-    parser.add_argument("--given-phased", "-ph",
-                        help="\n(For Testing Purpose) Passing prephased result manually(Not VCF, No GCtrick).\n"
-                             "If given, the process will be done to this phased file.\n\n")
+    parser.add_argument("--given-phased-vcf",
+                        help="\n(For Testing Purpose) Passing prephased VCF result file manually.\n"
+                             "If given, the process will be done to this phased vcf file.\n\n")
 
     parser.add_argument("--given-GM", "-gGM",
                         help="\n(For Testing Purpose) Passing the prefix of already created AGM.\n"
                              "If given, the process will be done to this AGM file.\n\n")
 
+    parser.add_argument("--multiprocess", "-mp", help="\nSetting parallel multiprocessing.\n\n", type=int, choices=[2,3,4,5,6,7,8,9], nargs='?', default=1, const=3)
 
 
 
@@ -412,7 +579,7 @@ if __name__ == "__main__":
     args = parser.parse_args(["-ref", "tests/T1DGC/T1DGC_REF",
                               "-o", "tests/T1DGC_CookQC/T1DGC_REF.CookQC",
                               '-mem', '12g',
-                              '-ph', 'tests/T1DGC_CookQC/T1DGC_REF.ONLY_Variants_HLA.bgl.phased',
+                              "--given-phased-vcf", 'tests/T1DGC_CookQC/step1_phasing_back-up/T1DGC_REF.ONLY_Variants_HLA.GCtrick.bgl.phased.vcf.gz',
                               '-gGM', 'tests/T1DGC_CookQC/AGM.T1DGC_REF.ONLY_Variants+T1DGC_REF'])
 
     # args = parser.parse_args(["-ref", "tests/PAN-ASIAN/Pan-Asian_REF",
@@ -424,5 +591,5 @@ if __name__ == "__main__":
     # args = parser.parse_args()
     print(args)
 
-    CookQC(args.input, args.reference, args.out, _mem=args.java_memory,
-           _given_phased=args.given_phased, _given_AGM=args.given_GM)
+    CookQC(args.input, args.reference, args.out, _mem=args.java_memory, _given_AGM=args.given_GM,
+           _given_phased_vcf=args.given_phased_vcf, _MultP=args.multiprocess)
