@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os, sys, re
+import subprocess
 from os.path import join
 import multiprocessing as mp
 
@@ -465,18 +466,19 @@ class HLA_Imputation(object):
 
 
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={} > {}.log'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map, raw_HLA_IMPUTATION_OUT)
+            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={}'.format(
+                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map)
             # print(command)
-            if not os.system(command):
-                if not self.__save_intermediates:
-                    # os.system(' '.join(['rm', raw_HLA_IMPUTATION_OUT + '.log'])) # Imputation Log file will be saved.
-                    # os.system(' '.join(['rm', _DOUBLED_PHASED_RESULT]))
-                    # os.system(' '.join(['rm', _REF_PHASED_VCF]))
-                    pass  # for temporarily
-            else:
-                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation failed.")
+
+            try:
+                subprocess.run(command.split(' '), check=True, stdout=open(raw_HLA_IMPUTATION_OUT+'.log', 'w'), stderr=open(raw_HLA_IMPUTATION_OUT+'.err.log', 'w'))
+            except subprocess.CalledProcessError:
+                sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
                 sys.exit()
+            else:
+                # print(std_MAIN_PROCESS_NAME+"Imputation({} / overlap:{}) done.".format(_exonN, _overlap))
+                os.system("rm {}".format(raw_HLA_IMPUTATION_OUT+'.err.log'))
+
 
 
         else: # Without Adaptive Genetic Map
@@ -493,18 +495,19 @@ class HLA_Imputation(object):
             """
 
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true overlap={} gprobs=true > {}.log'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, raw_HLA_IMPUTATION_OUT)
+            command = '{} gt={} ref={} out={} impute=true lowmem=true overlap={} gprobs=true'.format(
+                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap)
             # print(command)
-            if not os.system(command):
-                if not self.__save_intermediates:
-                    # os.system(' '.join(['rm', raw_HLA_IMPUTATION_OUT + '.log'])) # Imputation Log file will be saved.
-                    # os.system(' '.join(['rm', _DOUBLED_PHASED_RESULT]))
-                    # os.system(' '.join(['rm', _REF_PHASED_VCF]))
-                    pass  # for temporarily
-            else:
-                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation failed.")
+
+            try:
+                subprocess.run(command.split(' '), check=True, stdout=open(raw_HLA_IMPUTATION_OUT+'.log', 'w'), stderr=open(raw_HLA_IMPUTATION_OUT+'.err.log', 'w'))
+            except subprocess.CalledProcessError:
+                sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
                 sys.exit()
+            else:
+                # print(std_MAIN_PROCESS_NAME+"Imputation({} / overlap:{}) done.".format(_exonN, _overlap))
+                os.system("rm {}".format(raw_HLA_IMPUTATION_OUT+'.err.log'))
+
 
 
         RUN_Bash('gzip -d -f {}.vcf.gz'.format(raw_HLA_IMPUTATION_OUT))
