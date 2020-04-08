@@ -65,6 +65,31 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     ###### < Dependency Checking > ######
 
     ### External software
+    if not(bool(_p_plink) and os.path.exists(_p_plink)):
+        sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "PLINK(v1.9b) can't be found.\n")
+        sys.exit()
+
+    if not(bool(_p_beagle4) and os.path.exists(_p_beagle4)):
+        sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Beagle4 can't be found.\n")
+        sys.exit()
+
+    if not(bool(_p_linkage2beagle) and os.path.exists(_p_linkage2beagle)):
+        sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "linkage2beagle can't be found in 'dependency/' folder.\n")
+        sys.exit()
+
+    if not(bool(_p_beagle2linkage) and os.path.exists(_p_beagle2linkage)):
+        sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "beagle2linkage can't be found in 'dependency/' folder.\n")
+        sys.exit()
+
+    if not(bool(_p_beagle2vcf) and os.path.exists(_p_beagle2vcf)):
+        sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "beagle2vcf can't be found in 'dependency/' folder.\n")
+        sys.exit()
+
+    if not(bool(_p_vcf2beagle) and os.path.exists(_p_vcf2beagle)):
+        sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "vcf2beagle can't be found in 'dependency/' folder.\n")
+        sys.exit()
+
+
 
     ### Source files
 
