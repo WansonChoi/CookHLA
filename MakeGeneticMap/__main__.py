@@ -6,7 +6,7 @@ from shutil import which
 import argparse, textwrap
 
 from src.RUN_Bash import RUN_Bash
-from src.MakeGeneticMap.Panel_subset import Panel_Subset
+from MakeGeneticMap.Panel_subset import Panel_Subset
 
 std_MAIN_PROCESS_NAME = "\n[%s]: " % (os.path.basename(__file__))
 std_ERROR_MAIN_PROCESS_NAME = "\n[%s::ERROR]: " % (os.path.basename(__file__))
@@ -17,7 +17,7 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 
 
 def MakeGeneticMap(_input, _reference, _out,
-                   _p_src="./src/MakeGeneticMap", _p_dependency="./dependency",
+                   _p_src="./MakeGeneticMap", _p_dependency="./dependency",
                    __save_intermediates=False):
 
 
@@ -204,7 +204,8 @@ if __name__ == "__main__":
 
     ########## < Main parser > ##########
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
+    parser = argparse.ArgumentParser(prog='MakeGeneticMap',
+                                     formatter_class=argparse.RawTextHelpFormatter,
                                      description=textwrap.dedent('''\
     ###########################################################################################
 
@@ -239,8 +240,8 @@ if __name__ == "__main__":
     parser.add_argument("--input", "-i", help="\nCommon prefix of input files.\n\n", required=True)
     parser.add_argument("--reference", "-ref", help="\nPrefix of Reference files.\n\n", required=True)
     parser.add_argument("--out", "-o", help="\nOutput file name prefix\n\n", required=True)
-    parser.add_argument("-hg", help="\nHuman Genome version(ex. 18, 19, 38)\n\n", choices=["18", "19", "38"],
-                        metavar="HG", default='18')
+    # parser.add_argument("-hg", help="\nHuman Genome version(ex. 18, 19, 38)\n\n", choices=["18", "19", "38"],
+    #                     metavar="HG", default='18')
 
 
 
