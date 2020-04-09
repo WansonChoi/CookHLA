@@ -18,6 +18,10 @@ from src.HLA_MultipleRefs import HLA_MultipleRefs
 HLA_genotype_call_prephasing = 'src/9accuracy_pre.v2.csh'
 HLA_genotype_call_noprephasing = 'src/9accuracy_no.v2.csh'
 
+# Defined Error
+from src.CookHLAError import CooKHLAImputationError
+
+
 
 ########## < Core Varialbes > ##########
 
@@ -471,14 +475,16 @@ class HLA_Imputation(object):
             # print(command)
 
             try:
-                subprocess.run(command.split(' '), check=True, stdout=open(raw_HLA_IMPUTATION_OUT+'.log', 'w'), stderr=open(raw_HLA_IMPUTATION_OUT+'.err.log', 'w'))
+                f_log = open(raw_HLA_IMPUTATION_OUT+'.log', 'w')
+                subprocess.run(command.split(' '), check=True, stdout=f_log, stderr=f_log)
             except subprocess.CalledProcessError:
-                raise ValueError
-                sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
-                return -1
+                raise CooKHLAImputationError(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
+                # sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
+                # return -1
             else:
                 # print(std_MAIN_PROCESS_NAME+"Imputation({} / overlap:{}) done.".format(_exonN, _overlap))
-                os.system("rm {}".format(raw_HLA_IMPUTATION_OUT+'.err.log'))
+                # os.system("rm {}".format(raw_HLA_IMPUTATION_OUT+'.err.log'))
+                pass
 
 
 
