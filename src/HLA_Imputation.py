@@ -473,8 +473,9 @@ class HLA_Imputation(object):
             try:
                 subprocess.run(command.split(' '), check=True, stdout=open(raw_HLA_IMPUTATION_OUT+'.log', 'w'), stderr=open(raw_HLA_IMPUTATION_OUT+'.err.log', 'w'))
             except subprocess.CalledProcessError:
+                raise ValueError
                 sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
-                sys.exit()
+                return -1
             else:
                 # print(std_MAIN_PROCESS_NAME+"Imputation({} / overlap:{}) done.".format(_exonN, _overlap))
                 os.system("rm {}".format(raw_HLA_IMPUTATION_OUT+'.err.log'))
