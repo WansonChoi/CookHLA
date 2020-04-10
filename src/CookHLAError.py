@@ -8,7 +8,7 @@ class CookHLAError(Exception):
 
 
 
-class CooKHLAImputationError(CookHLAError):
+class CookHLAImputationError(CookHLAError):
     """
     Error for Beagle 4.1 implementation (Bash Execution).
     """

@@ -4,7 +4,7 @@ import os, sys, re
 from os.path import join
 from shutil import which
 import argparse, textwrap
-
+from time import time
 
 from src.HLA_Imputation import HLA_Imputation
 from src.HLA_Imputation_GM import HLA_Imputation_GM
@@ -623,7 +623,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
+    CookHLA_start = time()
+
     CookHLA(args.input, args.out, args.reference, args.hg, args.genetic_map, args.average_erate,
             _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer,
             __use_Multiple_Markers=args.use_multiple_markers, _given_prephased=args.prephased,
             f_prephasing=args.prephasing, _HapMap_Map=args.hapmap_map)
+
+    CookHLA_end = time()
+
+    CookHLA_time = (CookHLA_end - CookHLA_start)/60
+    print(std_MAIN_PROCESS_NAME + "Total CookHLA time : {}(min)".format(CookHLA_time))
