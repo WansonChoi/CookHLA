@@ -19,7 +19,7 @@ def whichGroup(_allele, _allele_gruop):
             return _allele_gruop[f_allele].iat[0]
         else:
             return '0'
-        
+
 
         
 def measureAccuracy(_answer, _imputed, _out=None, _allele_group=None):
@@ -243,7 +243,7 @@ def measureAccuracy(_answer, _imputed, _out=None, _allele_group=None):
             
         df_log_eachRow = pd.DataFrame(l_eachRow_log, columns=['FID', 'IID', 'imputed_1', 'imputed_2', 'answer_1', 'answer_2', 'correct'])
 #         print("df_log:\n{}\n".format(df_log_eachRow))
-        df_log_eachRow.to_csv(_out+'.log', sep='\t', header=True, index=False)
+        df_log_eachRow.to_csv(_out+'.accuracy.log', sep='\t', header=True, index=False)
         sr_acc.to_csv(_out+'.accuracy', sep='\t', header=False, index=True)
               
         return _out+'.accuracy'
@@ -254,7 +254,8 @@ def measureAccuracy(_answer, _imputed, _out=None, _allele_group=None):
 
     
 if __name__ == '__main__':
-    
-    [_answer_Marked_chped, _imputed_Marked_chped, _out, _allele_group] = sys.argv[1:]
 
-    measureAccuracy(_answer_Marked_chped, _imputed_Marked_chped, _out, _allele_group)
+    """
+    measureAccuracy_v3.5.py
+    """
+    pass

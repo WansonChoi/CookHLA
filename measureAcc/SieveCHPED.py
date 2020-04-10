@@ -136,7 +136,13 @@ def SieveCHPED(_hped, _chped, _out=None):
     
 if __name__ == '__main__':
     
+    """
+    SieveCHPED.py
     
-    [_hped, _chped, _out] = sys.argv[1:]
-    
-    SieveCHPED(_hped, _chped, _out)
+    """
+
+    pass
+
+    # [_hped, _chped, _out] = sys.argv[1:]
+    #
+    # SieveCHPED(_hped, _chped, _out)

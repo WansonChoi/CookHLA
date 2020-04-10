@@ -10,7 +10,7 @@ p_2digit_pair = re.compile(r'\d{2}?,\d{2}?')
 
 
 
-def ALLELES2HPED(_alleles, _out=None):
+def ALLELES2HPED(_alleles, _out=None, _f_HLA_DRB1_1454to1401=False):
     
     df_alleles = pd.read_csv(_alleles, sep='\s+', header=None, dtype=str)
 #     print("df_alleles :\n{}\n".format(df_alleles.head()))
@@ -42,7 +42,7 @@ def ALLELES2HPED(_alleles, _out=None):
     
     df_alleles = df_alleles.set_index(['FID', 'IID', 'HLA']).unstack('HLA')
     df_alleles.columns = df_alleles.columns.droplevel(level=0)
-    print("df_alleles:\n{}\n".format(df_alleles))
+    # print("df_alleles:\n{}\n".format(df_alleles))
     
     ### processing not give HLA genes.
     given_HLAs = df_alleles.columns.tolist()
@@ -85,6 +85,10 @@ def ALLELES2HPED(_alleles, _out=None):
         
     df_alleles2 = pd.concat(l_temp, axis=1)
 #     print("df_alleles2 :\n{}\n".format(df_alleles2.head()))
+
+
+    if _f_HLA_DRB1_1454to1401:
+        df_alleles2 = HLA_DRB1_1454to1401(df_alleles2)
     
     
     df_Idx = df_alleles2.index.to_frame()
@@ -106,7 +110,14 @@ def ALLELES2HPED(_alleles, _out=None):
         return _out + '.hped'
     else:
         return df_alleles2
-    
+
+
+
+def HLA_DRB1_1454to1401(_hped_right):
+
+    df_HLA_DRB1 = _hped_right.iloc[:, [14, 15]].replace('1454', '1401')
+
+    return pd.concat([_hped_right.iloc[:, :14], df_HLA_DRB1], axis=1)
     
     
     
@@ -116,9 +127,10 @@ if __name__ == '__main__':
     ALLELES2HPED.py
     
     """
+
+    pass
     
     
-    [_answer, _out] = sys.argv[1:]
-    
-    
-    ALLELES2HPED(_answer, _out)
+    # [_answer, _out] = sys.argv[1:]
+    #
+    # ALLELES2HPED(_answer, _out)
