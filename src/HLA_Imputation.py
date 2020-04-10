@@ -22,6 +22,9 @@ HLA_genotype_call_noprephasing = 'src/9accuracy_no.v2.csh'
 # Defined Error
 from src.CookHLAError import CookHLAImputationError
 
+# measureAcc_v3.5
+from measureAcc.__main__ import CookHLA_measureAcc
+
 
 
 ########## < Core Varialbes > ##########
@@ -198,18 +201,20 @@ class HLA_Imputation(object):
 
         ## Acquring accuracy
 
-        if _answer and self.HLA_IMPUTATION_OUT != '-1':
+        if bool(_answer):
 
-            if not os.path.exists(_answer):
-                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't exist. Please check '--answer/-an' argument again.\n"
-                                                      "Skipping calculating imputation accuracy.")
-            elif os.path.getsize(_answer) == 0:
-                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
-                                                      "Skipping calculating imputation accuracy.")
-            else:
-                self.accuracy = measureAccuracy(_answer, self.HLA_IMPUTATION_OUT, 'all', outfile=self.HLA_IMPUTATION_OUT + '.accuracy', __only4digits=True)
+            print(std_MAIN_PROCESS_NAME + "Calculating accuracy of each HLA gene. (answer: '{}')".format(_answer))
 
+            measureAcc_start = time()
 
+            t = CookHLA_measureAcc(_answer, self.HLA_IMPUTATION_OUT, self.HLA_IMPUTATION_OUT)
+            self.accuracy = t.accuracy
+
+            measureAcc_end = time()
+
+            measureAcc_time = (measureAcc_end - measureAcc_start)/60
+            print("\nAccuracy : {}".format(self.accuracy))
+            print("measureAccuracy time: {}(min)\n".format(measureAcc_time))
 
 
 
