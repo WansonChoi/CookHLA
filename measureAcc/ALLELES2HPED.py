@@ -88,7 +88,7 @@ def ALLELES2HPED(_alleles, _out=None, _f_HLA_DRB1_1454to1401=False):
 
 
     if _f_HLA_DRB1_1454to1401:
-        df_alleles2 = HLA_DRB1_1454to1401(df_alleles2)
+        df_alleles2 = HLA_DRB1_1454to1401(df_alleles2, _alleles)
     
     
     df_Idx = df_alleles2.index.to_frame()
@@ -113,12 +113,18 @@ def ALLELES2HPED(_alleles, _out=None, _f_HLA_DRB1_1454to1401=False):
 
 
 
-def HLA_DRB1_1454to1401(_hped_right):
+def HLA_DRB1_1454to1401(_hped_right, _alleles):
 
-    df_HLA_DRB1 = _hped_right.iloc[:, [14, 15]].replace('1454', '1401')
+    f_1451 = (_hped_right.iloc[:, [14, 15]] == '1454').apply(lambda x : x.any(), axis=1)
 
-    return pd.concat([_hped_right.iloc[:, :14], df_HLA_DRB1], axis=1)
-    
+    if f_1451.any():
+        print("HLA_DRB1*1454 will be considered as 1401. ('{}')".format(_alleles))
+
+        df_HLA_DRB1 = _hped_right.iloc[:, [14, 15]].replace('1454', '1401')
+        return pd.concat([_hped_right.iloc[:, :14], df_HLA_DRB1], axis=1)
+
+    else:
+        return _hped_right
     
     
 if __name__ == '__main__':

@@ -73,7 +73,7 @@ class CookHLA_measureAcc(object):
         if _f.endswith('.alleles'):
             # ALLELES2HPED
             t_out = join(_out_dir, re.sub(r'\.alleles$', '', basename(_f)))
-            _f = ALLELES2HPED(_f, t_out)
+            _f = ALLELES2HPED(_f, t_out, _f_HLA_DRB1_1454to1401=True)
             # print("alleles -> hped: {}".format(_f))
 
         if _f.endswith('.hped'):
