@@ -18,7 +18,7 @@ tests/
 *.ipynb_checkpoints/
 *.pversion
 *.ipynb
-*.sh
+#*.sh
 .vscode/
 
 plink.log

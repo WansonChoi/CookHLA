@@ -1,6 +1,7 @@
 #-*- coding: utf-8 -*-
 
 import os, sys, re
+import subprocess
 from os.path import join
 
 from src.BGL2Alleles import BGL2Alleles
@@ -335,17 +336,19 @@ class HLA_Imputation_GM(object):
                 aver_erate = f.readline().rstrip('\n')
 
             # overlap : 3000 (default)
-            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true ne=10000 map={} err={} overlap=3000 > {}.log'.format(
-                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate, OUT)
+            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true ne=10000 map={} err={} overlap=3000'.format(
+                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate)
             # print(command)
-            if not os.system(command):
-                if not self.__save_intermediates:
-                    os.system('rm {}'.format(OUT+'.log'))
-                    # os.system('rm {}'.format(_MHC_QC_VCF))
-                    # os.system('rm {}'.format(_REF_PHASED_VCF)) # These 2 files
-            else:
-                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation with Geneticmap failed.")
+
+            try:
+                subprocess.run(command.split(' '), check=True, stdout=open(OUT+'.log', 'w'), stderr=open(OUT+'.err.log', 'w'))
+            except subprocess.CalledProcessError:
+                sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation failed.\n")
                 sys.exit()
+            else:
+                # print(std_MAIN_PROCESS_NAME+"Imputation done.".format(_exonN, _overlap))
+                os.system("rm {}".format(OUT+'.err.log'))
+
 
 
         else: ### Plain
@@ -358,18 +361,18 @@ class HLA_Imputation_GM(object):
             """
 
             # overlap : 3000 (default)
-            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true overlap=3000 > {}.log'.format(
-                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, OUT)
+            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true overlap=3000'.format(
+                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT)
             # print(command)
-            if not os.system(command):
-                if not self.__save_intermediates:
-                    os.system('rm {}'.format(OUT + '.log'))
-                    # os.system('rm {}'.format(_MHC_QC_VCF))
-                    # os.system('rm {}'.format(_REF_PHASED_VCF)) # These 2 files
-            else:
-                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation with Adaptive Genetic Map failed.")
-                sys.exit()
 
+            try:
+                subprocess.run(command.split(' '), check=True, stdout=open(OUT+'.log', 'w'), stderr=open(OUT+'.err.log', 'w'))
+            except subprocess.CalledProcessError:
+                sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation failed.\n")
+                sys.exit()
+            else:
+                # print(std_MAIN_PROCESS_NAME+"Imputation done.".format(_exonN, _overlap))
+                os.system("rm {}".format(OUT + '.err.log'))
 
 
 

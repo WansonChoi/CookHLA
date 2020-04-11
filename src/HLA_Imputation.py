@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import os, sys, re
-from os.path import join
+import subprocess
+from os.path import join, exists
 import multiprocessing as mp
+from time import time
 
 # Both
 # from src.GC_tricked_bgl2ori_bgl import GCtricedBGL2OriginalBGL
@@ -16,6 +18,13 @@ from src.HLA_MultipleRefs import HLA_MultipleRefs
 # HLA genotype calling
 HLA_genotype_call_prephasing = 'src/9accuracy_pre.v2.csh'
 HLA_genotype_call_noprephasing = 'src/9accuracy_no.v2.csh'
+
+# Defined Error
+from src.CookHLAError import CookHLAImputationError, CookHLAHLATypeCallError
+
+# measureAcc_v3.5
+from measureAcc.__main__ import CookHLA_measureAcc
+
 
 
 ########## < Core Varialbes > ##########
@@ -128,6 +137,8 @@ class HLA_Imputation(object):
 
         if _MultP == 1:
 
+            imputation_serial_start = time()
+
             ## Serial implementation of main.
             for _exonN in __EXON__:
                 for _overlap in __overlap__:
@@ -136,10 +147,16 @@ class HLA_Imputation(object):
                         self.IMPUTE(MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf',
                                     _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing=f_prephasing)
 
+            imputation_serial_end = time()
+
+            imputation_serial_time = (imputation_serial_end - imputation_serial_start)/60
+            print(std_MAIN_PROCESS_NAME+"Total imputation time of Serial implementation: {}(min)\n".format(imputation_serial_time))
 
         else:
 
             ## Parallel implementation of main.
+
+            imputation_parallel_start = time()
 
             pool = mp.Pool(processes=_MultP if _MultP <= 9 else 9)
 
@@ -155,6 +172,10 @@ class HLA_Imputation(object):
                 for _overlap in __overlap__:
                     self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_exonN][_overlap].get()
 
+            imputation_parallel_end = time()
+
+            imputation_parallel_time = (imputation_parallel_end - imputation_parallel_start)/60
+            print(std_MAIN_PROCESS_NAME + "Total imputation time of Parallel implementation (with {} core(s)): {}(min)\n".format(_MultP, imputation_parallel_time))
 
         self.idx_process += 1
 
@@ -180,18 +201,20 @@ class HLA_Imputation(object):
 
         ## Acquring accuracy
 
-        if _answer and self.HLA_IMPUTATION_OUT != '-1':
+        if bool(_answer):
 
-            if not os.path.exists(_answer):
-                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't exist. Please check '--answer/-an' argument again.\n"
-                                                      "Skipping calculating imputation accuracy.")
-            elif os.path.getsize(_answer) == 0:
-                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
-                                                      "Skipping calculating imputation accuracy.")
-            else:
-                self.accuracy = measureAccuracy(_answer, self.HLA_IMPUTATION_OUT, 'all', outfile=self.HLA_IMPUTATION_OUT + '.accuracy', __only4digits=True)
+            print(std_MAIN_PROCESS_NAME + "Calculating accuracy of each HLA gene. (answer: '{}')".format(_answer))
 
+            measureAcc_start = time()
 
+            t = CookHLA_measureAcc(_answer, self.HLA_IMPUTATION_OUT, self.HLA_IMPUTATION_OUT)
+            self.accuracy = t.accuracy
+
+            measureAcc_end = time()
+
+            measureAcc_time = (measureAcc_end - measureAcc_start)/60
+            print("\nAccuracy : {}".format(self.accuracy))
+            print("measureAccuracy time: {}(min)\n".format(measureAcc_time))
 
 
 
@@ -243,11 +266,6 @@ class HLA_Imputation(object):
                         if f_remove_raw_IMP_results:
                             RUN_Bash('rm {}'.format(self.dict_IMP_Result[_exonN][_overlap]))
                             RUN_Bash('rm {}'.format(self.dict_IMP_Result[_exonN][_overlap].rstrip('.vcf') + '.log'))
-
-            # '*.alleles'
-            for _hla in HLA_names:
-                RUN_Bash('rm {}'.format(self.dict_IMP_Result['exon2'][3000]+'.HLA_{}.alleles'.format(_hla))) # based on HJ's way.
-
 
 
 
@@ -435,7 +453,7 @@ class HLA_Imputation(object):
 
 
         # print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
-        print("[{}] Performing HLA imputation({} / overlap:{}).".format(self.idx_process, _exonN, _overlap))
+        print("\n[{}] Performing HLA imputation({} / overlap:{}).".format(self.idx_process, _exonN, _overlap))
         # self.idx_process += 1
 
 
@@ -465,18 +483,28 @@ class HLA_Imputation(object):
 
 
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={} > {}.log'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map, raw_HLA_IMPUTATION_OUT)
+            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={}'.format(
+                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map)
             # print(command)
-            if not os.system(command):
-                if not self.__save_intermediates:
-                    # os.system(' '.join(['rm', raw_HLA_IMPUTATION_OUT + '.log'])) # Imputation Log file will be saved.
-                    # os.system(' '.join(['rm', _DOUBLED_PHASED_RESULT]))
-                    # os.system(' '.join(['rm', _REF_PHASED_VCF]))
-                    pass  # for temporarily
+
+            try:
+                f_log = open(raw_HLA_IMPUTATION_OUT+'.log', 'w')
+
+                imputation_start = time()
+                subprocess.run(command.split(' '), check=True, stdout=f_log, stderr=f_log)
+                imputation_end = time()
+
+            except subprocess.CalledProcessError:
+                raise CookHLAImputationError(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
+                # sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
+                # return -1
             else:
-                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation failed.")
-                sys.exit()
+                # print(std_MAIN_PROCESS_NAME+"Imputation({} / overlap:{}) done.".format(_exonN, _overlap))
+                # os.system("rm {}".format(raw_HLA_IMPUTATION_OUT+'.err.log'))
+
+                imputation_time = (imputation_end - imputation_start)/60
+                sys.stdout.write("Imputation({} / overlap:{}) time: {}(min)\n".format(_exonN, _overlap, imputation_time))
+
 
 
         else: # Without Adaptive Genetic Map
@@ -493,18 +521,19 @@ class HLA_Imputation(object):
             """
 
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true overlap={} gprobs=true > {}.log'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, raw_HLA_IMPUTATION_OUT)
+            command = '{} gt={} ref={} out={} impute=true lowmem=true overlap={} gprobs=true'.format(
+                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap)
             # print(command)
-            if not os.system(command):
-                if not self.__save_intermediates:
-                    # os.system(' '.join(['rm', raw_HLA_IMPUTATION_OUT + '.log'])) # Imputation Log file will be saved.
-                    # os.system(' '.join(['rm', _DOUBLED_PHASED_RESULT]))
-                    # os.system(' '.join(['rm', _REF_PHASED_VCF]))
-                    pass  # for temporarily
-            else:
-                print(std_ERROR_MAIN_PROCESS_NAME + "Imputation failed.")
+
+            try:
+                subprocess.run(command.split(' '), check=True, stdout=open(raw_HLA_IMPUTATION_OUT+'.log', 'w'), stderr=open(raw_HLA_IMPUTATION_OUT+'.err.log', 'w'))
+            except subprocess.CalledProcessError:
+                sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
                 sys.exit()
+            else:
+                # print(std_MAIN_PROCESS_NAME+"Imputation({} / overlap:{}) done.".format(_exonN, _overlap))
+                os.system("rm {}".format(raw_HLA_IMPUTATION_OUT+'.err.log'))
+
 
 
         RUN_Bash('gzip -d -f {}.vcf.gz'.format(raw_HLA_IMPUTATION_OUT))
@@ -527,13 +556,36 @@ class HLA_Imputation(object):
         else:
             command = 'tcsh {} {} {}'.format(HLA_genotype_call_noprephasing, to_args, _out)
         # print(command)
-        RUN_Bash(command)
 
-        if os.path.exists(_out + '.alleles') and os.path.getsize(_out + '.alleles') > 0:
-            return _out + '.alleles'
+        try:
+            f_log = open(_out + '.HLATypeCall.log', 'w')
+            subprocess.run(command.split(' '), check=True, stdout=f_log, stderr=f_log)
+
+        except subprocess.CalledProcessError:
+            raise CookHLAHLATypeCallError("HLA type Calling failed.\n")
+
         else:
-            print(std_ERROR_MAIN_PROCESS_NAME + "Failed to perform final HLA genotype calling.")
-            return '-1'
+
+            # Merge HLATypeCall results of each HLA gene
+            with open(_out+'.alleles', 'w') as f_HLAtypeCall_merged:
+                for hla in HLA_names:
+
+                    HLAtypeCall_each = _raw_IMP_Result['exon2'][3000]+'.HLA_{}.alleles'.format(hla)
+
+                    if exists(HLAtypeCall_each):
+                        f_HLAtypeCall_each = open(HLAtypeCall_each, 'r')
+                        f_HLAtypeCall_merged.writelines(f_HLAtypeCall_each.readlines())
+                        f_HLAtypeCall_each.close()
+
+                        # '*.alleles'
+                        os.system("rm {}".format(HLAtypeCall_each))
+
+
+            if exists(_out + '.alleles') and os.path.getsize(_out + '.alleles') > 0:
+                return _out + '.alleles'
+            else:
+                print(std_ERROR_MAIN_PROCESS_NAME + "Failed to perform final HLA genotype calling.")
+                return '-1'
 
 
 

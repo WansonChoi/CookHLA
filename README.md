@@ -2,14 +2,14 @@
 
 ## (1) Introduction
 
-CookHLA imputes HLA types of target patients based on their genotypes and a reference panel information.
+CookHLA imputes HLA types of target patient genotype data based on a reference panel information. Currently, CookHLA **ONLY SUPPORTS hg18** for genotype data. Also, **Family ID and Individual ID, 'FID' and 'IID' in PLINK data, have to be same**.
 
 <br>
 <br>
 
 ## (2) Installation
 
-First, Prepare OS X(Mac) or Linux operating system. CookHLA currently doesn't support Windows. It was checked that CookHLA can work in the next specific operating systems.
+First, Prepare OS X(Mac) or Linux operating system. CookHLA currently doesn't support Windows. It was checked that CookHLA can work in the next specific operating systems. (Linux environment, especially CentOS, is most recommended.)
 
 - Linux : 
     <!-- - Ubuntu 19.04(Disco Dingo)
@@ -79,12 +79,11 @@ We strongly recommend using the latest version of 'Anaconda(or Miniconda)' to se
 
 ```
 $ python CookHLA.py \
-    -i example/Korean.20.example \
-    -o MyHLAImputation/Korean+Pan-Asian_REF \
-    -ref example/reference_panel/Pan-Asian_REF.100.example \
-    -gm example/reference_panel/AGM.Korean+Pan-Asian_REF.mach_step.avg.clpsB \
-    -ae example/reference_panel/AGM.Korean+Pan-Asian_REF.aver.erate \
-    -ml \
+    -i example/1958BC \
+    -o MyHLAImputation/1958BC+HM_CEU_REF \
+    -ref example/HM_CEU_REF \
+    -gm example/AGM.1958BC+HM_CEU_REF.mach_step.avg.clpsB \
+    -ae example/AGM.1958BC+HM_CEU_REF.aver.erate \
     -mem 2g \
     # -mp 2   # The number of available cores for Multiprocessing.
 

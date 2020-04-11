@@ -1,6 +1,7 @@
 import sys, os, re
 
 p_HLA_exon = re.compile(r'^HLA_\w+_(\d+)(_\w+)?$')
+p_1stTwo = re.compile(r'^(\S+)\s+(\S+)\s+')
 
 def BGL2Alleles(bglfile, outfile, genes):
 
@@ -14,16 +15,31 @@ def BGL2Alleles(bglfile, outfile, genes):
 
     tmpfile=outfile+'.tmpfile'
 
-    f = open(bglfile)
+    # f = open(bglfile)
 
-    # (Python 2.x.x)
-    # FID = f.next().split()[2:]
-    # IID = f.next().split()[2:]
+    # # (Python 3.x.x)
+    # FID = f.readline().split()[2:]
+    # IID = f.readline().split()[2:]
+    # f.close()
 
-    # (Python 3.x.x)
-    FID = f.readline().split()[2:]
-    IID = f.readline().split()[2:]
-    f.close()
+    IID = None
+    FID = None
+
+    with open(bglfile, 'r') as f:
+
+        for line in f:
+
+            m = p_1stTwo.match(string=line)
+
+            if m.group(1) == 'I':
+                IID = line.split()[2:]
+            elif m.group(1) == 'P':
+                FID = line.split()[2:]
+            else:
+                break
+
+    if not bool(FID):
+        FID = IID
 
     # (Python 2.x.x)
     # N=len(IID)/2

@@ -21,6 +21,14 @@ HLA_EXON9 <- as.matrix(read.table(args9,colClasses = 'character'))
 
 
 a <- max(nrow(HLA_EXON1),nrow(HLA_EXON2),nrow(HLA_EXON3),nrow(HLA_EXON4),nrow(HLA_EXON5),nrow(HLA_EXON6),nrow(HLA_EXON7),nrow(HLA_EXON8),nrow(HLA_EXON9))
+
+# Exception handling for absent HLA genes.
+if (a <= 1) {
+  print(paste0("No HLA_", gene, " in this study."))
+  quit(save="no")
+}
+
+
 new_HLA_vcf <- matrix(0,a,(ncol(HLA_EXON1)-9)/2+9)
 new_HLA_vcf[,1:9] <- HLA_EXON1[1:a,1:9]
 FID <- HLA_EXON1[1,10:ncol(HLA_EXON1)]
