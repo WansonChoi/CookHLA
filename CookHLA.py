@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
 
 import os, sys, re
-from os.path import join
+from os.path import join, exists
 from shutil import which
 import argparse, textwrap
 from time import time
@@ -65,27 +65,27 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     ###### < Dependency Checking > ######
 
     ### External software
-    if not(bool(_p_plink) and os.path.exists(_p_plink)):
+    if not(bool(_p_plink) and exists(_p_plink)):
         sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "PLINK(v1.9b) can't be found.\n")
         sys.exit()
 
-    if not(bool(_p_beagle4) and os.path.exists(_p_beagle4)):
+    if not(bool(_p_beagle4) and exists(_p_beagle4)):
         sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Beagle4 can't be found.\n")
         sys.exit()
 
-    if not(bool(_p_linkage2beagle) and os.path.exists(_p_linkage2beagle)):
+    if not(bool(_p_linkage2beagle) and exists(_p_linkage2beagle)):
         sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "linkage2beagle can't be found in 'dependency/' folder.\n")
         sys.exit()
 
-    if not(bool(_p_beagle2linkage) and os.path.exists(_p_beagle2linkage)):
+    if not(bool(_p_beagle2linkage) and exists(_p_beagle2linkage)):
         sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "beagle2linkage can't be found in 'dependency/' folder.\n")
         sys.exit()
 
-    if not(bool(_p_beagle2vcf) and os.path.exists(_p_beagle2vcf)):
+    if not(bool(_p_beagle2vcf) and exists(_p_beagle2vcf)):
         sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "beagle2vcf can't be found in 'dependency/' folder.\n")
         sys.exit()
 
-    if not(bool(_p_vcf2beagle) and os.path.exists(_p_vcf2beagle)):
+    if not(bool(_p_vcf2beagle) and exists(_p_vcf2beagle)):
         sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "vcf2beagle can't be found in 'dependency/' folder.\n")
         sys.exit()
 
@@ -94,7 +94,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     ### Source files
 
     ### Given prephased result
-    if _given_prephased and not os.path.exists(_given_prephased):
+    if _given_prephased and not exists(_given_prephased):
         print(std_ERROR_MAIN_PROCESS_NAME + "Given prephased result file('{}') doesn't exist. Please check '--prephase/-ph' argument again.\n".format(_given_prephased))
         sys.exit()
 
@@ -133,7 +133,6 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
 
     PLINK = ' '.join([_p_plink, "--noweb", "--silent", '--allow-no-sex'])
-    # BEAGLE4 = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_beagle4])
     BEAGLE4 = ' '.join([_p_beagle4, '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory)])
     LINKAGE2BEAGLE = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_linkage2beagle])
     BEAGLE2LINKAGE = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_beagle2linkage])
@@ -548,8 +547,6 @@ if __name__ == "__main__":
 
         CookHLA.py
 
-        (Created by Buhm Han.)
-
 
 
     ###########################################################################################
@@ -563,22 +560,13 @@ if __name__ == "__main__":
 
     parser.add_argument("-h", "--help", help="Show this help message and exit\n\n", action='help')
 
-    parser.add_argument("--input", "-i", help="\nCommon prefix of input files.\n\n", required=True)
+    parser.add_argument("--input", "-i", help="\nCommon prefix of Target Input files.\n\n", required=True)
     parser.add_argument("--reference", "-ref", help="\nPrefix of Reference files.\n\n", required=True)
     parser.add_argument("--out", "-o", help="\nOutput file name prefix\n\n", required=True)
-    parser.add_argument("-hg", help="\nHuman Genome version(ex. 18, 19, 38)\n\n", choices=["18", "19", "38"],
-                        metavar="HG", default='18')
 
-
-    # For publish
-    # parser.add_argument("--genetic-map", "-gm", help="\nGenetic Map file.\n\n", required=True)
-    # parser.add_argument("--average-erate", "-ae", help="\nAverate error rate file.\n\n", required=True)
-
-
-    # For Testing
     parser.add_argument("--genetic-map", "-gm", help="\nGenetic Map file.\n\n")
     parser.add_argument("--average-erate", "-ae", help="\nAverate error rate file.\n\n")
-    parser.add_argument("--use-multiple-markers", "-ml", help="\nUsing multiple markers.\n\n", action='store_true')
+    # parser.add_argument("--use-multiple-markers", "-ml", help="\nUsing multiple markers.\n\n", action='store_true') => now default
 
     parser.add_argument("--prephasing", "-pr", help="\nUtilizing prephasing strategy.\n\n", action='store_true')
 
@@ -587,15 +575,6 @@ if __name__ == "__main__":
     parser.add_argument("--multiprocess", "-mp", help="\nSetting parallel multiprocessing.\n\n", type=int, choices=[2,3,4,5,6,7,8,9], nargs='?', default=1, const=3)
 
     parser.add_argument("--java-memory", "-mem", help="\nMemory requried for beagle(ex. 12g).\n\n", default="2g")
-
-    parser.add_argument("--prephased", "-ph",
-                        help="\n(For Testing Purpose) Passing prephased result manually to control the error rate of prephasing. "
-                             "If given, Imputation will be done based on this phased file.\n\n")
-
-    parser.add_argument("--hapmap-map", "-hm",
-                        help="\n(For Testing Purpose) Hapmap Map(Adaptive Genetic Map).\n\n")
-
-
 
 
 
@@ -625,10 +604,9 @@ if __name__ == "__main__":
 
     CookHLA_start = time()
 
-    CookHLA(args.input, args.out, args.reference, args.hg, args.genetic_map, args.average_erate,
+    CookHLA(args.input, args.out, args.reference, "18", args.genetic_map, args.average_erate,
             _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer,
-            __use_Multiple_Markers=args.use_multiple_markers, _given_prephased=args.prephased,
-            f_prephasing=args.prephasing, _HapMap_Map=args.hapmap_map)
+            __use_Multiple_Markers=True, f_prephasing=args.prephasing)
 
     CookHLA_end = time()
 
