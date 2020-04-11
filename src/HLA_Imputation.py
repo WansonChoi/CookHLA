@@ -135,47 +135,55 @@ class HLA_Imputation(object):
 
         ### (2) Imputation
 
-        if _MultP == 1:
+        # if _MultP == 1:
+        #
+        #     imputation_serial_start = time()
+        #
+        #     ## Serial implementation of main.
+        #     for _exonN in __EXON__:
+        #         for _overlap in __overlap__:
+        #
+        #             self.dict_IMP_Result[_exonN][_overlap] = \
+        #                 self.IMPUTE(MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf',
+        #                             _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing=f_prephasing)
+        #
+        #     imputation_serial_end = time()
+        #
+        #     imputation_serial_time = (imputation_serial_end - imputation_serial_start)/60
+        #     print(std_MAIN_PROCESS_NAME+"Total imputation time of Serial implementation: {}(min)\n".format(imputation_serial_time))
+        #
+        # else:
+        #
+        #     ## Parallel implementation of main.
+        #
+        #     imputation_parallel_start = time()
+        #
+        #     pool = mp.Pool(processes=_MultP if _MultP <= 9 else 9)
+        #
+        #     dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing))
+        #                           for _overlap in __overlap__}
+        #                  for _exonN in __EXON__}
+        #
+        #     pool.close()
+        #     pool.join()
+        #
+        #
+        #     for _exonN in __EXON__:
+        #         for _overlap in __overlap__:
+        #             self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_exonN][_overlap].get()
+        #
+        #     imputation_parallel_end = time()
+        #
+        #     imputation_parallel_time = (imputation_parallel_end - imputation_parallel_start)/60
+        #     print(std_MAIN_PROCESS_NAME + "Total imputation time of Parallel implementation (with {} core(s)): {}(min)\n".format(_MultP, imputation_parallel_time))
 
-            imputation_serial_start = time()
 
-            ## Serial implementation of main.
-            for _exonN in __EXON__:
-                for _overlap in __overlap__:
-
-                    self.dict_IMP_Result[_exonN][_overlap] = \
-                        self.IMPUTE(MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf',
-                                    _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing=f_prephasing)
-
-            imputation_serial_end = time()
-
-            imputation_serial_time = (imputation_serial_end - imputation_serial_start)/60
-            print(std_MAIN_PROCESS_NAME+"Total imputation time of Serial implementation: {}(min)\n".format(imputation_serial_time))
-
-        else:
-
-            ## Parallel implementation of main.
-
-            imputation_parallel_start = time()
-
-            pool = mp.Pool(processes=_MultP if _MultP <= 9 else 9)
-
-            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing))
-                                  for _overlap in __overlap__}
-                         for _exonN in __EXON__}
-
-            pool.close()
-            pool.join()
+        # self.IMPUTE_v2(MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing=f_prephasing)
+        self.IMPUTE_v2(MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel, self.__AVER__, self.dict_ExonN_AGM,
+                       f_prephasing=f_prephasing, _MultP=_MultP)
 
 
-            for _exonN in __EXON__:
-                for _overlap in __overlap__:
-                    self.dict_IMP_Result[_exonN][_overlap] = dict_Pool[_exonN][_overlap].get()
 
-            imputation_parallel_end = time()
-
-            imputation_parallel_time = (imputation_parallel_end - imputation_parallel_start)/60
-            print(std_MAIN_PROCESS_NAME + "Total imputation time of Parallel implementation (with {} core(s)): {}(min)\n".format(_MultP, imputation_parallel_time))
 
         self.idx_process += 1
 
@@ -542,10 +550,195 @@ class HLA_Imputation(object):
 
 
 
+    def IMPUTE_v2(self, MHC, _out, _IMPUTATION_INPUT, _REF_PHASED_VCF, _aver_erate, _Refined_Genetic_Map, f_prephasing=False,
+                  _MultP=1):
+
+        ## Check 'CONVERT_IN' step.
+        if os.path.getsize(_IMPUTATION_INPUT) == 0:
+            print(std_ERROR_MAIN_PROCESS_NAME + "Input file for imputation('{}') contains nothing. Please check it again.".format(_IMPUTATION_INPUT))
+            sys.exit()
+
+
+
+        ## Preparing 'average error rate' value (if using Adaptive Genetic Map).
+        if self.FLAG_AdaptiveGeneticMap:
+            # aver_erate
+            with open(_aver_erate, 'r') as f:
+                aver_erate = f.readline().rstrip('\n')
+
+
+
+        if _MultP == 1:
+            # Serial implementation
+
+            iteration_serial_start = time()
+
+            for _exonN in __EXON__:
+                for _overlap in __overlap__:
+
+                    ## Preparing command
+                    raw_HLA_IMPUTATION_OUT = MHC + ('.QC.{}.{}.doubled.raw_imputation_out'.format(_exonN,_overlap) if f_prephasing else '.QC.{}.{}.raw_imputation_out'.format(
+                        _exonN, _overlap))
+
+                    if self.FLAG_AdaptiveGeneticMap:  # With Adatpive Genetic Map
+
+                        """
+                        ### MM + AGM
+
+                        # prephasing
+                        java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=${OVERLAP} err=$aver_erate map=$geneticMap.refined.map
+
+                        # No-prephasing
+                        java -jar beagle4.jar gt=$MHC.QC.vcf                    ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=${OVERLAP} err=$aver_erate map=$geneticMap.refined.map
+
+                        """
+
+                        command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={} > {}'.format(
+                            self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF[_exonN] + '.phased.vcf',
+                            raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map[_exonN],
+                            raw_HLA_IMPUTATION_OUT + '.log'
+                        )
+                        # print(command)
+
+
+                    else:  # Without Adaptive Genetic Map
+
+                        """
+                        ### MM
+
+                        # prephasing
+                        java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true overlap=$OVERLAP gprobs=true
+
+                        # No-prephasing
+                        java -jar beagle4.jar gt=$MHC.QC.vcf                    ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true overlap=$OVERLAP gprobs=true
+
+                        """
+
+                        command = '{} gt={} ref={} out={} impute=true lowmem=true overlap={} gprobs=true > {}'.format(
+                            self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF[_exonN] + '.phased.vcf',
+                            raw_HLA_IMPUTATION_OUT, _overlap, raw_HLA_IMPUTATION_OUT + '.log')
+                        # print(command)
+
+
+
+                    ## Serial Bash execution of Imputation.
+                    print("\n[{}] Performing HLA imputation({} / overlap:{}).".format(self.idx_process, _exonN, _overlap))
+
+                    Imputation_serial_strat = time()
+                    process = subprocess.Popen(command, shell=True)
+                    process_result = process.wait() # Serial implementation
+                    Imputation_serial_end = time()
+
+                    Imputation_serial_time = (Imputation_serial_end - Imputation_serial_strat)/60
+                    print("HLA imputation({} / overlap:{}) time : {}.".format(_exonN, _overlap, Imputation_serial_time))
+
+                    if process_result == 0:
+                        # Successfully done.
+                        RUN_Bash('gzip -d -f {}.vcf.gz'.format(raw_HLA_IMPUTATION_OUT))
+                        self.dict_IMP_Result[_exonN][_overlap] = raw_HLA_IMPUTATION_OUT + '.vcf'
+                    else:
+                        raise CookHLAImputationError
+
+            iteration_serial_end = time()
+
+            iteration_serial_time = (iteration_serial_end - iteration_serial_start)/60
+            print("Iteration time in serial: {}(min)".format(iteration_serial_time))
+
+
+        else:
+            # Parallel implementation
+
+            ## Preparing command
+            dict_command = {_exonN: {_overlap: None for _overlap in __overlap__} for _exonN in __EXON__}
+            dict_output_prefix = {_exonN: {_overlap: None for _overlap in __overlap__} for _exonN in __EXON__}
+
+            for _exonN in __EXON__:
+                for _overlap in __overlap__:
+
+                    raw_HLA_IMPUTATION_OUT = MHC + ('.QC.{}.{}.doubled.raw_imputation_out'.format(_exonN, _overlap) if f_prephasing else '.QC.{}.{}.raw_imputation_out'.format(_exonN, _overlap))
+
+                    if self.FLAG_AdaptiveGeneticMap:  # With Adatpive Genetic Map
+
+                        """
+                        ### MM + AGM
+            
+                        # prephasing
+                        java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=${OVERLAP} err=$aver_erate map=$geneticMap.refined.map
+            
+                        # No-prephasing
+                        java -jar beagle4.jar gt=$MHC.QC.vcf                    ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=${OVERLAP} err=$aver_erate map=$geneticMap.refined.map
+            
+                        """
+
+                        command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={} > {}'.format(
+                            self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF[_exonN] + '.phased.vcf',
+                            raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map[_exonN],
+                            raw_HLA_IMPUTATION_OUT+'.log'
+                        )
+                        # print(command)
+
+
+                    else:  # Without Adaptive Genetic Map
+
+                        """
+                        ### MM
+            
+                        # prephasing
+                        java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true overlap=$OVERLAP gprobs=true
+            
+                        # No-prephasing
+                        java -jar beagle4.jar gt=$MHC.QC.vcf                    ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true overlap=$OVERLAP gprobs=true
+            
+                        """
+
+                        command = '{} gt={} ref={} out={} impute=true lowmem=true overlap={} gprobs=true > {}'.format(
+                            self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF[_exonN] + '.phased.vcf',
+                            raw_HLA_IMPUTATION_OUT, _overlap, raw_HLA_IMPUTATION_OUT+'.log')
+                        # print(command)
+
+                    dict_command[_exonN][_overlap] = command
+                    dict_output_prefix[_exonN][_overlap] = raw_HLA_IMPUTATION_OUT
+
+
+
+            ## Parallel Bash execution of Imputation.
+            l_subprocesses = []
+            Imputation_parallel_start = time()
+
+            for _exonN in __EXON__:
+                for _overlap in __overlap__:
+
+                    print("\n[{}] Performing HLA imputation({} / overlap:{}) in parallel.".format(self.idx_process, _exonN, _overlap))
+
+                    process = subprocess.Popen(dict_command[_exonN][_overlap], shell=True)
+                    l_subprocesses.append(process)
+
+            output = [item.wait() for item in l_subprocesses]
+            Imputation_parallel_end = time()
+
+            if all(list(map(lambda x : x == 0, output))):
+                # Successfully done.
+
+                Imputation_parallel_time = (Imputation_parallel_end - Imputation_parallel_start)/60
+                print("Iteration time in parallel: {}(min)".format(Imputation_parallel_time))
+
+                for _exonN in __EXON__:
+                    for _overlap in __overlap__:
+                        RUN_Bash('gzip -d -f {}.vcf.gz'.format(dict_output_prefix[_exonN][_overlap]))
+                        self.dict_IMP_Result[_exonN][_overlap] = dict_output_prefix[_exonN][_overlap] + '.vcf'
+
+            else:
+                raise CookHLAImputationError
+
+
+        return 0
+
+
+
     def CONVERT_OUT(self, _raw_IMP_Result, _out, f_prephasing=False):
 
 
-        print("[{}] Converting out imputation result(s).".format(self.idx_process, _out))
+        print("\n[{}] Converting out imputation result(s).".format(self.idx_process, _out))
         self.idx_process += 1
 
 
