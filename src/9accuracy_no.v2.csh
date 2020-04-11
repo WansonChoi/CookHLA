@@ -188,30 +188,12 @@ Rscript src/9GP_no.R $INPUT.HLA_DPB1 $INPUT2.HLA_DPB1 $INPUT3.HLA_DPB1 $INPUT4.H
 
 ### Merge the outputs from '9GP_no.R'
 # cat *.alleles > $INPUT.9.merged
-cat ${INPUT}.HLA_A.alleles \
-    ${INPUT}.HLA_B.alleles \
-    ${INPUT}.HLA_C.alleles \
-    ${INPUT}.HLA_DRB1.alleles \
-    ${INPUT}.HLA_DQA1.alleles \
-    ${INPUT}.HLA_DQB1.alleles \
-    ${INPUT}.HLA_DPA1.alleles \
-    ${INPUT}.HLA_DPB1.alleles > ${out}.alleles
 
-# rm ${INPUT}.HLA_A
-# rm ${INPUT}.HLA_A.alleles
-# rm ${INPUT}.HLA_B
-# rm ${INPUT}.HLA_B.alleles
-# rm ${INPUT}.HLA_C
-# rm ${INPUT}.HLA_C.alleles
-# rm ${INPUT}.HLA_DRB1
-# rm ${INPUT}.HLA_DRB1.alleles
-# rm ${INPUT}.HLA_DQA1
-# rm ${INPUT}.HLA_DQA1.alleles
-# rm ${INPUT}.HLA_DQB1
-# rm ${INPUT}.HLA_DQB1.alleles
-# rm ${INPUT}.HLA_DPA1
-# rm ${INPUT}.HLA_DPA1.alleles
-# rm ${INPUT}.HLA_DPB1
-# rm ${INPUT}.HLA_DPB1.alleles
-
-# python measureAccuracy4D.py $ANSWER $INPUT.9.merged > $INPUT.9.accuracy
+# cat ${INPUT}.HLA_A.alleles \
+#     ${INPUT}.HLA_B.alleles \
+#     ${INPUT}.HLA_C.alleles \
+#     ${INPUT}.HLA_DRB1.alleles \
+#     ${INPUT}.HLA_DQA1.alleles \
+#     ${INPUT}.HLA_DQB1.alleles \
+#     ${INPUT}.HLA_DPA1.alleles \
+#     ${INPUT}.HLA_DPB1.alleles > ${out}.alleles    => moved to 'HLA_Imptation.py' (2020.04.11.)

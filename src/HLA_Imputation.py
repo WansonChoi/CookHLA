@@ -2,7 +2,7 @@
 
 import os, sys, re
 import subprocess
-from os.path import join
+from os.path import join, exists
 import multiprocessing as mp
 from time import time
 
@@ -20,7 +20,7 @@ HLA_genotype_call_prephasing = 'src/9accuracy_pre.v2.csh'
 HLA_genotype_call_noprephasing = 'src/9accuracy_no.v2.csh'
 
 # Defined Error
-from src.CookHLAError import CookHLAImputationError
+from src.CookHLAError import CookHLAImputationError, CookHLAHLATypeCallError
 
 # measureAcc_v3.5
 from measureAcc.__main__ import CookHLA_measureAcc
@@ -266,11 +266,6 @@ class HLA_Imputation(object):
                         if f_remove_raw_IMP_results:
                             RUN_Bash('rm {}'.format(self.dict_IMP_Result[_exonN][_overlap]))
                             RUN_Bash('rm {}'.format(self.dict_IMP_Result[_exonN][_overlap].rstrip('.vcf') + '.log'))
-
-            # '*.alleles'
-            for _hla in HLA_names:
-                RUN_Bash('rm {}'.format(self.dict_IMP_Result['exon2'][3000]+'.HLA_{}.alleles'.format(_hla))) # based on HJ's way.
-
 
 
 
@@ -561,13 +556,36 @@ class HLA_Imputation(object):
         else:
             command = 'tcsh {} {} {}'.format(HLA_genotype_call_noprephasing, to_args, _out)
         # print(command)
-        RUN_Bash(command)
 
-        if os.path.exists(_out + '.alleles') and os.path.getsize(_out + '.alleles') > 0:
-            return _out + '.alleles'
+        try:
+            f_log = open(_out + '.HLATypeCall.log', 'w')
+            subprocess.run(command.split(' '), check=True, stdout=f_log, stderr=f_log)
+
+        except subprocess.CalledProcessError:
+            raise CookHLAHLATypeCallError("HLA type Calling failed.\n")
+
         else:
-            print(std_ERROR_MAIN_PROCESS_NAME + "Failed to perform final HLA genotype calling.")
-            return '-1'
+
+            # Merge HLATypeCall results of each HLA gene
+            with open(_out+'.alleles', 'w') as f_HLAtypeCall_merged:
+                for hla in HLA_names:
+
+                    HLAtypeCall_each = _raw_IMP_Result['exon2'][3000]+'.HLA_{}.alleles'.format(hla)
+
+                    if exists(HLAtypeCall_each):
+                        f_HLAtypeCall_each = open(HLAtypeCall_each, 'r')
+                        f_HLAtypeCall_merged.writelines(f_HLAtypeCall_each.readlines())
+                        f_HLAtypeCall_each.close()
+
+                        # '*.alleles'
+                        os.system("rm {}".format(HLAtypeCall_each))
+
+
+            if exists(_out + '.alleles') and os.path.getsize(_out + '.alleles') > 0:
+                return _out + '.alleles'
+            else:
+                print(std_ERROR_MAIN_PROCESS_NAME + "Failed to perform final HLA genotype calling.")
+                return '-1'
 
 
 

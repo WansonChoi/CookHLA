@@ -18,6 +18,16 @@ class CookHLAImputationError(CookHLAError):
 
 
 
+class CookHLAHLATypeCallError(CookHLAError):
+    """
+    Error for Beagle 4.1 implementation (Bash Execution).
+    """
+
+    def __init__(self, _message):
+        print(_message)
+
+
+
 class CookHLAInputPreparationError(CookHLAError):
     """
     Error for Beagle 4.1 implementation (Bash Execution).

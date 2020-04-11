@@ -189,13 +189,13 @@ Rscript src/9GP_merge.R $INPUT.HLA_DPB1 $INPUT2.HLA_DPB1 $INPUT3.HLA_DPB1 $INPUT
 
 ### Merge the outputs from '9GP_merge.R'
 # cat *.alleles > $INPUT.9.merged
-cat ${INPUT}.HLA_A.alleles \
-    ${INPUT}.HLA_B.alleles \
-    ${INPUT}.HLA_C.alleles \
-    ${INPUT}.HLA_DRB1.alleles \
-    ${INPUT}.HLA_DQA1.alleles \
-    ${INPUT}.HLA_DQB1.alleles \
-    ${INPUT}.HLA_DPA1.alleles \
-    ${INPUT}.HLA_DPB1.alleles > ${out}.alleles
 
-# python measureAccuracy4D.py $ANSWER $INPUT.9.merged > $INPUT.9.accuracy
+# cat ${INPUT}.HLA_A.alleles \
+#     ${INPUT}.HLA_B.alleles \
+#     ${INPUT}.HLA_C.alleles \
+#     ${INPUT}.HLA_DRB1.alleles \
+#     ${INPUT}.HLA_DQA1.alleles \
+#     ${INPUT}.HLA_DQB1.alleles \
+#     ${INPUT}.HLA_DPA1.alleles \
+#     ${INPUT}.HLA_DPB1.alleles > ${out}.alleles    => moved to 'HLA_Imptation.py' (2020.04.11.)
+
