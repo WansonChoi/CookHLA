@@ -200,7 +200,8 @@ class HLA_Imputation(object):
 
         ### (3) CONVERT_OUT
 
-        self.HLA_IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, MHC + '.HLA_IMPUTATION_OUT', f_prephasing=f_prephasing)
+        self.HLA_IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, MHC + '.HLA_IMPUTATION_OUT', __overlap__,
+                                                   f_prephasing=f_prephasing)
         print(std_MAIN_PROCESS_NAME+'IMPUTATION_OUT:\n{}'.format(self.HLA_IMPUTATION_OUT))
 
 
@@ -604,7 +605,7 @@ class HLA_Imputation(object):
 
 
 
-    def CONVERT_OUT(self, _raw_IMP_Result, _out, f_prephasing=False):
+    def CONVERT_OUT(self, _raw_IMP_Result, _out, __overlap__, f_prephasing=False):
 
 
         print("[{}] Converting out imputation result(s).".format(self.idx_process, _out))
