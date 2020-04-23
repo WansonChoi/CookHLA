@@ -381,7 +381,7 @@ class HLA_Imputation_GM(object):
             with open(_aver_erate, 'r') as f:
                 aver_erate = f.readline().rstrip('\n')
 
-            command = '{} gt={} ref={} out={} impute=true gp=true err={} map={} '.format(
+            command = '{} gt={} ref={} out={} impute=true gp=true err={} map={}'.format(
                 self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, aver_erate, _Refined_Genetic_Map)
             # print(command)
 
