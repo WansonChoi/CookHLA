@@ -45,8 +45,8 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
     # _p_plink = os.path.join(p_dependency, "plink")
     _p_plink = which('plink')
-    # _p_beagle4 = os.path.join(p_dependency, "beagle4.jar")
-    _p_beagle4 = which('beagle')    # replaced by the one of Anaconda(Bioconda).
+    # _p_beagle5 = os.path.join(p_dependency, "beagle4.jar")
+    _p_beagle5 = which('beagle')    # replaced by the one of Anaconda(Bioconda).
     _p_linkage2beagle = os.path.join(p_dependency, "linkage2beagle.jar")
     _p_beagle2linkage = os.path.join(p_dependency, "beagle2linkage.jar")
     _p_beagle2vcf = os.path.join(p_dependency, "beagle2vcf.jar")
@@ -69,7 +69,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "PLINK(v1.9b) can't be found.\n")
         sys.exit()
 
-    if not(bool(_p_beagle4) and exists(_p_beagle4)):
+    if not(bool(_p_beagle5) and exists(_p_beagle5)):
         sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Beagle4 can't be found.\n")
         sys.exit()
 
@@ -133,7 +133,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
 
     PLINK = ' '.join([_p_plink, "--noweb", "--silent", '--allow-no-sex'])
-    BEAGLE4 = ' '.join([_p_beagle4, '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory)])
+    BEAGLE5 = ' '.join([_p_beagle5, '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory)])
     LINKAGE2BEAGLE = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_linkage2beagle])
     BEAGLE2LINKAGE = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_beagle2linkage])
     BEAGLE2VCF = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_beagle2vcf])
@@ -486,7 +486,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         # [3] Multiple Markers
         # [6] Multiple Markers + Adaptive Genetic Map
         __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
-                                        LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
+                                        LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE5,
                                         _answer=_answer, f_save_intermediates=__save_intermediates, _MultP=_MultP,
                                         _given_prephased=_given_prephased, f_prephasing=f_prephasing)
 
@@ -497,8 +497,9 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         # [4] Adaptive Genetic Map (HapMap)
         # [5] Adaptive Genetic Map
         __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
-                                           LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
-                                           _answer=_answer, f_save_intermediates=__save_intermediates, _HapMap_Map=_HapMap_Map)
+                                           LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE5,
+                                           _answer=_answer, f_save_intermediates=__save_intermediates,
+                                           _HapMap_Map=_HapMap_Map)
 
 
     idx_process = __IMPUTE_OUT__.idx_process

@@ -24,9 +24,9 @@ HLA_names_gen = ["A", "C", "B", "DRB1", "DQA1", "DQB1", "DPA1", "DPB1"]
 
 class HLA_Imputation_GM(object):
 
-    def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
-                 _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4,
-                 _answer=None, f_save_intermediates=False, _HapMap_Map=None):
+    def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate, _LINKAGE2BEAGLE,
+                 _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5, _answer=None, f_save_intermediates=False,
+                 _HapMap_Map=None):
 
 
         ### Class variables
@@ -56,7 +56,7 @@ class HLA_Imputation_GM(object):
         self.BEAGLE2VCF = _BEAGLE2VCF
         self.VCF2BEAGLE = _VCF2BEAGLE
         self.PLINK = _PLINK
-        self.BEAGLE4 = _BEAGLE4
+        self.BEAGLE5 = _BEAGLE5
 
         # Adaptive Genetic Map
         self.__AGM__ = _AdaptiveGeneticMap
@@ -327,17 +327,40 @@ class HLA_Imputation_GM(object):
 
             """
             ### AGM
+            """
+
+            """
+            ## Beagle 4.1 ##
             
             beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true ne=10000 map=$geneticMap.refined.map err=$aver_erate overlap=3000
+            
+            
+            
+            ## Beagle 5.1 ##
+
+            beagle \
+                gt=$MHC.QC.vcf \
+                ref=$REFERENCE.phased.vcf \
+                out=$MHC.QC.imputation_out \
+                impute=true \
+                gp=true \
+                map=$geneticMap.refined.map \
+                err=$aver_erate
                         
             """
 
             with open(_aver_erate, 'r') as f:
                 aver_erate = f.readline().rstrip('\n')
 
-            # overlap : 3000 (default)
-            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true ne=10000 map={} err={} overlap=3000'.format(
-                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate)
+            command = '{} \
+                        gt={} \
+                        ref={} \
+                        out={} \
+                        impute=true \
+                        gp=true \
+                        map={} \
+                        err={}'.format(
+                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate)
             # print(command)
 
             try:
@@ -355,14 +378,33 @@ class HLA_Imputation_GM(object):
 
             """
             ### Plain
-            
+            """
+
+            """
+            ## Beagle 4.1 ##
+
             beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true overlap=3000
+
+
+            
+            ## Beagle 5.1 ##
+            
+            beagle \
+                gt=$MHC.QC.vcf \
+                ref=$REFERENCE.phased.vcf \
+                out=$MHC.QC.imputation_out \
+                impute=true \
+                gp=true
             
             """
 
-            # overlap : 3000 (default)
-            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true overlap=3000'.format(
-                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT)
+            command = '{} \
+                        gt={} \
+                        ref={} \
+                        out={} \
+                        impute=true \
+                        gp=true'.format(
+                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT)
             # print(command)
 
             try:
@@ -402,7 +444,7 @@ class HLA_Imputation_GM(object):
         """
 
         command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} overlap=3000 > {}.log'.format(
-            self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map, OUT)
+            self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map, OUT)
         # print(command)
         if not os.system(command):
             if not self.__save_intermediates:

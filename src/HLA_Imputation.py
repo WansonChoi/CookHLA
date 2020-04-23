@@ -41,15 +41,18 @@ isClassI = {"A": True, "B": True, "C": True, "DPA1": False, "DPB1": False, "DQA1
 __EXON__ = ['exon2', 'exon3', 'exon4']
 # __EXON__ = ['exon2']
 
-__overlap__ = [3000, 4000, 5000]
+## Beagle 4.1
+# __overlap__ = [3000, 4000, 5000]
 # __overlap__ = [3000]
 
+## Beagle 5.1
+__overlap__ = [4, 8, 12]
 
 
 class HLA_Imputation(object):
 
     def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate, _LINKAGE2BEAGLE,
-                 _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4, _answer=None, f_save_intermediates=False,
+                 _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5, _answer=None, f_save_intermediates=False,
                  _MultP=1, _given_prephased=None, f_prephasing=False, f_remove_raw_IMP_results=False):
 
         ### General
@@ -82,7 +85,7 @@ class HLA_Imputation(object):
         self.BEAGLE2VCF = _BEAGLE2VCF
         self.VCF2BEAGLE = _VCF2BEAGLE
         self.PLINK = _PLINK
-        self.BEAGLE4 = _BEAGLE4
+        self.BEAGLE5 = _BEAGLE5
 
         # created in 'CONVERT_IN'
         # self.refined_REF_markers = None # used in 'CONVERT_OUT'
@@ -467,6 +470,10 @@ class HLA_Imputation(object):
 
             """
             ### MM + AGM
+            """
+
+            """
+            ## Beagle 4.1 ##
             
             # prephasing
             java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=${OVERLAP} err=$aver_erate map=$geneticMap.refined.map
@@ -474,6 +481,25 @@ class HLA_Imputation(object):
             # No-prephasing
             java -jar beagle4.jar gt=$MHC.QC.vcf                    ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=${OVERLAP} err=$aver_erate map=$geneticMap.refined.map
             
+
+
+            ## Beagle 5.1 ##
+            
+            # prephasing
+            Not yet.
+            
+            # No-prephasing
+            java -jar beagle4.jar \
+                    gt=$MHC.QC.vcf \
+                    ref=$REFERENCE.phased.vcf \
+                    out=$MHC.QC.double.imputation_out \
+                    impute=true \
+                    gp=true \
+                    ap=true \
+                    overlap=${OVERLAP} \
+                    err=$aver_erate \
+                    map=$geneticMap.refined.map
+
             """
 
 
@@ -483,8 +509,16 @@ class HLA_Imputation(object):
 
 
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={}'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map)
+            command = '{} \
+                        gt={} \
+                        ref={} \
+                        out={} \
+                        impute=true \
+                        gp=true \
+                        overlap={} \
+                        err={} \
+                        map={}'.format(
+                self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map)
             # print(command)
 
             try:
@@ -511,6 +545,10 @@ class HLA_Imputation(object):
 
             """
             ### MM
+            """
+
+            """
+            ## Beagle 4.1 ##
             
             # prephasing
             java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true overlap=$OVERLAP gprobs=true
@@ -518,11 +556,33 @@ class HLA_Imputation(object):
             # No-prephasing
             java -jar beagle4.jar gt=$MHC.QC.vcf                    ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true overlap=$OVERLAP gprobs=true
 
+
+
+            ## Begale 5.1 ##
+
+            # prephasing
+            Not yet
+            
+            # No-prephasing
+            java -jar beagle4.jar \
+                        gt=$MHC.QC.vcf \
+                        ref=$REFERENCE.phased.vcf \
+                        out=$MHC.QC.double.imputation_out \
+                        impute=true \
+                        overlap=$OVERLAP \
+                        gp=true
+            
             """
 
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true overlap={} gprobs=true'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap)
+            command = '{} \
+                        gt={} \
+                        ref={} \
+                        out={} \
+                        impute=true \
+                        overlap={} \
+                        gp=true'.format(
+                self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap)
             # print(command)
 
             try:
@@ -570,7 +630,7 @@ class HLA_Imputation(object):
             with open(_out+'.alleles', 'w') as f_HLAtypeCall_merged:
                 for hla in HLA_names:
 
-                    HLAtypeCall_each = _raw_IMP_Result['exon2'][3000]+'.HLA_{}.alleles'.format(hla)
+                    HLAtypeCall_each = _raw_IMP_Result[__EXON__[0]][__overlap__[0]]+'.HLA_{}.alleles'.format(hla)
 
                     if exists(HLAtypeCall_each):
                         f_HLAtypeCall_each = open(HLAtypeCall_each, 'r')
@@ -595,7 +655,7 @@ class HLA_Imputation(object):
         print("[{}] Performing pre-phasing".format(self.idx_process))
         self.idx_process += 1
 
-        command = ' '.join([self.BEAGLE4, 'gt={} ref={} out={} impute=false > {}'.format(MHC_QC_VCF, REF_PHASED_VCF,
+        command = ' '.join([self.BEAGLE5, 'gt={} ref={} out={} impute=false > {}'.format(MHC_QC_VCF, REF_PHASED_VCF,
                                                                                          MHC + '.QC.phasing_out_not_double',
                                                                                          MHC + '.QC.phasing_out_not_double.vcf.log')])
         # print(command)
