@@ -198,6 +198,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
 
     __RETURN__ = CollectTable(__accuracies__)
+    print(std_MAIN_PROCESS_NAME + "Accuracy Table:\n{}\n".format(__RETURN__))
     __RETURN__.to_csv(OUT+".ACCURACY_TABLE.txt", sep='\t', header=True, index=True)
 
     return __RETURN__
@@ -212,7 +213,7 @@ def CollectTable(__accuracies__):
     for i in range(2, 7):
 
         if __accuracies__[i] and os.path.exists(__accuracies__[i]):
-            df_temp = pd.read_csv(__accuracies__[i], sep='\s+', header=None, index_col=[0,1], names=['HLA', 'digit', 'acc'])
+            df_temp = pd.read_csv(__accuracies__[i], sep='\s+', header=None, index_col=0, names=['HLA', 'acc'])
             # print(df_temp)
             l_df.append(df_temp)
             l_label.append(Int2Label(i))
