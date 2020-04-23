@@ -213,7 +213,12 @@ def CollectTable(__accuracies__):
     for i in range(2, 7):
 
         if __accuracies__[i] and os.path.exists(__accuracies__[i]):
-            df_temp = pd.read_csv(__accuracies__[i], sep='\s+', header=None, index_col=0, names=['HLA', 'acc'])
+
+            # measureAcc_v2
+            df_temp = pd.read_csv(__accuracies__[i], sep='\s+', header=None, index_col=[0,1], names=['HLA', '4D', 'acc'])
+
+            # measureAcc_v3.5
+            # df_temp = pd.read_csv(__accuracies__[i], sep='\s+', header=None, index_col=0, names=['HLA', 'acc'])
             # print(df_temp)
             l_df.append(df_temp)
             l_label.append(Int2Label(i))
