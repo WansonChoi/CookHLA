@@ -45,15 +45,17 @@ __EXON__ = ['exon2', 'exon3', 'exon4']
 # __overlap__ = [3000, 4000, 5000]
 # __overlap__ = [3000]
 
-## Beagle 5.1
-__overlap__ = [4, 8, 12]
 
 
 class HLA_Imputation(object):
 
     def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate, _LINKAGE2BEAGLE,
-                 _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5, _answer=None, f_save_intermediates=False,
-                 _MultP=1, _given_prephased=None, f_prephasing=False, f_remove_raw_IMP_results=False):
+                 _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5, __OVERLAP__,
+                 _answer=None, f_save_intermediates=False, _MultP=1, _given_prephased=None, f_prephasing=False,
+                 f_remove_raw_IMP_results=False):
+
+        ## Beagle 5.1
+        __overlap__ = __OVERLAP__
 
         ### General
         self.idx_process = idx_process
