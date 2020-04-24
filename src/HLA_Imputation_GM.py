@@ -31,9 +31,9 @@ HLA_names_gen = ["A", "C", "B", "DRB1", "DQA1", "DQB1", "DPA1", "DPB1"]
 
 class HLA_Imputation_GM(object):
 
-    def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate, _LINKAGE2BEAGLE,
-                 _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5, _answer=None, f_save_intermediates=False,
-                 _HapMap_Map=None):
+    def __init__(self, idx_process, MHC, _reference, _out, _hg, window, _AdaptiveGeneticMap, _Average_Erate,
+                 _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5, _answer=None,
+                 f_save_intermediates=False, _HapMap_Map=None):
 
 
         ### Class variables
@@ -341,7 +341,7 @@ class HLA_Imputation_GM(object):
 
 
 
-    def IMPUTE(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF, _aver_erate, _Refined_Genetic_Map):
+    def IMPUTE(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF, _aver_erate, _Refined_Genetic_Map, _window):
 
 
         print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
@@ -374,15 +374,16 @@ class HLA_Imputation_GM(object):
                 impute=true \
                 gp=true \
                 map=$geneticMap.refined.map \
-                err=$aver_erate
+                err=$aver_erate \
+                window=$window
                         
             """
 
             with open(_aver_erate, 'r') as f:
                 aver_erate = f.readline().rstrip('\n')
 
-            command = '{} gt={} ref={} out={} impute=true gp=true err={} map={}'.format(
-                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, aver_erate, _Refined_Genetic_Map)
+            command = '{} gt={} ref={} out={} impute=true gp=true err={} map={} window={}'.format(
+                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, aver_erate, _Refined_Genetic_Map, _window)
             # print(command)
 
             try:
@@ -426,7 +427,8 @@ class HLA_Imputation_GM(object):
                 ref=$REFERENCE.phased.vcf \
                 out=$MHC.QC.imputation_out \
                 impute=true \
-                gp=true
+                gp=true \
+                window=$window
             
             """
 
@@ -435,8 +437,9 @@ class HLA_Imputation_GM(object):
                         ref={} \
                         out={} \
                         impute=true \
-                        gp=true'.format(
-                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT)
+                        gp=true \
+                        window={}'.format(
+                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _window)
             # print(command)
 
             try:
@@ -468,7 +471,7 @@ class HLA_Imputation_GM(object):
 
 
 
-    def IMPUTE_HapMap_Map(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF):
+    def IMPUTE_HapMap_Map(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF, _window):
 
         # Imputation function for only HapMap_Map.txt
 
@@ -495,7 +498,8 @@ class HLA_Imputation_GM(object):
             out=$MHC.QC.imputation_out \
             impute=true \
             gp=true \
-            map=HapMap_Map.txt
+            map=HapMap_Map.txt \
+            window=$window
 
         """
 
@@ -509,8 +513,9 @@ class HLA_Imputation_GM(object):
                     out={} \
                     impute=true \
                     gp=true \
-                    map={}'.format(
-            self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map)
+                    map={} \
+                    window={}'.format(
+            self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map, _window)
         # print(command)
 
         try:

@@ -50,7 +50,7 @@ __EXON__ = ['exon2', 'exon3', 'exon4']
 class HLA_Imputation(object):
 
     def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate, _LINKAGE2BEAGLE,
-                 _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5, __OVERLAP__,
+                 _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5, __OVERLAP__, _window,
                  _answer=None, f_save_intermediates=False, _MultP=1, _given_prephased=None, f_prephasing=False,
                  f_remove_raw_IMP_results=False):
 
@@ -463,7 +463,8 @@ class HLA_Imputation(object):
 
 
 
-    def IMPUTE(self, MHC, _out, _IMPUTATION_INPUT, _REF_PHASED_VCF, _overlap, _exonN, _aver_erate, _Refined_Genetic_Map, f_prephasing=False):
+    def IMPUTE(self, MHC, _out, _IMPUTATION_INPUT, _REF_PHASED_VCF, _overlap, _exonN, _window,
+               _aver_erate, _Refined_Genetic_Map, f_prephasing=False):
 
         if os.path.getsize(_IMPUTATION_INPUT) == 0:
             print(std_ERROR_MAIN_PROCESS_NAME + "Input file for imputation('{}') contains nothing. Please check it again.".format(_IMPUTATION_INPUT))
@@ -513,7 +514,8 @@ class HLA_Imputation(object):
                     ap=true \
                     overlap=${OVERLAP} \
                     err=$aver_erate \
-                    map=$geneticMap.refined.map
+                    map=$geneticMap.refined.map \
+                    window=$window
 
             """
 
@@ -532,8 +534,10 @@ class HLA_Imputation(object):
                         gp=true \
                         overlap={} \
                         err={} \
-                        map={}'.format(
-                self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map)
+                        map={} \
+                        window={}'.format(
+                self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate,
+                _Refined_Genetic_Map, _window)
             # print(command)
 
             try:
@@ -585,7 +589,8 @@ class HLA_Imputation(object):
                         out=$MHC.QC.double.imputation_out \
                         impute=true \
                         overlap=$OVERLAP \
-                        gp=true
+                        gp=true \
+                        window=$window
             
             """
 
@@ -596,8 +601,9 @@ class HLA_Imputation(object):
                         out={} \
                         impute=true \
                         overlap={} \
-                        gp=true'.format(
-                self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap)
+                        gp=true \
+                        window={}'.format(
+                self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, _window)
             # print(command)
 
             try:
