@@ -89,7 +89,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_2_Plain, REFRENCE, _answer=ANSWER, _java_memory=JAVA_MEM,
-                    _window=_WINDOW)
+                    __overlap__=__OVERLAP__, _window=_WINDOW)
 
         time_end_2_Plain = time()
         print("Implementation time of _2_Plain : {}(min)".format((time_end_2_Plain - time_start_2_Plain)/60))
@@ -135,7 +135,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_4_AGM_HapMap_Map, REFRENCE, _HapMap_Map=HapMap_Map,
-                    _answer=ANSWER, _java_memory=JAVA_MEM, _window=_WINDOW)
+                    _answer=ANSWER, _java_memory=JAVA_MEM, __overlap__=__OVERLAP__, _window=_WINDOW)
 
         time_end_4_HapMap_Map = time()
         print("Implementation time of _4_HapMap_Map : {}(min)".format((time_end_4_HapMap_Map - time_start_4_HapMap_Map)/60))
@@ -156,7 +156,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_5_AGM, REFRENCE, _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
-                    _answer=ANSWER, _java_memory=JAVA_MEM, _window=_WINDOW)
+                    _answer=ANSWER, _java_memory=JAVA_MEM, __overlap__=__OVERLAP__, _window=_WINDOW)
 
         time_end_5_AGM = time()
         print("Implementation time of _5_AGM : {}(min)".format((time_end_5_AGM - time_start_5_AGM)/60))
