@@ -40,6 +40,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
     # Beagle5.1.
     __OVERLAP__ = _args.overlap
+    _WINDOW = _args.window
 
 
 
@@ -87,7 +88,8 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
         time_start_2_Plain = time()
 
         [t_HLA_Imptation_out, t_accuracy] = \
-            CookHLA(INPUT, OUT_2_Plain, REFRENCE, _answer=ANSWER, _java_memory=JAVA_MEM)
+            CookHLA(INPUT, OUT_2_Plain, REFRENCE, _answer=ANSWER, _java_memory=JAVA_MEM,
+                    _window=_WINDOW)
 
         time_end_2_Plain = time()
         print("Implementation time of _2_Plain : {}(min)".format((time_end_2_Plain - time_start_2_Plain)/60))
@@ -112,7 +114,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
             CookHLA(INPUT, OUT_3_MM, REFRENCE,
                     __use_Multiple_Markers=True, _MultP=_args.multiprocess,
                     _answer=ANSWER2, _java_memory=JAVA_MEM, f_prephasing=PREPHASING,
-                    __overlap__=__OVERLAP__)
+                    __overlap__=__OVERLAP__, _window=_WINDOW)
 
         time_end_3_MM = time()
         print("Implementation time of _3_MM : {}(min)".format((time_end_3_MM - time_start_3_MM)/60))
@@ -133,7 +135,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_4_AGM_HapMap_Map, REFRENCE, _HapMap_Map=HapMap_Map,
-                    _answer=ANSWER, _java_memory=JAVA_MEM)
+                    _answer=ANSWER, _java_memory=JAVA_MEM, _window=_WINDOW)
 
         time_end_4_HapMap_Map = time()
         print("Implementation time of _4_HapMap_Map : {}(min)".format((time_end_4_HapMap_Map - time_start_4_HapMap_Map)/60))
@@ -154,7 +156,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_5_AGM, REFRENCE, _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
-                    _answer=ANSWER, _java_memory=JAVA_MEM)
+                    _answer=ANSWER, _java_memory=JAVA_MEM, _window=_WINDOW)
 
         time_end_5_AGM = time()
         print("Implementation time of _5_AGM : {}(min)".format((time_end_5_AGM - time_start_5_AGM)/60))
@@ -178,7 +180,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
                     __use_Multiple_Markers=True, _MultP=_args.multiprocess,
                     _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
                     _answer=ANSWER2, _java_memory=JAVA_MEM, f_prephasing=PREPHASING,
-                    __overlap__=__OVERLAP__)
+                    __overlap__=__OVERLAP__, _window=_WINDOW)
 
         time_end_6_MM_AGM = time()
 
@@ -345,7 +347,9 @@ if __name__ == "__main__":
 
     # Beagle5.1.
     parser.add_argument("--overlap", "-ol",
-                        help="\n3 Overlap values(cM) for Beagle 5.1 implementation.\n\n", nargs=3, default=(4,8,12), type=int)
+                        help="\n3 Overlap values(cM) for Beagle 5.1 implementation.\n\n", nargs=3, default=(4,8,12), type=float)
+    parser.add_argument("--window", "-w",
+                        help="\nwindow values(cM) for Beagle 5.1 implementation.\n\n", default=40, type=int)
 
 
 
