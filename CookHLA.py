@@ -583,7 +583,7 @@ if __name__ == "__main__":
     parser.add_argument("--overlap", "-ol",
                         help="\n3 Overlap values(cM) for Beagle 5.1 implementation.\n\n", nargs=3, default=(4,8,12), type=float)
     parser.add_argument("--window", "-w",
-                        help="\nwindow values(cM) for Beagle 5.1 implementation.\n\n", default=40, type=int)
+                        help="\nwindow values(cM) for Beagle 5.1 implementation.\n\n", default=40, type=float)
 
 
 
