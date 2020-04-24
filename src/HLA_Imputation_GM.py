@@ -389,7 +389,7 @@ class HLA_Imputation_GM(object):
                 f_log = open(OUT+'.log', 'w')
 
                 imputation_start = time()
-                subprocess.run(command.split(' '), check=True, stdout=f_log, stderr=f_log)
+                subprocess.run(re.split('\s+', command), check=True, stdout=f_log, stderr=f_log)
                 imputation_end = time()
 
             except subprocess.CalledProcessError:
@@ -443,7 +443,7 @@ class HLA_Imputation_GM(object):
                 f_log = open(OUT+'.log', 'w')
 
                 imputation_start = time()
-                subprocess.run(command.split(' '), check=True, stdout=f_log, stderr=f_log)
+                subprocess.run(re.split('\s+', command), check=True, stdout=f_log, stderr=f_log)
                 imputation_end = time()
 
             except subprocess.CalledProcessError:
@@ -517,7 +517,7 @@ class HLA_Imputation_GM(object):
             f_log = open(OUT + '.log', 'w')
 
             imputation_start = time()
-            subprocess.run(command.split(' '), check=True, stdout=f_log, stderr=f_log)
+            subprocess.run(re.split('\s+', command), check=True, stdout=f_log, stderr=f_log)
             imputation_end = time()
 
         except subprocess.CalledProcessError:
