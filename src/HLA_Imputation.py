@@ -150,7 +150,8 @@ class HLA_Imputation(object):
 
                     self.dict_IMP_Result[_exonN][_overlap] = \
                         self.IMPUTE(MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf',
-                                    _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing=f_prephasing)
+                                    _overlap, _exonN, _window,
+                                    self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing=f_prephasing)
 
             imputation_serial_end = time()
 
@@ -165,7 +166,7 @@ class HLA_Imputation(object):
 
             pool = mp.Pool(processes=_MultP if _MultP <= 9 else 9)
 
-            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing))
+            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, _window, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing))
                                   for _overlap in __overlap__}
                          for _exonN in __EXON__}
 

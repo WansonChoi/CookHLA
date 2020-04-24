@@ -498,9 +498,9 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         # [2] Plain (Just with Beagle 4.1)
         # [4] Adaptive Genetic Map (HapMap)
         # [5] Adaptive Genetic Map
-        __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg, _window, _AdaptiveGeneticMap, _Average_Erate,
-                                           LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE5,
-                                           _answer=_answer, f_save_intermediates=__save_intermediates,
+        __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg, _window, _AdaptiveGeneticMap,
+                                           _Average_Erate, LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE,
+                                           PLINK, BEAGLE5, _answer=_answer, f_save_intermediates=__save_intermediates,
                                            _HapMap_Map=_HapMap_Map)
 
 

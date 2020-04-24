@@ -31,7 +31,7 @@ HLA_names_gen = ["A", "C", "B", "DRB1", "DQA1", "DQB1", "DPA1", "DPB1"]
 
 class HLA_Imputation_GM(object):
 
-    def __init__(self, idx_process, MHC, _reference, _out, _hg, window, _AdaptiveGeneticMap, _Average_Erate,
+    def __init__(self, idx_process, MHC, _reference, _out, _hg, _window, _AdaptiveGeneticMap, _Average_Erate,
                  _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5, _answer=None,
                  f_save_intermediates=False, _HapMap_Map=None):
 
@@ -102,9 +102,10 @@ class HLA_Imputation_GM(object):
         ### (2) IMPUTE
 
         if _HapMap_Map:
-            self.raw_IMP_Reuslt = self.IMPUTE_HapMap_Map(_out, MHC_QC_VCF, REF_PHASED_VCF)
+            self.raw_IMP_Reuslt = self.IMPUTE_HapMap_Map(_out, MHC_QC_VCF, REF_PHASED_VCF, _window)
         else:
-            self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, self.__AVER__, self.refined_Genetic_Map)
+            self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, self.__AVER__, self.refined_Genetic_Map,
+                                              _window)
 
         # [Temporary Hard coding]
         # self.raw_IMP_Reuslt = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF.QC.imputation_out.vcf'
