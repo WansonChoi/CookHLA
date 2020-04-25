@@ -26,7 +26,7 @@ TOLERATED_DIFF = 0.15
 def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Average_Erate=None, _java_memory='2g',
             _MultP=1, _answer=None, __save_intermediates=False, __use_Multiple_Markers=False, _p_src="./src",
             _p_dependency="./dependency", _given_prephased=None, f_prephasing=False, _HapMap_Map=None,
-            __overlap__=(4,8,12), _window=40):
+            __overlap__=(4,8,12), _window=40, _ne=1000000):
 
 
     ### Argument exception
@@ -486,19 +486,19 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
         # [3] Multiple Markers
         # [6] Multiple Markers + Adaptive Genetic Map
-        __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
+        __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg, __overlap__, _window, _ne,
+                                        _AdaptiveGeneticMap, _Average_Erate,
                                         LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE5,
-                                        __overlap__, _window,
                                         _answer=_answer, f_save_intermediates=__save_intermediates, _MultP=_MultP,
                                         _given_prephased=_given_prephased, f_prephasing=f_prephasing)
 
 
     elif not __use_Multiple_Markers:
 
-        # [2] Plain (Just with Beagle 4.1)
+        # [2] Plain
         # [4] Adaptive Genetic Map (HapMap)
         # [5] Adaptive Genetic Map
-        __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg, _window, __overlap__[0],
+        __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg, _window, __overlap__[0], _ne,
                                            _AdaptiveGeneticMap, _Average_Erate, LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE,
                                            PLINK, BEAGLE5, _answer=_answer, f_save_intermediates=__save_intermediates,
                                            _HapMap_Map=_HapMap_Map)
@@ -583,7 +583,9 @@ if __name__ == "__main__":
     parser.add_argument("--overlap", "-ol",
                         help="\n3 Overlap values(cM) for Beagle 5.1 implementation.\n\n", nargs=3, default=(4,8,12), type=float)
     parser.add_argument("--window", "-w",
-                        help="\nwindow values(cM) for Beagle 5.1 implementation.\n\n", default=40, type=float)
+                        help="\nWindow value(cM) for Beagle 5.1 implementation.\n\n", default=40, type=float)
+    parser.add_argument("--effective-population-size", "-ne",
+                        help="\nEffective population size value for Beagle 5.1 implementation.\n\n", default=1000000, type=int)
 
 
 
@@ -615,7 +617,7 @@ if __name__ == "__main__":
 
     CookHLA(args.input, args.out, args.reference, "18", args.genetic_map, args.average_erate,
             _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer,
-            __use_Multiple_Markers=True, f_prephasing=args.prephasing, __overlap__=args.overlap)
+            __use_Multiple_Markers=True, f_prephasing=args.prephasing, __overlap__=args.overlap, _ne=args.ne)
 
     CookHLA_end = time()
 
