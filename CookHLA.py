@@ -26,7 +26,7 @@ TOLERATED_DIFF = 0.15
 def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Average_Erate=None, _java_memory='2g',
             _MultP=1, _answer=None, __save_intermediates=False, __use_Multiple_Markers=False, _p_src="./src",
             _p_dependency="./dependency", _given_prephased=None, f_prephasing=False, _HapMap_Map=None,
-            __overlap__=(4,8,12), _window=40, _ne=1000000):
+            __overlap__=(4,8,12), _window=40, _ne=1000000, _nthreads=1):
 
 
     ### Argument exception
@@ -486,7 +486,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
         # [3] Multiple Markers
         # [6] Multiple Markers + Adaptive Genetic Map
-        __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg, __overlap__, _window, _ne,
+        __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg, __overlap__, _window, _ne, _nthreads,
                                         _AdaptiveGeneticMap, _Average_Erate,
                                         LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE5,
                                         _answer=_answer, f_save_intermediates=__save_intermediates, _MultP=_MultP,
@@ -498,7 +498,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         # [2] Plain
         # [4] Adaptive Genetic Map (HapMap)
         # [5] Adaptive Genetic Map
-        __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg, _window, __overlap__[0], _ne,
+        __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg, _window, __overlap__[0], _ne, _nthreads,
                                            _AdaptiveGeneticMap, _Average_Erate, LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE,
                                            PLINK, BEAGLE5, _answer=_answer, f_save_intermediates=__save_intermediates,
                                            _HapMap_Map=_HapMap_Map)
@@ -586,6 +586,8 @@ if __name__ == "__main__":
                         help="\nWindow value(cM) for Beagle 5.1 implementation.\n\n", default=40, type=float)
     parser.add_argument("--effective-population-size", "-ne",
                         help="\nEffective population size value for Beagle 5.1 implementation.\n\n", default=1000000, type=int)
+    parser.add_argument("--nthreads", "-nth",
+                        help="\nThe number of theads to use in Beagle 5.1 implementation.\n\n", default=1, type=int)
 
 
 

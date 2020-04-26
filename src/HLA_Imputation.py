@@ -49,7 +49,7 @@ __EXON__ = ['exon2', 'exon3', 'exon4']
 
 class HLA_Imputation(object):
 
-    def __init__(self, idx_process, MHC, _reference, _out, _hg, __OVERLAP__, _window, _ne,
+    def __init__(self, idx_process, MHC, _reference, _out, _hg, __OVERLAP__, _window, _ne, _nthreads,
                  _AdaptiveGeneticMap, _Average_Erate,
                  _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5,
                  _answer=None, f_save_intermediates=False, _MultP=1, _given_prephased=None, f_prephasing=False,
@@ -151,7 +151,7 @@ class HLA_Imputation(object):
 
                     self.dict_IMP_Result[_exonN][_overlap] = \
                         self.IMPUTE(MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf',
-                                    _overlap, _exonN, _window, _ne,
+                                    _overlap, _exonN, _window, _ne, _nthreads,
                                     self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing=f_prephasing)
 
             imputation_serial_end = time()
@@ -167,7 +167,7 @@ class HLA_Imputation(object):
 
             pool = mp.Pool(processes=_MultP if _MultP <= 9 else 9)
 
-            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, _window, _ne, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing))
+            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, _window, _ne, _nthreads, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing))
                                   for _overlap in __overlap__}
                          for _exonN in __EXON__}
 
@@ -465,7 +465,7 @@ class HLA_Imputation(object):
 
 
 
-    def IMPUTE(self, MHC, _out, _IMPUTATION_INPUT, _REF_PHASED_VCF, _overlap, _exonN, _window, _ne,
+    def IMPUTE(self, MHC, _out, _IMPUTATION_INPUT, _REF_PHASED_VCF, _overlap, _exonN, _window, _ne, _nthreads,
                _aver_erate, _Refined_Genetic_Map, f_prephasing=False):
 
         if os.path.getsize(_IMPUTATION_INPUT) == 0:
@@ -518,7 +518,8 @@ class HLA_Imputation(object):
                     err=$aver_erate \
                     map=$geneticMap.refined.map \
                     window=$window \
-                    ne=$ne
+                    ne=$ne \
+                    nthreads=$nthreads
 
             """
 
@@ -539,9 +540,10 @@ class HLA_Imputation(object):
                         err={} \
                         map={} \
                         window={} \
-                        ne={}'.format(
+                        ne={} \
+                        nthreads={}'.format(
                 self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate,
-                _Refined_Genetic_Map, _window,_ne)
+                _Refined_Genetic_Map, _window, _ne, _nthreads)
             # print(command)
 
             try:
@@ -595,7 +597,8 @@ class HLA_Imputation(object):
                         overlap=$OVERLAP \
                         gp=true \
                         window=$window \
-                        ne=$ne
+                        ne=$ne \
+                        nthreads=$nthreads
             
             """
 
@@ -608,8 +611,9 @@ class HLA_Imputation(object):
                         overlap={} \
                         gp=true \
                         window={} \
-                        ne={}'.format(
-                self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, _window, _ne)
+                        ne={} \
+                        nthreads={}'.format(
+                self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, _window, _ne, _nthreads)
             # print(command)
 
             try:
