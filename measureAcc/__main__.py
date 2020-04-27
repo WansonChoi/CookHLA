@@ -38,19 +38,19 @@ class CookHLA_measureAcc(object):
         if not exists(_answer):
             raise CookHLAInputPreparationError("Given answer file can't be found.('{}')".format(_answer))
 
-        # if not (_answer.endswith('.alleles') or _answer.endswith('.hped') or _answer.endswith('.Marked.chped')):
-        #     # No *.chped alone
-        #     raise CookHLAInputPreparationError("Given answer file must have file extension "
-        #                                        "either '*.alleles', '*.hped' or '*.Marked.chped'.")
+        if not (_answer.endswith('.alleles') or _answer.endswith('.hped') or _answer.endswith('.Marked.chped')):
+            # No *.chped alone
+            raise CookHLAInputPreparationError("Given answer file must have file extension "
+                                               "either '*.alleles', '*.hped' or '*.Marked.chped'.")
 
         # (2) imputed file
         if not exists(_imputed):
             raise CookHLAInputPreparationError("Given imputed file can't be found.('{}')".format(_imputed))
 
-        # if not (_imputed.endswith('.alleles') or _imputed.endswith('.hped') or _imputed.endswith('.Marked.chped')):
-        #     # No *.chped alone
-        #     raise CookHLAInputPreparationError("Given imputed file must have file extension "
-        #                                        "either '*.alleles', '*.hped' or '*.Marked.chped'.")
+        if not (_imputed.endswith('.alleles') or _imputed.endswith('.hped') or _imputed.endswith('.Marked.chped')):
+            # No *.chped alone
+            raise CookHLAInputPreparationError("Given imputed file must have file extension "
+                                               "either '*.alleles', '*.hped' or '*.Marked.chped'.")
 
 
         # (3) _allele_group file
