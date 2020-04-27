@@ -34,7 +34,7 @@ class HLA_Imputation_GM(object):
     def __init__(self, idx_process, MHC, _reference, _out, _hg, _window, _overlap, _ne, _nthreads,
                  _AdaptiveGeneticMap, _Average_Erate,
                  _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5, _answer=None,
-                 f_save_intermediates=False, _HapMap_Map=None):
+                 f_save_intermediates=False, _HapMap_Map=None, f_measureAcc_v2=False):
 
 
         ### Class variables
@@ -138,20 +138,24 @@ class HLA_Imputation_GM(object):
                 print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
                                                     "Skipping calculating imputation accuracy.")
             else:
-                self.accuracy = measureAccuracy(_answer, self.HLA_IMPUTATION_OUT, 'all',
-                                                outfile=self.HLA_IMPUTATION_OUT + '.accuracy', __only4digits=True)
 
-            # measureAcc_v3.5
-            # measureAcc_start = time()
-            #
-            # t = CookHLA_measureAcc(_answer, self.HLA_IMPUTATION_OUT, self.HLA_IMPUTATION_OUT)
-            # self.accuracy = t.accuracy
-            #
-            # measureAcc_end = time()
-            #
-            # measureAcc_time = (measureAcc_end - measureAcc_start)/60
-            # print("\nAccuracy : {}".format(self.accuracy))
-            # print("measureAccuracy time: {}(min)\n".format(measureAcc_time))
+                if f_measureAcc_v2:
+                    # measureAcc_v2
+                    self.accuracy = measureAccuracy(_answer, self.HLA_IMPUTATION_OUT, 'all',
+                                                    outfile=self.HLA_IMPUTATION_OUT + '.accuracy', __only4digits=True)
+
+                else:
+                    # measureAcc_v3.5
+                    measureAcc_start = time()
+
+                    t = CookHLA_measureAcc(_answer, self.HLA_IMPUTATION_OUT, self.HLA_IMPUTATION_OUT)
+                    self.accuracy = t.accuracy
+
+                    measureAcc_end = time()
+
+                    measureAcc_time = (measureAcc_end - measureAcc_start)/60
+                    print("\nAccuracy : {}".format(self.accuracy))
+                    print("measureAccuracy time: {}(min)\n".format(measureAcc_time))
 
 
 

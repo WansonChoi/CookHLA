@@ -53,7 +53,7 @@ class HLA_Imputation(object):
                  _AdaptiveGeneticMap, _Average_Erate,
                  _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5,
                  _answer=None, f_save_intermediates=False, _MultP=1, _given_prephased=None, f_prephasing=False,
-                 f_remove_raw_IMP_results=False):
+                 f_remove_raw_IMP_results=False, f_measureAcc_v2=False):
 
         ## Beagle 5.1
         __overlap__ = __OVERLAP__
@@ -219,22 +219,25 @@ class HLA_Imputation(object):
             elif os.path.getsize(_answer) == 0:
                 print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
                                                     "Skipping calculating imputation accuracy.")
+
             else:
-                self.accuracy = measureAccuracy(_answer, self.HLA_IMPUTATION_OUT, 'all',
-                                                outfile=self.HLA_IMPUTATION_OUT + '.accuracy', __only4digits=True)
+                if f_measureAcc_v2:
+                    # measureAcc_v2
+                    self.accuracy = measureAccuracy(_answer, self.HLA_IMPUTATION_OUT, 'all',
+                                                        outfile=self.HLA_IMPUTATION_OUT + '.accuracy', __only4digits=True)
 
+                else:
+                    # measureAcc_v3.5
+                    measureAcc_start = time()
 
-            # measureAcc_v3.5
-            # measureAcc_start = time()
-            #
-            # t = CookHLA_measureAcc(_answer, self.HLA_IMPUTATION_OUT, self.HLA_IMPUTATION_OUT)
-            # self.accuracy = t.accuracy
-            #
-            # measureAcc_end = time()
-            #
-            # measureAcc_time = (measureAcc_end - measureAcc_start)/60
-            # print("\nAccuracy : {}".format(self.accuracy))
-            # print("measureAccuracy time: {}(min)\n".format(measureAcc_time))
+                    t = CookHLA_measureAcc(_answer, self.HLA_IMPUTATION_OUT, self.HLA_IMPUTATION_OUT)
+                    self.accuracy = t.accuracy
+
+                    measureAcc_end = time()
+
+                    measureAcc_time = (measureAcc_end - measureAcc_start)/60
+                    print("\nAccuracy : {}".format(self.accuracy))
+                    print("measureAccuracy time: {}(min)\n".format(measureAcc_time))
 
 
 

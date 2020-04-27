@@ -43,6 +43,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
     _WINDOW = _args.window
     _NE = _args.effective_population_size
     _NTHREADS = _args.nthreads
+    _f_MEASUREACC_v2 = _args.measureAcc_v2
 
 
 
@@ -90,8 +91,8 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
         time_start_2_Plain = time()
 
         [t_HLA_Imptation_out, t_accuracy] = \
-            CookHLA(INPUT, OUT_2_Plain, REFRENCE, _answer=ANSWER, _java_memory=JAVA_MEM,
-                    __overlap__=__OVERLAP__, _window=_WINDOW, _ne=_NE, _nthreads=_NTHREADS)
+            CookHLA(INPUT, OUT_2_Plain, REFRENCE, _java_memory=JAVA_MEM, _answer=ANSWER, __overlap__=__OVERLAP__,
+                    _window=_WINDOW, _ne=_NE, _nthreads=_NTHREADS, f_measureAcc_v2=_f_MEASUREACC_v2)
 
         time_end_2_Plain = time()
         print("Implementation time of _2_Plain : {}(min)".format((time_end_2_Plain - time_start_2_Plain)/60))
@@ -113,10 +114,9 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
         time_start_3_MM = time()
 
         [t_HLA_Imptation_out, t_accuracy] = \
-            CookHLA(INPUT, OUT_3_MM, REFRENCE,
-                    __use_Multiple_Markers=True, _MultP=_args.multiprocess,
-                    _answer=ANSWER2, _java_memory=JAVA_MEM, f_prephasing=PREPHASING,
-                    __overlap__=__OVERLAP__, _window=_WINDOW, _ne=_NE, _nthreads=_NTHREADS)
+            CookHLA(INPUT, OUT_3_MM, REFRENCE, _java_memory=JAVA_MEM, _MultP=_args.multiprocess, _answer=ANSWER2,
+                    __use_Multiple_Markers=True, f_prephasing=PREPHASING, __overlap__=__OVERLAP__, _window=_WINDOW,
+                    _ne=_NE, _nthreads=_NTHREADS, f_measureAcc_v2=_f_MEASUREACC_v2)
 
         time_end_3_MM = time()
         print("Implementation time of _3_MM : {}(min)".format((time_end_3_MM - time_start_3_MM)/60))
@@ -136,8 +136,9 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
         time_start_4_HapMap_Map = time()
 
         [t_HLA_Imptation_out, t_accuracy] = \
-            CookHLA(INPUT, OUT_4_AGM_HapMap_Map, REFRENCE, _HapMap_Map=HapMap_Map,
-                    _answer=ANSWER, _java_memory=JAVA_MEM, __overlap__=__OVERLAP__, _window=_WINDOW, _ne=_NE, _nthreads=_NTHREADS)
+            CookHLA(INPUT, OUT_4_AGM_HapMap_Map, REFRENCE, _java_memory=JAVA_MEM, _answer=ANSWER,
+                    _HapMap_Map=HapMap_Map, __overlap__=__OVERLAP__, _window=_WINDOW, _ne=_NE, _nthreads=_NTHREADS,
+                    f_measureAcc_v2=_f_MEASUREACC_v2)
 
         time_end_4_HapMap_Map = time()
         print("Implementation time of _4_HapMap_Map : {}(min)".format((time_end_4_HapMap_Map - time_start_4_HapMap_Map)/60))
@@ -158,7 +159,8 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_5_AGM, REFRENCE, _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
-                    _answer=ANSWER, _java_memory=JAVA_MEM, __overlap__=__OVERLAP__, _window=_WINDOW, _ne=10000, _nthreads=_NTHREADS)
+                    _java_memory=JAVA_MEM, _answer=ANSWER, __overlap__=__OVERLAP__, _window=_WINDOW, _ne=10000,
+                    _nthreads=_NTHREADS, f_measureAcc_v2=_f_MEASUREACC_v2)
 
         time_end_5_AGM = time()
         print("Implementation time of _5_AGM : {}(min)".format((time_end_5_AGM - time_start_5_AGM)/60))
@@ -178,11 +180,10 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
         time_start_6_MM_AGM = time()
 
         [t_HLA_Imptation_out, t_accuracy] = \
-            CookHLA(INPUT, OUT_6_MM_AGM, REFRENCE,
-                    __use_Multiple_Markers=True, _MultP=_args.multiprocess,
-                    _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
-                    _answer=ANSWER2, _java_memory=JAVA_MEM, f_prephasing=PREPHASING,
-                    __overlap__=__OVERLAP__, _window=_WINDOW, _ne=10000, _nthreads=_NTHREADS)
+            CookHLA(INPUT, OUT_6_MM_AGM, REFRENCE, _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
+                    _java_memory=JAVA_MEM, _MultP=_args.multiprocess, _answer=ANSWER2, __use_Multiple_Markers=True,
+                    f_prephasing=PREPHASING, __overlap__=__OVERLAP__, _window=_WINDOW, _ne=10000, _nthreads=_NTHREADS,
+                    f_measureAcc_v2=_f_MEASUREACC_v2)
 
         time_end_6_MM_AGM = time()
 
@@ -346,6 +347,8 @@ if __name__ == "__main__":
                         help="\nBoolean sequence to nominate which imputations are to be done.\n\n", nargs=5, default=(1,1,1,1,1), type=int)
 
     parser.add_argument("--prephasing", "-pr", help="\nUtilizing prephasing strategy.\n\n", action='store_true')
+
+    parser.add_argument("--measureAcc_v2", "-macc_v2", help="\nCalculate accuracy with previous version module.\n\n", action='store_true')
 
     # Beagle5.1.
     parser.add_argument("--overlap", "-ol",
