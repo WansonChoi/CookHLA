@@ -202,7 +202,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
     # print(__accuracies__)
 
 
-    __RETURN__ = CollectTable(__accuracies__)
+    __RETURN__ = CollectTable(__accuracies__, _f_MEASUREACC_v2)
     print(std_MAIN_PROCESS_NAME + "Accuracy Table:\n{}\n".format(__RETURN__))
     __RETURN__.to_csv(OUT+".ACCURACY_TABLE.txt", sep='\t', header=True, index=True)
 
@@ -210,7 +210,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
 
 
-def CollectTable(__accuracies__):
+def CollectTable(__accuracies__, f_measureAcc_v2=False):
 
     l_df = []
     l_label = []
@@ -219,11 +219,14 @@ def CollectTable(__accuracies__):
 
         if __accuracies__[i] and os.path.exists(__accuracies__[i]):
 
-            # measureAcc_v2
-            df_temp = pd.read_csv(__accuracies__[i], sep='\s+', header=None, index_col=[0,1], names=['HLA', '4D', 'acc'])
+            if f_measureAcc_v2:
+                # measureAcc_v2
+                df_temp = pd.read_csv(__accuracies__[i], sep='\s+', header=None, index_col=[0,1], names=['HLA', '4D', 'acc'])
 
-            # measureAcc_v3.5
-            # df_temp = pd.read_csv(__accuracies__[i], sep='\s+', header=None, index_col=0, names=['HLA', 'acc'])
+            else:
+                # measureAcc_v3.5
+                df_temp = pd.read_csv(__accuracies__[i], sep='\s+', header=None, index_col=0, names=['HLA', 'acc'])
+
             # print(df_temp)
             l_df.append(df_temp)
             l_label.append(Int2Label(i))
