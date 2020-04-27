@@ -158,7 +158,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_5_AGM, REFRENCE, _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
-                    _answer=ANSWER, _java_memory=JAVA_MEM, __overlap__=__OVERLAP__, _window=_WINDOW, _ne=_NE, _nthreads=_NTHREADS)
+                    _answer=ANSWER, _java_memory=JAVA_MEM, __overlap__=__OVERLAP__, _window=_WINDOW, _ne=10000, _nthreads=_NTHREADS)
 
         time_end_5_AGM = time()
         print("Implementation time of _5_AGM : {}(min)".format((time_end_5_AGM - time_start_5_AGM)/60))
@@ -182,7 +182,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
                     __use_Multiple_Markers=True, _MultP=_args.multiprocess,
                     _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
                     _answer=ANSWER2, _java_memory=JAVA_MEM, f_prephasing=PREPHASING,
-                    __overlap__=__OVERLAP__, _window=_WINDOW, _ne=_NE, _nthreads=_NTHREADS)
+                    __overlap__=__OVERLAP__, _window=_WINDOW, _ne=10000, _nthreads=_NTHREADS)
 
         time_end_6_MM_AGM = time()
 

@@ -518,7 +518,7 @@ class HLA_Imputation(object):
                     err=$aver_erate \
                     map=$geneticMap.refined.map \
                     window=$window \
-                    ne=$ne \
+                    ne=10000    # fixed \
                     nthreads=$nthreads
 
             """
@@ -540,10 +540,10 @@ class HLA_Imputation(object):
                         err={} \
                         map={} \
                         window={} \
-                        ne={} \
+                        ne=10000 \
                         nthreads={}'.format(
                 self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate,
-                _Refined_Genetic_Map, _window, _ne, _nthreads)
+                _Refined_Genetic_Map, _window, _nthreads)
             # print(command)
 
             try:

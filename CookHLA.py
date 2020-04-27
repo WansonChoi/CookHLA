@@ -26,7 +26,7 @@ TOLERATED_DIFF = 0.15
 def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Average_Erate=None, _java_memory='2g',
             _MultP=1, _answer=None, __save_intermediates=False, __use_Multiple_Markers=False, _p_src="./src",
             _p_dependency="./dependency", _given_prephased=None, f_prephasing=False, _HapMap_Map=None,
-            __overlap__=(4,8,12), _window=40, _ne=1000000, _nthreads=1):
+            __overlap__=(0.5, 1, 1.5), _window=5, _ne=1000000, _nthreads=1):
 
 
     ### Argument exception

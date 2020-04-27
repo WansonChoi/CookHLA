@@ -379,7 +379,7 @@ class HLA_Imputation_GM(object):
                 err=$aver_erate \
                 window=$window \
                 overlap=$overlap \
-                ne=$ne \
+                ne=10000    # fixed \
                 nthreads=$nthreads
                         
             """
@@ -387,8 +387,8 @@ class HLA_Imputation_GM(object):
             with open(_aver_erate, 'r') as f:
                 aver_erate = f.readline().rstrip('\n')
 
-            command = '{} gt={} ref={} out={} impute=true gp=true err={} map={} window={} overlap={} ne={} nthreads={}'.format(
-                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, aver_erate, _Refined_Genetic_Map, _window, _overlap, _ne, _nthreads)
+            command = '{} gt={} ref={} out={} impute=true gp=true err={} map={} window={} overlap={} ne=10000 nthreads={}'.format(
+                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, aver_erate, _Refined_Genetic_Map, _window, _overlap, _nthreads)
             # print(command)
 
             try:
