@@ -232,7 +232,7 @@ def CollectTable(__accuracies__, f_measureAcc_v2=False):
             l_label.append(Int2Label(i))
 
 
-    df_acc = pd.concat(l_df, axis=1).applymap(lambda x : None if x == -1 else x).dropna()
+    df_acc = pd.concat(l_df, axis=1).applymap(lambda x : None if x <= 0 else x).dropna()
     df_acc.columns = l_label
     # print(df_acc)
 
