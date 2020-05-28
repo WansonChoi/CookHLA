@@ -19,6 +19,6 @@ if __name__ == '__main__':
     """
 
 
-    [_answer_Marked_chped, _imputed_Marked_chped, _out] = sys.argv[1:]
+    [_answer, _imputed, _out] = sys.argv[1:]
 
-    CookHLA_measureAcc(_answer_Marked_chped, _imputed_Marked_chped, _out)
+    CookHLA_measureAcc(_answer, _imputed, _out)
