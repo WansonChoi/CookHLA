@@ -621,7 +621,7 @@ if __name__ == "__main__":
 
     CookHLA(args.input, args.out, args.reference, "18", args.genetic_map, args.average_erate,
             _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer, __use_Multiple_Markers=True,
-            f_prephasing=args.prephasing, __overlap__=args.overlap, _ne=args.ne, f_measureAcc_v2=args.measureAcc_v2)
+            f_prephasing=args.prephasing, __overlap__=args.overlap, _ne=args.effective_population_size, f_measureAcc_v2=args.measureAcc_v2)
 
     CookHLA_end = time()
 
