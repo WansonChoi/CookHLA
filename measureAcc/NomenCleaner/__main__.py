@@ -3,51 +3,8 @@
 import os, sys, re
 import argparse, textwrap
 
-from NomenCleaner.NomenCleaner import NomenCleaner
+from measureAcc.NomenCleaner.NomenCleaner import HATK_NomenCleaner
 
-
-
-class HATK_NomenCleaner(object):
-
-    def __init__(self, _hped, _hat, _imgt, _out, **kwargs):
-
-        """
-        Main wrapper for NomenCleaner
-
-        """
-
-        ## Exception Handling here
-
-        # if not os.path.exists(_hped):
-        #     print(std_ERROR_MAIN_PROCESS_NAME + "Given HPED file('{}') doesn't exist.\n"
-        #                                         "Please check the '--hped' argument again.\n"
-        #                                         "".format(_hped))
-        #     sys.exit()
-        # else:
-        #     # Checking the number of columns
-        #     f_hped = open(_hped, 'r')
-        #
-        #     hped_1st_line = f_hped.readline()
-        #     hped_1st_line = re.split(pattern='\s+', string=hped_1st_line.rstrip('\n'))
-        #
-        #     if len(hped_1st_line) != 22:
-        #         # # of columns of hped file must be 22(6 + 8*2).
-        #         print(std_ERROR_MAIN_PROCESS_NAME + "The number of columns of given HPED file('{}') must be 22 but it is '{}'.\n"
-        #                                             "Please check the number of columns of that HPED file again."
-        #                                             "".format(_hped, len(hped_1st_line)))
-        #         sys.exit()
-        #
-        #
-        # if not os.path.exists(_hat):
-        #     print(std_ERROR_MAIN_PROCESS_NAME + "Given HAT(HLA Allel Table) file('{}') doesn't exist.\n"
-        #                                         "Please check the '--hat")
-
-
-
-        self.chped = NomenCleaner(_hped, _hat, _imgt, _out,
-                                  __oneF=kwargs['__oneF'], __twoF=kwargs['__twoF'], __threeF=kwargs['__threeF'], __fourF=kwargs['__fourF'],
-                                  __Ggroup=kwargs['__Ggroup'], __Pgroup=kwargs['__Pgroup'],
-                                  __f_NoCaption=kwargs["__f_NoCaption"], __leave_NotFound=kwargs["__leave_NotFound"])
 
 
 
