@@ -7,6 +7,7 @@ from os.path import exists, join, dirname, basename
 from measureAcc.NomenCleaner.NomenCleaner import HATK_NomenCleaner
 from measureAcc.src.SieveCHPED import SieveCHPED
 from measureAcc.src.ALLELES2HPED import ALLELES2HPED
+from measureAcc.src.HPED_DRB1_1454to1401 import HPED_DRB1_1454to1401
 
 from src.CookHLAError import CookHLAInputPreparationError
 
@@ -83,7 +84,10 @@ class CookHLA_measureAcc(object):
             # print("alleles -> hped: {}".format(_f))
 
         if _f.endswith('.hped'):
+
             # (1) HLA_DRB1 1454 to 1401
+            _f = HPED_DRB1_1454to1401(_f, re.sub(r'hped$', '1454to1401.hped', _f))
+
 
             # (2) NomenCleaner
             t1_out = re.sub(r'hped$', 'imgt3320.4field', _f)
