@@ -583,9 +583,9 @@ if __name__ == "__main__":
 
     # Beagle5.1.
     parser.add_argument("--overlap", "-ol",
-                        help="\n3 Overlap values(cM) for Beagle 5.1 implementation.\n\n", nargs=3, default=(4,8,12), type=float)
+                        help="\n3 Overlap values(cM) for Beagle 5.1 implementation.\n\n", nargs=3, default=(0.5,1,1.5), type=float)
     parser.add_argument("--window", "-w",
-                        help="\nWindow value(cM) for Beagle 5.1 implementation.\n\n", default=40, type=float)
+                        help="\nWindow value(cM) for Beagle 5.1 implementation.\n\n", default=5, type=float)
     parser.add_argument("--effective-population-size", "-ne",
                         help="\nEffective population size value for Beagle 5.1 implementation.\n\n", default=1000000, type=int)
     parser.add_argument("--nthreads", "-nth",
