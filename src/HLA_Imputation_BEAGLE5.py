@@ -34,23 +34,27 @@ std_ERROR_MAIN_PROCESS_NAME = "\n[%s::ERROR]: " % (os.path.basename(__file__))
 std_WARNING_MAIN_PROCESS_NAME = "\n[%s::WARNING]: " % (os.path.basename(__file__))
 
 HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
-HLA_names_gen = ["A", "C", "B", "DRB1", "DQA1", "DQB1", "DPA1", "DPB1"]
-isClassI = {"A": True, "B": True, "C": True, "DPA1": False, "DPB1": False, "DQA1": False, "DQB1": False, "DRB1": False}
 
 
 __EXON__ = ['exon2', 'exon3', 'exon4']
 # __EXON__ = ['exon2']
 
-__overlap__ = [3000, 4000, 5000]
+## Beagle 4.1
+# __overlap__ = [3000, 4000, 5000]
 # __overlap__ = [3000]
 
 
 
-class HLA_Imputation(object):
+class HLA_Imputation_BEAGLE5(object):
 
-    def __init__(self, idx_process, MHC, _reference, _out, _hg, _nthreads, _AdaptiveGeneticMap, _Average_Erate, _LINKAGE2BEAGLE,
-                 _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4, _CSH, _answer=None, f_save_intermediates=False,
-                 _MultP=1, _given_prephased=None, f_prephasing=False, f_remove_raw_IMP_results=False, f_measureAcc_v2=False):
+    def __init__(self, idx_process, MHC, _reference, _out, _hg, __OVERLAP__, _window, _ne, _nthreads,
+                 _AdaptiveGeneticMap, _Average_Erate,
+                 _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5, _CSH,
+                 _answer=None, f_save_intermediates=False, _MultP=1, _given_prephased=None, f_prephasing=False,
+                 f_remove_raw_IMP_results=False, f_measureAcc_v2=False):
+
+        ## Beagle 5.1
+        __overlap__ = __OVERLAP__
 
         ### General
         self.idx_process = idx_process
@@ -82,7 +86,7 @@ class HLA_Imputation(object):
         self.BEAGLE2VCF = _BEAGLE2VCF
         self.VCF2BEAGLE = _VCF2BEAGLE
         self.PLINK = _PLINK
-        self.BEAGLE4 = _BEAGLE4
+        self.BEAGLE5 = _BEAGLE5
 
         # created in 'CONVERT_IN'
         # self.refined_REF_markers = None # used in 'CONVERT_OUT'
@@ -145,7 +149,8 @@ class HLA_Imputation(object):
 
                     self.dict_IMP_Result[_exonN][_overlap] = \
                         self.IMPUTE(MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf',
-                                    _overlap, _exonN, _nthreads, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing=f_prephasing)
+                                    _overlap, _exonN, _window, _ne, _nthreads,
+                                    self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing=f_prephasing)
 
             imputation_serial_end = time()
 
@@ -160,7 +165,7 @@ class HLA_Imputation(object):
 
             pool = mp.Pool(processes=_MultP if _MultP <= 9 else 9)
 
-            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, _nthreads, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing))
+            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, _window, _ne, _nthreads, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing))
                                   for _overlap in __overlap__}
                          for _exonN in __EXON__}
 
@@ -195,7 +200,8 @@ class HLA_Imputation(object):
 
         ### (3) CONVERT_OUT
 
-        self.HLA_IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, MHC + '.HLA_IMPUTATION_OUT', _CSH, f_prephasing=f_prephasing)
+        self.HLA_IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, MHC + '.HLA_IMPUTATION_OUT', __overlap__, _CSH,
+                                                   f_prephasing=f_prephasing)
         print(std_MAIN_PROCESS_NAME+'IMPUTATION_OUT:\n{}'.format(self.HLA_IMPUTATION_OUT))
 
 
@@ -460,7 +466,8 @@ class HLA_Imputation(object):
 
 
 
-    def IMPUTE(self, MHC, _out, _IMPUTATION_INPUT, _REF_PHASED_VCF, _overlap, _exonN, _nthreads, _aver_erate, _Refined_Genetic_Map, f_prephasing=False):
+    def IMPUTE(self, MHC, _out, _IMPUTATION_INPUT, _REF_PHASED_VCF, _overlap, _exonN, _window, _ne, _nthreads,
+               _aver_erate, _Refined_Genetic_Map, f_prephasing=False):
 
         if os.path.getsize(_IMPUTATION_INPUT) == 0:
             print(std_ERROR_MAIN_PROCESS_NAME + "Input file for imputation('{}') contains nothing. Please check it again.".format(_IMPUTATION_INPUT))
@@ -482,6 +489,10 @@ class HLA_Imputation(object):
 
             """
             ### MM + AGM
+            """
+
+            """
+            ## Beagle 4.1 ##
             
             # prephasing
             java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=${OVERLAP} err=$aver_erate map=$geneticMap.refined.map
@@ -489,6 +500,28 @@ class HLA_Imputation(object):
             # No-prephasing
             java -jar beagle4.jar gt=$MHC.QC.vcf                    ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true gprobs=true ne=10000 overlap=${OVERLAP} err=$aver_erate map=$geneticMap.refined.map
             
+
+
+            ## Beagle 5.1 ##
+            
+            # prephasing
+            Not yet.
+            
+            # No-prephasing
+            java -jar beagle4.jar \
+                    gt=$MHC.QC.vcf \
+                    ref=$REFERENCE.phased.vcf \
+                    out=$MHC.QC.double.imputation_out \
+                    impute=true \
+                    gp=true \
+                    ap=true \
+                    overlap=${OVERLAP} \
+                    err=$aver_erate \
+                    map=$geneticMap.refined.map \
+                    window=$window \
+                    ne=10000    # fixed \
+                    nthreads=$nthreads
+
             """
 
 
@@ -498,8 +531,20 @@ class HLA_Imputation(object):
 
 
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={} nthreads={}'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map, _nthreads)
+            command = '{} \
+                        gt={} \
+                        ref={} \
+                        out={} \
+                        impute=true \
+                        gp=true \
+                        overlap={} \
+                        err={} \
+                        map={} \
+                        window={} \
+                        ne=10000 \
+                        nthreads={}'.format(
+                self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate,
+                _Refined_Genetic_Map, _window, _nthreads)
             # print(command)
 
             try:
@@ -527,6 +572,10 @@ class HLA_Imputation(object):
 
             """
             ### MM
+            """
+
+            """
+            ## Beagle 4.1 ##
             
             # prephasing
             java -jar beagle4.jar gt=$MHC.QC.phasing_out_double.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true overlap=$OVERLAP gprobs=true
@@ -534,11 +583,39 @@ class HLA_Imputation(object):
             # No-prephasing
             java -jar beagle4.jar gt=$MHC.QC.vcf                    ref=$REFERENCE.phased.vcf out=$MHC.QC.double.imputation_out impute=true lowmem=true overlap=$OVERLAP gprobs=true
 
+
+
+            ## Begale 5.1 ##
+
+            # prephasing
+            Not yet
+            
+            # No-prephasing
+            java -jar beagle4.jar \
+                        gt=$MHC.QC.vcf \
+                        ref=$REFERENCE.phased.vcf \
+                        out=$MHC.QC.double.imputation_out \
+                        impute=true \
+                        overlap=$OVERLAP \
+                        gp=true \
+                        window=$window \
+                        ne=$ne \
+                        nthreads=$nthreads
+            
             """
 
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true overlap={} gprobs=true nthreads={}'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, _nthreads)
+            command = '{} \
+                        gt={} \
+                        ref={} \
+                        out={} \
+                        impute=true \
+                        overlap={} \
+                        gp=true \
+                        window={} \
+                        ne={} \
+                        nthreads={}'.format(
+                self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, _window, _ne, _nthreads)
             # print(command)
 
             try:
@@ -566,7 +643,7 @@ class HLA_Imputation(object):
 
 
 
-    def CONVERT_OUT(self, _raw_IMP_Result, _out, _CSH, f_prephasing=False):
+    def CONVERT_OUT(self, _raw_IMP_Result, _out, __overlap__, _CSH, f_prephasing=False):
 
 
         print("[{}] Converting out imputation result(s).".format(self.idx_process, _out))
@@ -594,7 +671,7 @@ class HLA_Imputation(object):
             with open(_out+'.alleles', 'w') as f_HLAtypeCall_merged:
                 for hla in HLA_names:
 
-                    HLAtypeCall_each = _raw_IMP_Result['exon2'][3000]+'.HLA_{}.alleles'.format(hla)
+                    HLAtypeCall_each = _raw_IMP_Result[__EXON__[0]][__overlap__[0]]+'.HLA_{}.alleles'.format(hla)
 
                     if exists(HLAtypeCall_each):
                         f_HLAtypeCall_each = open(HLAtypeCall_each, 'r')
@@ -619,7 +696,7 @@ class HLA_Imputation(object):
         print("[{}] Performing pre-phasing".format(self.idx_process))
         self.idx_process += 1
 
-        command = ' '.join([self.BEAGLE4, 'gt={} ref={} out={} impute=false > {}'.format(MHC_QC_VCF, REF_PHASED_VCF,
+        command = ' '.join([self.BEAGLE5, 'gt={} ref={} out={} impute=false > {}'.format(MHC_QC_VCF, REF_PHASED_VCF,
                                                                                          MHC + '.QC.phasing_out_not_double',
                                                                                          MHC + '.QC.phasing_out_not_double.vcf.log')])
         # print(command)

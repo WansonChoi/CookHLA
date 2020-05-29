@@ -29,11 +29,12 @@ HLA_names_gen = ["A", "C", "B", "DRB1", "DQA1", "DQB1", "DPA1", "DPB1"]
 
 
 
-class HLA_Imputation_GM(object):
+class HLA_Imputation_GM_BEAGLE5(object):
 
-    def __init__(self, idx_process, MHC, _reference, _out, _hg, _nthreads, _AdaptiveGeneticMap, _Average_Erate,
-                 _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4,
-                 _answer=None, f_save_intermediates=False, _HapMap_Map=None, f_measureAcc_v2=False):
+    def __init__(self, idx_process, MHC, _reference, _out, _hg, _window, _overlap, _ne, _nthreads,
+                 _AdaptiveGeneticMap, _Average_Erate,
+                 _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE5, _answer=None,
+                 f_save_intermediates=False, _HapMap_Map=None, f_measureAcc_v2=False):
 
 
         ### Class variables
@@ -63,7 +64,7 @@ class HLA_Imputation_GM(object):
         self.BEAGLE2VCF = _BEAGLE2VCF
         self.VCF2BEAGLE = _VCF2BEAGLE
         self.PLINK = _PLINK
-        self.BEAGLE4 = _BEAGLE4
+        self.BEAGLE5 = _BEAGLE5
 
         # Adaptive Genetic Map
         self.__AGM__ = _AdaptiveGeneticMap
@@ -102,9 +103,10 @@ class HLA_Imputation_GM(object):
         ### (2) IMPUTE
 
         if _HapMap_Map:
-            self.raw_IMP_Reuslt = self.IMPUTE_HapMap_Map(_out, MHC_QC_VCF, REF_PHASED_VCF, _nthreads)
+            self.raw_IMP_Reuslt = self.IMPUTE_HapMap_Map(_out, MHC_QC_VCF, REF_PHASED_VCF, _window, _overlap, _ne, _nthreads)
         else:
-            self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, self.__AVER__, self.refined_Genetic_Map, _nthreads)
+            self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, self.__AVER__, self.refined_Genetic_Map,
+                                              _window, _overlap, _ne, _nthreads)
 
         # [Temporary Hard coding]
         # self.raw_IMP_Reuslt = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF.QC.imputation_out.vcf'
@@ -154,6 +156,7 @@ class HLA_Imputation_GM(object):
                     measureAcc_time = (measureAcc_end - measureAcc_start)/60
                     print("\nAccuracy : {}".format(self.accuracy))
                     print("measureAccuracy time: {}(min)\n".format(measureAcc_time))
+
 
 
         ###### < Get Accuracy > ######
@@ -344,7 +347,7 @@ class HLA_Imputation_GM(object):
 
 
 
-    def IMPUTE(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF, _aver_erate, _Refined_Genetic_Map, _nthreads):
+    def IMPUTE(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF, _aver_erate, _Refined_Genetic_Map, _window, _overlap, _ne, _nthreads):
 
 
         print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
@@ -359,17 +362,37 @@ class HLA_Imputation_GM(object):
 
             """
             ### AGM
+            """
+
+            """
+            ## Beagle 4.1 ##
             
             beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true ne=10000 map=$geneticMap.refined.map err=$aver_erate overlap=3000
+            
+            
+            
+            ## Beagle 5.1 ##
+
+            beagle \
+                gt=$MHC.QC.vcf \
+                ref=$REFERENCE.phased.vcf \
+                out=$MHC.QC.imputation_out \
+                impute=true \
+                gp=true \
+                map=$geneticMap.refined.map \
+                err=$aver_erate \
+                window=$window \
+                overlap=$overlap \
+                ne=10000    # fixed \
+                nthreads=$nthreads
                         
             """
 
             with open(_aver_erate, 'r') as f:
                 aver_erate = f.readline().rstrip('\n')
 
-            # overlap : 3000 (default)
-            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true ne=10000 map={} err={} overlap=3000 nthreads={}'.format(
-                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate, _nthreads)
+            command = '{} gt={} ref={} out={} impute=true gp=true err={} map={} window={} overlap={} ne=10000 nthreads={}'.format(
+                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, aver_erate, _Refined_Genetic_Map, _window, _overlap, _nthreads)
             # print(command)
 
             try:
@@ -381,10 +404,11 @@ class HLA_Imputation_GM(object):
 
             except subprocess.CalledProcessError:
                 raise CookHLAImputationError(std_ERROR_MAIN_PROCESS_NAME + "AGM Imputation failed.\n")
-
-
+                # sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
+                # return -1
             else:
-                # print(std_MAIN_PROCESS_NAME+"Imputation done.".format(_exonN, _overlap))
+                # print(std_MAIN_PROCESS_NAME+"Imputation({} / overlap:{}) done.".format(_exonN, _overlap))
+                # os.system("rm {}".format(raw_HLA_IMPUTATION_OUT+'.err.log'))
                 f_log.close()
 
                 imputation_time = (imputation_end - imputation_start)/60
@@ -392,18 +416,46 @@ class HLA_Imputation_GM(object):
 
 
 
+
         else: ### Plain
 
             """
             ### Plain
-            
+            """
+
+            """
+            ## Beagle 4.1 ##
+
             beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true overlap=3000
+
+
+            
+            ## Beagle 5.1 ##
+            
+            beagle \
+                gt=$MHC.QC.vcf \
+                ref=$REFERENCE.phased.vcf \
+                out=$MHC.QC.imputation_out \
+                impute=true \
+                gp=true \
+                window=$window \
+                overlap=$overlap \
+                ne=$ne \
+                nthreads=$nthreads
             
             """
 
-            # overlap : 3000 (default)
-            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true overlap=3000 nthreads={}'.format(
-                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _nthreads)
+            command = '{} \
+                        gt={} \
+                        ref={} \
+                        out={} \
+                        impute=true \
+                        gp=true \
+                        window={} \
+                        overlap={} \
+                        ne={} \
+                        nthreads={}'.format(
+                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _window, _overlap, _ne, _nthreads)
             # print(command)
 
             try:
@@ -415,14 +467,15 @@ class HLA_Imputation_GM(object):
 
             except subprocess.CalledProcessError:
                 raise CookHLAImputationError(std_ERROR_MAIN_PROCESS_NAME + "Plain Imputation failed.\n")
-
-
+                # sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
+                # return -1
             else:
-                # print(std_MAIN_PROCESS_NAME+"Imputation done.".format(_exonN, _overlap))
-                f_log.close()
+                # print(std_MAIN_PROCESS_NAME+"Imputation({} / overlap:{}) done.".format(_exonN, _overlap))
+                # os.system("rm {}".format(raw_HLA_IMPUTATION_OUT+'.err.log'))
 
                 imputation_time = (imputation_end - imputation_start)/60
                 sys.stdout.write("Plain Imputation time: {}(min)\n".format(imputation_time))
+
 
 
 
@@ -434,7 +487,7 @@ class HLA_Imputation_GM(object):
 
 
 
-    def IMPUTE_HapMap_Map(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF, _nthreads):
+    def IMPUTE_HapMap_Map(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF, _window, _overlap, _ne, _nthreads):
 
         # Imputation function for only HapMap_Map.txt
 
@@ -446,13 +499,45 @@ class HLA_Imputation_GM(object):
 
         """
         ### AGM - HapMap_map.txt
+        """
 
+        """
+        ## Beagle 4.1 ##
         beagle gt=$MHC.QC.vcf ref=$REFERENCE.phased.vcf out=$MHC.QC.imputation_out impute=true gprobs=true lowmem=true map=HapMap_Map.txt overlap=3000
+
+
+
+        ## Beagle 5.1 ##
+        beagle \
+            gt=$MHC.QC.vcf \
+            ref=$REFERENCE.phased.vcf \
+            out=$MHC.QC.imputation_out \
+            impute=true \
+            gp=true \
+            map=HapMap_Map.txt \
+            window=$window \
+            overlap=$overlap \
+            ne=$ne \
+            nthreads=$nthreads
 
         """
 
-        command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} overlap=3000 nthreads={} > {}.log'.format(
-            self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map, OUT, _nthreads)
+        # command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} overlap=3000 > {}.log'.format(
+        #     self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map, OUT)
+
+
+        command = '{} \
+                    gt={} \
+                    ref={} \
+                    out={} \
+                    impute=true \
+                    gp=true \
+                    map={} \
+                    window={} \
+                    overlap={} \
+                    ne={} \
+                    nthreads={}'.format(
+            self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map, _window, _overlap, _ne, _nthreads)
         # print(command)
 
         try:
@@ -473,7 +558,6 @@ class HLA_Imputation_GM(object):
 
             imputation_time = (imputation_end - imputation_start) / 60
             sys.stdout.write("HapMapMap Imputation time: {}(min)\n".format(imputation_time))
-
 
         RUN_Bash('gzip -d -f {}.vcf.gz'.format(OUT))
 
