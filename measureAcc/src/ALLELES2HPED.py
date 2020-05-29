@@ -1,5 +1,7 @@
+#-*- coding: utf-8 -*-
 import os, sys, re
 import pandas as pd
+
 
 HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 HLA_names2 = ["B", "A", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
@@ -113,11 +115,11 @@ def ALLELES2HPED(_alleles, _out=None, _f_HLA_DRB1_1454to1401=False):
 
 
 
+
 def HLA_DRB1_1454to1401(_hped_right, _alleles):
+    f_1454 = (_hped_right.iloc[:, [14, 15]] == '1454').apply(lambda x: x.any(), axis=1)
 
-    f_1451 = (_hped_right.iloc[:, [14, 15]] == '1454').apply(lambda x : x.any(), axis=1)
-
-    if f_1451.any():
+    if f_1454.any():
         print("HLA_DRB1*1454 will be considered as 1401. ('{}')".format(_alleles))
 
         df_HLA_DRB1 = _hped_right.iloc[:, [14, 15]].replace('1454', '1401')
@@ -125,7 +127,9 @@ def HLA_DRB1_1454to1401(_hped_right, _alleles):
 
     else:
         return _hped_right
-    
+
+
+
     
 if __name__ == '__main__':
     
