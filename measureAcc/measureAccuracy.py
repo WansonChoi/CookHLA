@@ -10,6 +10,7 @@ from measureAcc.src.ALLELES2HPED import ALLELES2HPED
 from measureAcc.src.HPED_DRB1_1454to1401 import HPED_DRB1_1454to1401
 
 from src.CookHLAError import CookHLAInputPreparationError
+from src.BGL2Alleles import BGL2Alleles
 
 HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 Meta_Info = ['FID', 'IID', 'PID', 'MID', 'Sex', 'Phe']
@@ -54,7 +55,8 @@ class CookHLA_measureAcc(object):
         if not exists(_imputed):
             raise CookHLAInputPreparationError("Given imputed file can't be found.('{}')".format(_imputed))
 
-        if not (_imputed.endswith('.alleles') or _imputed.endswith('.hped') or _imputed.endswith('.Marked.chped')):
+        if not (_imputed.endswith('.alleles') or _imputed.endswith('.hped') or _imputed.endswith('.Marked.chped')
+                or _imputed.endswith('.bgl.phased')):
             # No *.chped alone
             raise CookHLAInputPreparationError("Given imputed file must have file extension "
                                                "either '*.alleles', '*.hped' or '*.Marked.chped'.")
@@ -76,6 +78,12 @@ class CookHLA_measureAcc(object):
 
 
     def ConvertToMarkedCHPED(self, _f, _out_dir):
+
+
+        if _f.endswith('.bgl.phased'):
+
+            # In case of SNP2HLA output.
+            _f = BGL2Alleles(_f, join(_out_dir, re.sub(r'bgl.phased$', 'alleles', basename(_f))) , 'all')
 
         if _f.endswith('.alleles'):
             # ALLELES2HPED
