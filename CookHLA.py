@@ -561,7 +561,6 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
         ##### < Beagle 5.1 > #####
 
-        pass
 
         if __use_Multiple_Markers:
 
