@@ -632,7 +632,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
             os.system(' '.join(['rm', _out + '.bgl.log']))
             os.system(' '.join(['rm -rf', JAVATMP]))
 
-            if f_save_IMPUTATION_INPUT:
+            if not f_save_IMPUTATION_INPUT:
                 # 'IMPUTATION_INPUT' (introduced in 2020.07.07)
                 os.system(' '.join(['rm', MHC + '.QC.bed']))
                 os.system(' '.join(['rm', MHC + '.QC.bim']))
