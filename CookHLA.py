@@ -29,7 +29,8 @@ TOLERATED_DIFF = 0.15
 def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Average_Erate=None, _java_memory='2g',
             _MultP=1, _answer=None, __save_intermediates=False, __use_Multiple_Markers=True, _p_src="./src",
             _p_dependency="./dependency", _given_prephased=None, f_prephasing=False, _HapMap_Map=None,
-            __overlap__=(0.5, 1, 1.5), _window=5, _ne=10000, _nthreads=1, f_measureAcc_v2=False, f_BEAGLE5=False):
+            __overlap__=(0.5, 1, 1.5), _window=5, _ne=10000, _nthreads=1, f_measureAcc_v2=False, f_BEAGLE5=False,
+            f_save_IMPUTATION_INPUT=False):
 
 
     ### Argument exception
@@ -625,17 +626,18 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         if not __save_intermediates:
             os.system(' '.join(['rm', MHC + '.QC.nopheno.ped']))
             os.system(' '.join(['rm', MHC + '.QC.dat']))
-            os.system(' '.join(['rm', MHC + '.QC.bed']))
-            os.system(' '.join(['rm', MHC + '.QC.bim']))
-            os.system(' '.join(['rm', MHC + '.QC.fam']))
-            os.system(' '.join(['rm', MHC + '.QC.vcf']))
             os.system(' '.join(['rm', MHC + '.QC.GCchange.bgl']))
             os.system(' '.join(['rm', MHC + '.QC.GCchange.markers']))
             os.system(' '.join(['rm', MHC + '.QC.log']))
             os.system(' '.join(['rm', _out + '.bgl.log']))
             os.system(' '.join(['rm -rf', JAVATMP]))
 
-
+            if f_save_IMPUTATION_INPUT:
+                # 'IMPUTATION_INPUT' (introduced in 2020.07.07)
+                os.system(' '.join(['rm', MHC + '.QC.bed']))
+                os.system(' '.join(['rm', MHC + '.QC.bim']))
+                os.system(' '.join(['rm', MHC + '.QC.fam']))
+                os.system(' '.join(['rm', MHC + '.QC.vcf']))
 
         print("DONE!\n")
 
@@ -688,6 +690,8 @@ if __name__ == "__main__":
 
     parser.add_argument("--measureAcc_v2", "-macc_v2", help="\nCalculate accuracy with previous version module.\n\n", action='store_true')
 
+    parser.add_argument("--save-IMPUTATION_INPUT", "-sII", help="\nSave input files for imputation.\n\n", action='store_true')
+
 
 
     # Beagle Both
@@ -736,7 +740,7 @@ if __name__ == "__main__":
     CookHLA(args.input, args.out, args.reference, "18", args.genetic_map, args.average_erate, _java_memory=args.java_memory,
             _MultP=args.multiprocess, _answer=args.answer, __use_Multiple_Markers=True, f_prephasing=args.prephasing,
             __overlap__=args.overlap, _window=args.window, _ne=args.effective_population_size, _nthreads=args.nthreads,
-            f_measureAcc_v2=args.measureAcc_v2, f_BEAGLE5=args.beagle5)
+            f_measureAcc_v2=args.measureAcc_v2, f_BEAGLE5=args.beagle5, f_save_IMPUTATION_INPUT=args.save_IMPUTATION_INPUT)
 
     CookHLA_end = time()
 
