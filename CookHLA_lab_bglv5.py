@@ -35,6 +35,7 @@ def CookHLA_lab_bglv5(_args, _control_flags=(1,1)):
     HapMap_Map = _args.hapmap_map
 
     JAVA_MEM = _args.java_memory
+    N_threads = args.nthreads
 
 
     # Output directory processing
@@ -124,7 +125,8 @@ def CookHLA_lab_bglv5(_args, _control_flags=(1,1)):
                         CookHLA(TARGET[i], OUT_4_Vanilla_HapMap_Map, REFRENCE[j],
                                 __use_Multiple_Markers=False, _MultP=_args.multiprocess,
                                 _HapMap_Map=HapMap_Map,
-                                _answer=ANSWER[i], _java_memory=JAVA_MEM, f_BEAGLE5=True)
+                                _answer=ANSWER[i], _java_memory=JAVA_MEM, f_BEAGLE5=True,
+                                _nthreads=N_threads)
 
                     time_end_1_Vanilla_HapMapMap = time()
                     print("Implementation time of 1_Vanilla_HapMapMap : {}(min)".format(
@@ -147,7 +149,8 @@ def CookHLA_lab_bglv5(_args, _control_flags=(1,1)):
                         CookHLA(TARGET[i], OUT_2_MM_AGM, REFRENCE[j],
                                 __use_Multiple_Markers=True, _MultP=_args.multiprocess,
                                 _AdaptiveGeneticMap=GeneticMap[j], _Average_Erate=AverageErate[j],
-                                _answer=ANSWER[i], _java_memory=JAVA_MEM, f_BEAGLE5=True)
+                                _answer=ANSWER[i], _java_memory=JAVA_MEM, f_BEAGLE5=True,
+                                _nthreads=N_threads)
 
                     time_end_2_MM_AGM = time()
 
@@ -291,6 +294,8 @@ if __name__ == "__main__":
     parser.add_argument("--multiprocess", "-mp", help="\nSetting parallel multiprocessing.\n\n", type=int, choices=[2,3,4,5,6,7,8,9], nargs='?', default=1, const=3)
 
     parser.add_argument("--java-memory", "-mem", help="\nMemory requried for beagle(ex. 12g).\n\n", default="2g")
+    parser.add_argument("--nthreads", "-nth",
+                        help="\nThe number of threads for each BEAGLE implementation (default: 1).\n\n", default=1, type=int)
 
     parser.add_argument("--hapmap-map", "-hm",
                         help="\n(For Testing Purpose) Hapmap Map(Adaptive Genetic Map).\n\n", required=True)
