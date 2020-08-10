@@ -599,7 +599,6 @@ class HLA_Imputation_BEAGLE5(object):
                         overlap=$OVERLAP \
                         gp=true \
                         window=$window \
-                        ne=$ne \
                         nthreads=$nthreads
             
             """
@@ -613,9 +612,8 @@ class HLA_Imputation_BEAGLE5(object):
                         overlap={} \
                         gp=true \
                         window={} \
-                        ne={} \
                         nthreads={}'.format(
-                self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, _window, _ne, _nthreads)
+                self.BEAGLE5, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, _window, _nthreads)
             # print(command)
 
             try:

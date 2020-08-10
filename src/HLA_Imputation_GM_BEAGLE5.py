@@ -381,8 +381,6 @@ class HLA_Imputation_GM_BEAGLE5(object):
                 gp=true \
                 map=$geneticMap.refined.map \
                 err=$aver_erate \
-                window=$window \
-                overlap=$overlap \
                 ne=10000    # fixed \
                 nthreads=$nthreads
                         
@@ -391,8 +389,8 @@ class HLA_Imputation_GM_BEAGLE5(object):
             with open(_aver_erate, 'r') as f:
                 aver_erate = f.readline().rstrip('\n')
 
-            command = '{} gt={} ref={} out={} impute=true gp=true err={} map={} window={} overlap={} ne=10000 nthreads={}'.format(
-                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, aver_erate, _Refined_Genetic_Map, _window, _overlap, _nthreads)
+            command = '{} gt={} ref={} out={} impute=true gp=true err={} map={} ne=10000 nthreads={}'.format(
+                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, aver_erate, _Refined_Genetic_Map, _nthreads)
             # print(command)
 
             try:
@@ -438,9 +436,6 @@ class HLA_Imputation_GM_BEAGLE5(object):
                 out=$MHC.QC.imputation_out \
                 impute=true \
                 gp=true \
-                window=$window \
-                overlap=$overlap \
-                ne=$ne \
                 nthreads=$nthreads
             
             """
@@ -451,11 +446,8 @@ class HLA_Imputation_GM_BEAGLE5(object):
                         out={} \
                         impute=true \
                         gp=true \
-                        window={} \
-                        overlap={} \
-                        ne={} \
                         nthreads={}'.format(
-                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _window, _overlap, _ne, _nthreads)
+                self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _nthreads)
             # print(command)
 
             try:
@@ -515,9 +507,6 @@ class HLA_Imputation_GM_BEAGLE5(object):
             impute=true \
             gp=true \
             map=HapMap_Map.txt \
-            window=$window \
-            overlap=$overlap \
-            ne=$ne \
             nthreads=$nthreads
 
         """
@@ -533,11 +522,8 @@ class HLA_Imputation_GM_BEAGLE5(object):
                     impute=true \
                     gp=true \
                     map={} \
-                    window={} \
-                    overlap={} \
-                    ne={} \
                     nthreads={}'.format(
-            self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map, _window, _overlap, _ne, _nthreads)
+            self.BEAGLE5, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map, _nthreads)
         # print(command)
 
         try:
