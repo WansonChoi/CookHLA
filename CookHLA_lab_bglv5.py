@@ -325,7 +325,7 @@ if __name__ == "__main__":
                         help="\n(For Testing Purpose) Hapmap Map(Adaptive Genetic Map).\n\n", required=True)
 
     parser.add_argument("--control-flags", "-cf",
-                        help="\nBoolean sequence to nominate which imputations are to be done.\n\n", nargs=2, default=(1,1), type=int)
+                        help="\nBoolean sequence to nominate which imputations are to be done.\n\n", nargs=2, default=(1,1,1), type=int)
 
 
 
