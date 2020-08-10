@@ -20,7 +20,7 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 
 
 
-def CookHLA_lab_bglv5(_args, _control_flags=(1,1)):
+def CookHLA_lab_bglv5(_args, _control_flags=(1,1,1)):
 
     # Arguments assignment.
 
@@ -47,17 +47,18 @@ def CookHLA_lab_bglv5(_args, _control_flags=(1,1)):
     ### Exception handlings
 
     # Check Control Flags
-    if len(_control_flags) != 2:
+    if len(_control_flags) != 3:
         print(std_ERROR_MAIN_PROCESS_NAME + "Wrong '_control_flags' value. Please check it again.")
         sys.exit()
 
-    if _control_flags == (1,1): # default value
+    if _control_flags == (1,1,1): # default value
 
-        F_1_Vanilla_HapMapMap = 1
-        F_2_MM_AGM = 1
+        F_1_Vanilla = 1
+        F_2_Vanilla_HapMapMap = 1
+        F_3_MM_AGM = 1
 
     else:
-        [F_1_Vanilla_HapMapMap, F_2_MM_AGM] = _control_flags
+        [F_1_Vanilla, F_2_Vanilla_HapMapMap, F_3_MM_AGM] = _control_flags
 
 
     # Check Input number
@@ -80,7 +81,7 @@ def CookHLA_lab_bglv5(_args, _control_flags=(1,1)):
     # __accuracies__ = {1: None,
     #                   2: None}
 
-    __accuracies__ = {i: {j : {1:None, 2:None} for j in range(len(REFRENCE))} for i in range(len(TARGET))}
+    __accuracies__ = {i: {j : [None, None, None] for j in range(len(REFRENCE))} for i in range(len(TARGET))}
     print(__accuracies__)
 
 
@@ -111,55 +112,78 @@ def CookHLA_lab_bglv5(_args, _control_flags=(1,1)):
                       "{}: {}".format(Nth_label_TAR, TARGET[i],
                                       Nth_label_REF, REFRENCE[j]))
 
-                if F_1_Vanilla_HapMapMap:
+                if F_1_Vanilla:
 
-                    ###### _1_Vanilla_HapMap_Map ######
-                    print("\n\n<Imputation : _1_Vanilla_HapMap_Map>")
+                    ###### _1_Vanilla ######
+                    print("\n\n<Imputation : _1_Vanilla>")
 
-                    OUT_4_Vanilla_HapMap_Map = join(OUTPUT_dir, Nth_label_TAR+Nth_label_REF,
-                                                '_1_Vanilla_HapMap_Map', OUTPUT_prefix + '.Vanilla_HapMap_Map')
+                    OUT_1_Vanilla = join(OUTPUT_dir, Nth_label_TAR+Nth_label_REF,
+                                         '_1_Vanilla', OUTPUT_prefix + '.Vanilla')
 
-                    time_start_1_Vanilla_HapMapMap = time()
+                    time_start_1_Vanilla = time()
 
                     [t_HLA_Imptation_out, t_accuracy] = \
-                        CookHLA(TARGET[i], OUT_4_Vanilla_HapMap_Map, REFRENCE[j],
+                        CookHLA(TARGET[i], OUT_1_Vanilla, REFRENCE[j],
+                                __use_Multiple_Markers=False, _MultP=_args.multiprocess,
+                                _answer=ANSWER[i], _java_memory=JAVA_MEM, f_BEAGLE5=True,
+                                _nthreads=N_threads)
+
+                    time_end_1_Vanilla = time()
+                    print("Implementation time of 1_Vanilla : {}(min)".format(
+                        (time_end_1_Vanilla - time_start_1_Vanilla) / 60))
+
+                    __accuracies__[i][j][0] = t_accuracy
+
+
+                if F_2_Vanilla_HapMapMap:
+
+                    ###### _2_Vanilla_HapMap_Map ######
+                    print("\n\n<Imputation : _2_Vanilla_HapMap_Map>")
+
+                    OUT_2_Vanilla_HapMap_Map = join(OUTPUT_dir, Nth_label_TAR+Nth_label_REF,
+                                                '_2_Vanilla_HapMap_Map', OUTPUT_prefix + '.Vanilla_HapMap_Map')
+
+                    time_start_2_Vanilla_HapMapMap = time()
+
+                    [t_HLA_Imptation_out, t_accuracy] = \
+                        CookHLA(TARGET[i], OUT_2_Vanilla_HapMap_Map, REFRENCE[j],
                                 __use_Multiple_Markers=False, _MultP=_args.multiprocess,
                                 _HapMap_Map=HapMap_Map,
                                 _answer=ANSWER[i], _java_memory=JAVA_MEM, f_BEAGLE5=True,
                                 _nthreads=N_threads)
 
-                    time_end_1_Vanilla_HapMapMap = time()
-                    print("Implementation time of 1_Vanilla_HapMapMap : {}(min)".format(
-                        (time_end_1_Vanilla_HapMapMap - time_start_1_Vanilla_HapMapMap) / 60))
+                    time_end_2_Vanilla_HapMapMap = time()
+                    print("Implementation time of 2_Vanilla_HapMapMap : {}(min)".format(
+                        (time_end_2_Vanilla_HapMapMap - time_start_2_Vanilla_HapMapMap) / 60))
 
                     __accuracies__[i][j][1] = t_accuracy
 
 
-                if F_2_MM_AGM:
+                if F_3_MM_AGM:
 
-                    ###### _2_MM_AGM ######
-                    print("\n\n<Imputation : _2_MM+AGM (full CookHLA)>")
+                    ###### _3_MM_AGM ######
+                    print("\n\n<Imputation : _3_MM+AGM (full CookHLA)>")
 
-                    OUT_2_MM_AGM = join(OUTPUT_dir, Nth_label_TAR+Nth_label_REF,
-                                        '_2_MM_AGM', OUTPUT_prefix + '.MM+AGM')
+                    OUT_3_MM_AGM = join(OUTPUT_dir, Nth_label_TAR+Nth_label_REF,
+                                        '_3_MM_AGM', OUTPUT_prefix + '.MM+AGM')
 
-                    time_start_2_MM_AGM = time()
+                    time_start_3_MM_AGM = time()
 
                     [t_HLA_Imptation_out, t_accuracy] = \
-                        CookHLA(TARGET[i], OUT_2_MM_AGM, REFRENCE[j],
+                        CookHLA(TARGET[i], OUT_3_MM_AGM, REFRENCE[j],
                                 __use_Multiple_Markers=True, _MultP=_args.multiprocess,
                                 _AdaptiveGeneticMap=GeneticMap[j], _Average_Erate=AverageErate[j],
                                 _answer=ANSWER[i], _java_memory=JAVA_MEM, f_BEAGLE5=True,
                                 _nthreads=N_threads)
 
-                    time_end_2_MM_AGM = time()
+                    time_end_3_MM_AGM = time()
 
-                    print("Implementation time of _2_MM_AGM : {}(min)".format((time_end_2_MM_AGM - time_start_2_MM_AGM) / 60))
+                    print("Implementation time of _3_MM_AGM : {}(min)".format((time_end_3_MM_AGM - time_start_3_MM_AGM) / 60))
 
                     __accuracies__[i][j][2] = t_accuracy
 
                 CollectTable(join(OUTPUT_dir, Nth_label_TAR+Nth_label_REF+".ACCURACY_TABLE.txt"),
-                             __accuracies__[i][j][1], __accuracies__[i][j][2])
+                             __accuracies__[i][j])
 
             else:
                 print(std_WARNING_MAIN_PROCESS_NAME +
@@ -176,16 +200,16 @@ def CookHLA_lab_bglv5(_args, _control_flags=(1,1)):
 
 
 
-def CollectTable(_out, *acc):
+def CollectTable(_out, acc):
 
-    l_label = ['_1_Vanilla_HapMapMap', '_2_MM+AGM'] # Hard-coded.
+    # l_label = ['_1_Vanilla', '_2_Vanilla_HapMapMap', '_3_MM+AGM'] # Hard-coded.
 
     df_acc = pd.concat([pd.read_csv(item, sep='\s+', header=None, index_col=0, names=['HLA', 'acc'])
                         for item in acc], axis=1) \
                 .applymap(lambda x: None if x <= 0 else x) \
                 .dropna()
 
-    df_acc.columns = l_label
+    # df_acc.columns = l_label
 
     sr_mean = df_acc.mean(axis=0)
     df_acc2 = df_acc.append(sr_mean, ignore_index=True)
