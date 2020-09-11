@@ -2,25 +2,25 @@
 
 ## (1) Introduction
 
-CookHLA imputes HLA types of target patient genotype data based on a reference panel information. Currently, CookHLA **ONLY SUPPORTS hg18** for genotype data. Also, **Family ID and Individual ID, 'FID' and 'IID' in PLINK data, have to be same**.
+CookHLA imputes HLA types of target patient genotype data based on a reference panel information.
+
+[Improvement]
+
+1. Multiple Marker Strategy
+2. Adative Genetic Map
 
 <br>
 <br>
 
-## (2) Installation
+## (2) Requirements and Dependencies
 
-First, Prepare OS X(Mac) or Linux operating system. CookHLA currently doesn't support Windows. It was checked that CookHLA can work in the next specific operating systems. (Linux environment, especially CentOS, is most recommended.)
+Prepare OS X(Mac) or Linux operating system. CookHLA currently doesn't support Windows. 
 
-- Linux : 
-    <!-- - Ubuntu 19.04(Disco Dingo)
-    - Ubuntu 18.04.3 LTS(Bionic Beaver) -->
-    - CentOS_7
-    - Linux Mint 19.2 Cinnamon(Tina)
-- OS X : 
-    - Catalina(**with Bash NOT Zsh**)
-    - Mojave
+> CookHLA were tested in the next specific operating systems. Linux: Ubuntu 19.04(Disco Dingo), Ubuntu 18.04.3 LTS(Bionic Beaver), CentOS_7, Linux Mint 19.2 Cinnamon(Tina). OS X : Catalina, Mojave
 
-    In case of using Catalina OS X, **Make sure your default shell is 'Bash($)' not 'Zsh(%)'**. To change the default shell to Bash, Please reference this blog(https://www.howtogeek.com/444596/how-to-change-the-default-shell-to-bash-in-macos-catalina/).
+<!-- > CentOS 7 or Ubuntu is most recommended in case of using Linux. -->
+
+> In case of using Catalina OS X, **Using default shell as 'Bash($)' not 'Zsh(%)'** is recommended. To change the default shell to Bash, Please reference this blog(https://www.howtogeek.com/444596/how-to-change-the-default-shell-to-bash-in-macos-catalina/).
 
 <br>
 
@@ -32,35 +32,39 @@ $ cd CookHLA
 ```
 <br>
 
-We strongly recommend using the latest version of 'Anaconda(or Miniconda)' to set up CookHLA.
 
+The following requirements must be installed in your system.
 
-1. install Anaconda or Miniconda.
+- python>=3.6.x
+- pandas>=0.25.3
+- perl>=5.26.2
+- R>=3.6.x
+- Java
 
-    - Anaconda : (https://www.anaconda.com/)
-    - Miniconda : (https://docs.conda.io/en/latest/miniconda.html)
 
 <br>
 
-2. Create a new independent Python virtual environment with the given YML file.
 
-	By using 'CookHLA_LINUX.yml' or 'CookHLA_OSX.yml' file in the project folder **depending on your operating system**, Create a new Python virtual environment.
-    
-	```
-	$ conda env create -f CookHLA_OSX.yml          ## OS X(Mac)
-	$ conda env create -f CookHLA_LINUX.yml        ## Linux
-	```
-	
-	The above command will generate a new Python virtual environment named 'CookHLA', which contains dependent Python packages, R and R libraries, independent to your original Python system. For more detailed explanation about Anaconda's managing Python virtual environment, Please check this reference(https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#create-env-file-manually).
-
-	If the new virtual environment has been succuessfully installed, then activate it.
-
-	```
-	$ conda activate CookHLA
-	```
+Optionally, If Python 'Anaconda(https://www.anaconda.com/)' is installed in your system, you can create a new independent Python virtual environment with the provided YML file.
 
 
-    CookHLA will be implemented in this virtual environment. 
+By using 'CookHLA_LINUX.yml' or 'CookHLA_OSX.yml' file in the project folder **depending on your operating system**, Create a new Python virtual environment.
+
+```
+$ conda env create -f CookHLA_OSX.yml          ## OS X(Mac)
+$ conda env create -f CookHLA_LINUX.yml        ## Linux
+```
+
+The above command will generate a new Python virtual environment named 'CookHLA', which contains dependent Python packages, R and R libraries, independent to your original Python system. For more detailed explanation about Anaconda's managing Python virtual environment, Please check this reference(https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#create-env-file-manually).
+
+If the new virtual environment has been succuessfully created, then activate it.
+
+```
+$ conda activate CookHLA
+```
+
+
+CookHLA can be implemented in this virtual environment. 
 
 
 <br>
@@ -75,7 +79,18 @@ We strongly recommend using the latest version of 'Anaconda(or Miniconda)' to se
 <br>
 
 
-## (3) Usage example
+
+## () Implementational Heads-up
+
+- Currently, CookHLA **ONLY SUPPORTS hg18** for genotype data.
+<!-- - **Family ID and Individual ID, 'FID' and 'IID' in PLINK data, have to be same**. -->
+
+
+<br>
+<br>
+
+
+## () Usage example
 
 ```
 $ python CookHLA.py \
@@ -88,3 +103,25 @@ $ python CookHLA.py \
     # -mp 2   # The number of available cores for Multiprocessing.
 
 ```
+
+<br>
+<br>
+
+
+## () How to generate a Reference panel
+
+
+
+<br>
+<br>
+
+## () How to generate a Adaptive Genetic Map
+
+
+
+<br>
+<br>
+
+
+
+## () Available Reference panels
