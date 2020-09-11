@@ -2,12 +2,15 @@
 
 ## (1) Introduction
 
-CookHLA imputes HLA types of target patient genotype data based on a reference panel information.
+`CookHLA` is an imputation software that can infer HLA types(alleles) of samples of given target population.
 
-[Improvement]
+`Human leukocyte antigen (HLA)` genes in the major histocompatibility complex (MHC) region influence many immune-related disease phenotypes. Discovering which HLA alleles or amino acids drive phenotypes often requires fine-mapping analysis in tens of thousands of samples, of which HLA typing can be prohibitively costly. Fortunately, the recent development of imputation methods enabled the prediction of HLA alleles using intergenic SNP data, allowing many studies to fine-map HLA for immune phenotypes. Nonetheless, existing imputation methods still have limitations in accuracy.
 
-1. Local embedding
-2. Adative Genetic Map
+**CookHLA** substantially improved imputation accuracy over previous methods, including the predecessor SNP2HLA by implementing several changes. First, to increase accuracy and efficiency, we employed the recently released hidden Markov model (Beagle v4 and v5). Second, to further improve accuracy, we developed a procedure that can account for local variability in the exons of HLA genes.  Highly polymorphic exons (exon 2/3/4 in Class I and 2/3 in Class II) are critical regions whose sequences can determine most of the 4-digit alleles. In our method, we repeat imputation by putting the marker set locally in each of the highly polymorphic exons, and use consensus posterior probabilities from the repeated analyses for final predictions(Figure B). Third, to increase accuracy even further, we adaptively learns the genetic map of MHC from the data. This map information allows us to account for the data-specific LD structure within MHC, which improves the imputation accuracy compared to the use of publicly available genetic maps(Figure C).
+
+
+![README_Main_Pipeline_WorkFlow](img/Figure1.png)
+
 
 <br>
 <br>
@@ -92,9 +95,9 @@ CookHLA can be implemented in this virtual environment.
 
 
 
-## () Implementational Heads-up
+## (3) Implementational Heads-up
 
-- Currently, CookHLA **ONLY SUPPORTS hg18** for genotype data. Target and Reference panel data must be in hg18 coordinate.
+- Currently, CookHLA **ONLY SUPPORTS hg18**. Target and Reference panel data must be in hg18 coordinate.
 <!-- - **Family ID and Individual ID, 'FID' and 'IID' in PLINK data, have to be same**. -->
 - Again, After downloading Beagle4('beagle.27Jan18.7e1.jar') and Beagle5('beagle.18May20.d20.jar') software in the 'dependency/' folder, Don't forget to rename them as 'beagle4.jar' and 'beagle5.jar'.
 
@@ -103,7 +106,7 @@ CookHLA can be implemented in this virtual environment.
 <br>
 
 
-## () Usage example
+## (4) Usage example
 
 ```
 $ python CookHLA.py \
@@ -130,7 +133,7 @@ In the output, '\*.alleles' file contains the imputed HLA types of the target ge
 <br>
 
 
-## () How to generate a Reference panel
+## (5) How to generate a Reference panel
 
 CookHLA uses the exactly same reference panel of SNP2HLA. SNP2HLA is distributed with the additional software **MakeReference**, which can generate a reference panel for both SNP2HLA and CookHLA. The official webpage of SNP2HLA is "http://software.broadinstitute.org/mpg/snp2hla/" and the manual of **MakeReference** can be found here, "http://software.broadinstitute.org/mpg/snp2hla/makereference_manual.html".
 
@@ -138,7 +141,7 @@ CookHLA uses the exactly same reference panel of SNP2HLA. SNP2HLA is distributed
 <br>
 
 
-## () How to generate an Adaptive Genetic Map
+## (6) How to generate an Adaptive Genetic Map
 
 To generate an Adaptive genetic map, You have to use **'MakeGeneticMap' module** in the CookHLA project folder.
 
@@ -159,7 +162,7 @@ It is recomended that **the number of markers of target genotype data should be 
 
 
 
-## () Available Reference panels
+## (7) Available Reference panels
 
 Some researchers might not have a reference panel or HLA type data to generate one. In this case, they should use public reference panels listed below.
 
@@ -199,11 +202,11 @@ Some researchers might not have a reference panel or HLA type data to generate o
         - Webpage Link: https://www.internationalgenome.org/category/hla/
         - Citation: Abi-Rached L, Gouret P, Yeh JH, et al. Immune diversity sheds light on missing variation in worldwide genetic diversity panels. PLoS One. 2018;13(10):e0206512. Published 2018 Oct 26. doi:10.1371/journal.pone.0206512
 
-
+<br>
 
 The 5th 1000G related data are not a reference panel but SNP and HLA type data that can be used to generate a reference panel. For researchers who can't afford to perform their own pre-processing and text processing, We provide the example 1000G reference panels that were used in the CookHLA paper. You can find them in 'xxxx' folder.
 
-In that folder, there are 6 1000G reference panels where each of them represents a super population specified in 1000G project (https://www.internationalgenome.org/category/population/), i.e. AFR, AMR, EAS, EUR and SAS including ALL.
+In that folder, there are 6 1000G reference panels where each of them represents a super population specified in 1000G project (https://www.internationalgenome.org/category/population/), i.e. AFR, AMR, EAS, EUR and SAS (including ALL).
 
 1. 
 2. 
@@ -224,14 +227,14 @@ Researchers can use these reference panels to implement CookHLA.
 <br>
 
 
-## () Citation
+## (8) Citation
 
-S. Cook, W. Choi, H. Lim, Y. Luo, K. Kim, X. Jia, S. Raychaudhuri and B. Han, CookHLA: Accurate Imputation of Human Leukocyte Antigens. Under review.
+S. Cook, W. Choi, H. Lim, Y. Luo, K. Kim, X. Jia, S. Raychaudhuri and B. Han, CookHLA: Accurate Imputation of Human Leukocyte Antigens. **Under Review**.
 
 <br>
 <br>
 
-## () License
+## (9) License
 The CookHLA Software Code is freely available for non-commercial academic research use. If you would like to obtain a license to the Code for commercial use, please contact Wanson Choi (WC) at wansonchoi@snu.ac.kr and Buhm Han (BH) at buhm.han@snu.ac.kr. WE (Seungho Cook, WC, Hyunjoon Lim and BH) MAKE NO REPRESENTATIONS OR WARRANTIES WHATSOEVER, EITHER EXPRESS OR IMPLIED, WITH RESPECT TO THE CODE PROVIDED HERE UNDER. IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE WITH RESPECT TO CODE ARE EXPRESSLY DISCLAIMED. THE CODE IS FURNISHED "AS IS" AND "WITH ALL FAULTS" AND DOWNLOADING OR USING THE CODE IS UNDERTAKEN AT YOUR OWN RISK. TO THE FULLEST EXTENT ALLOWED BY APPLICABLE LAW, IN NO EVENT SHALL WE BE LIABLE, WHETHER IN CONTRACT, TORT, WARRANTY, OR UNDER ANY STATUTE OR ON ANY OTHER BASIS FOR SPECIAL, INCIDENTAL, INDIRECT, PUNITIVE, MULTIPLE OR CONSEQUENTIAL DAMAGES SUSTAINED BY YOU OR ANY OTHER PERSON OR ENTITY ON ACCOUNT OF USE OR POSSESSION OF THE CODE, WHETHER OR NOT FORESEEABLE AND WHETHER OR NOT WE HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES, INCLUDING WITHOUT LIMITATION DAMAGES ARISING FROM OR RELATED TO LOSS OF USE, LOSS OF DATA, DOWNTIME, OR FOR LOSS OF REVENUE, PROFITS, GOODWILL, BUSINESS OR OTHER FINANCIAL LOSS.
 
 
