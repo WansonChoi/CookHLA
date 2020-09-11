@@ -2,7 +2,7 @@
 
 ## (1) Introduction
 
-`CookHLA` is an imputation software that can infer HLA types(alleles) of samples of given target population.
+**CookHLA** is an imputation software that can infer HLA types(alleles) of samples of given target population.
 
 `Human leukocyte antigen (HLA)` genes in the major histocompatibility complex (MHC) region influence many immune-related disease phenotypes. Discovering which HLA alleles or amino acids drive phenotypes often requires fine-mapping analysis in tens of thousands of samples, of which HLA typing can be prohibitively costly. Fortunately, the recent development of imputation methods enabled the prediction of HLA alleles using intergenic SNP data, allowing many studies to fine-map HLA for immune phenotypes. Nonetheless, existing imputation methods still have limitations in accuracy.
 
@@ -19,7 +19,7 @@
 
 Prepare OS X(Mac) or Linux operating system. CookHLA currently doesn't support Windows. 
 
-> CookHLA were tested in the next specific operating systems. Linux: Ubuntu 19.04(Disco Dingo), Ubuntu 18.04.3 LTS(Bionic Beaver), CentOS_7, Linux Mint 19.2 Cinnamon(Tina). OS X : Catalina, Mojave
+> CookHLA was tested in the next specific operating systems. Linux : Ubuntu 19.04(Disco Dingo), Ubuntu 18.04.3 LTS(Bionic Beaver), CentOS_7, Linux Mint 19.2 Cinnamon(Tina). / OS X : Catalina, Mojave
 
 <!-- > CentOS 7 or Ubuntu is most recommended in case of using Linux. -->
 
