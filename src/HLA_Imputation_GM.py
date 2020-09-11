@@ -3,11 +3,18 @@
 import os, sys, re
 import subprocess
 from os.path import join
+from time import time
 
 from src.BGL2Alleles import BGL2Alleles
 from src.GC_tricked_bgl2ori_bgl import GCtricedBGL2OriginalBGL
 from src.RUN_Bash import RUN_Bash
 from src.measureAccuracy import measureAccuracy
+
+# Defined Error
+from src.CookHLAError import CookHLAImputationError, CookHLAHLATypeCallError
+
+# measureAcc_v3.5
+from measureAcc.measureAccuracy import CookHLA_measureAcc
 
 
 
@@ -24,9 +31,9 @@ HLA_names_gen = ["A", "C", "B", "DRB1", "DQA1", "DQB1", "DPA1", "DPB1"]
 
 class HLA_Imputation_GM(object):
 
-    def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
+    def __init__(self, idx_process, MHC, _reference, _out, _hg, _nthreads, _AdaptiveGeneticMap, _Average_Erate,
                  _LINKAGE2BEAGLE, _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4,
-                 _answer=None, f_save_intermediates=False, _HapMap_Map=None):
+                 _answer=None, f_save_intermediates=False, _HapMap_Map=None, f_measureAcc_v2=False):
 
 
         ### Class variables
@@ -95,9 +102,9 @@ class HLA_Imputation_GM(object):
         ### (2) IMPUTE
 
         if _HapMap_Map:
-            self.raw_IMP_Reuslt = self.IMPUTE_HapMap_Map(_out, MHC_QC_VCF, REF_PHASED_VCF)
+            self.raw_IMP_Reuslt = self.IMPUTE_HapMap_Map(_out, MHC_QC_VCF, REF_PHASED_VCF, _nthreads)
         else:
-            self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, self.__AVER__, self.refined_Genetic_Map)
+            self.raw_IMP_Reuslt = self.IMPUTE(_out, MHC_QC_VCF, REF_PHASED_VCF, self.__AVER__, self.refined_Genetic_Map, _nthreads)
 
         # [Temporary Hard coding]
         # self.raw_IMP_Reuslt = '/Users/wansun/Git_Projects/CookHLA/tests/_3_CookHLA/20190605_onlyAGM/_3_HM_CEU_T1DGC_REF.QC.imputation_out.vcf'
@@ -118,10 +125,35 @@ class HLA_Imputation_GM(object):
 
         ###### < Get Accuracy > ######
 
-        if _answer and self.HLA_IMPUTATION_OUT:
-            self.accuracy = measureAccuracy(_answer, self.HLA_IMPUTATION_OUT, 'all', self.HLA_IMPUTATION_OUT+'.accuracy', __only4digits=True)
-            # print("Accuracy result :\n{}".format(self.accuracy))
+        if bool(_answer):
 
+            print(std_MAIN_PROCESS_NAME + "Calculating accuracy of each HLA gene. (answer: '{}')".format(_answer))
+
+            if not os.path.exists(_answer):
+                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't exist. Please check '--answer/-an' argument again.\n"
+                                                    "Skipping calculating imputation accuracy.")
+            elif os.path.getsize(_answer) == 0:
+                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
+                                                    "Skipping calculating imputation accuracy.")
+            else:
+
+                if f_measureAcc_v2:
+                    # measureAcc_v2
+                    self.accuracy = measureAccuracy(_answer, self.HLA_IMPUTATION_OUT, 'all',
+                                                    outfile=self.HLA_IMPUTATION_OUT + '.accuracy', __only4digits=True)
+
+                else:
+                    # measureAcc_v3.5
+                    measureAcc_start = time()
+
+                    t = CookHLA_measureAcc(_answer, self.HLA_IMPUTATION_OUT, self.HLA_IMPUTATION_OUT)
+                    self.accuracy = t.accuracy
+
+                    measureAcc_end = time()
+
+                    measureAcc_time = (measureAcc_end - measureAcc_start)/60
+                    print("\nAccuracy : {}".format(self.accuracy))
+                    print("measureAccuracy time: {}(min)\n".format(measureAcc_time))
 
 
         ###### < Get Accuracy > ######
@@ -312,7 +344,7 @@ class HLA_Imputation_GM(object):
 
 
 
-    def IMPUTE(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF, _aver_erate, _Refined_Genetic_Map):
+    def IMPUTE(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF, _aver_erate, _Refined_Genetic_Map, _nthreads):
 
 
         print("[{}] Performing HLA imputation (see {}.MHC.QC.imputation_out.log for progress).".format(self.idx_process, _out))
@@ -336,18 +368,27 @@ class HLA_Imputation_GM(object):
                 aver_erate = f.readline().rstrip('\n')
 
             # overlap : 3000 (default)
-            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true ne=10000 map={} err={} overlap=3000'.format(
-                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate)
+            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true ne=10000 map={} err={} overlap=3000 nthreads={}'.format(
+                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _Refined_Genetic_Map, aver_erate, _nthreads)
             # print(command)
 
             try:
-                subprocess.run(command.split(' '), check=True, stdout=open(OUT+'.log', 'w'), stderr=open(OUT+'.err.log', 'w'))
+                f_log = open(OUT+'.log', 'w')
+
+                imputation_start = time()
+                subprocess.run(re.split('\s+', command), check=True, stdout=f_log, stderr=f_log)
+                imputation_end = time()
+
             except subprocess.CalledProcessError:
-                sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation failed.\n")
-                sys.exit()
+                raise CookHLAImputationError(std_ERROR_MAIN_PROCESS_NAME + "AGM Imputation failed.\n")
+
+
             else:
                 # print(std_MAIN_PROCESS_NAME+"Imputation done.".format(_exonN, _overlap))
-                os.system("rm {}".format(OUT+'.err.log'))
+                f_log.close()
+
+                imputation_time = (imputation_end - imputation_start)/60
+                sys.stdout.write("AGM Imputation time: {}(min)\n".format(imputation_time))
 
 
 
@@ -361,18 +402,27 @@ class HLA_Imputation_GM(object):
             """
 
             # overlap : 3000 (default)
-            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true overlap=3000'.format(
-                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT)
+            command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true overlap=3000 nthreads={}'.format(
+                self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, _nthreads)
             # print(command)
 
             try:
-                subprocess.run(command.split(' '), check=True, stdout=open(OUT+'.log', 'w'), stderr=open(OUT+'.err.log', 'w'))
+                f_log = open(OUT+'.log', 'w')
+
+                imputation_start = time()
+                subprocess.run(re.split('\s+', command), check=True, stdout=f_log, stderr=f_log)
+                imputation_end = time()
+
             except subprocess.CalledProcessError:
-                sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation failed.\n")
-                sys.exit()
+                raise CookHLAImputationError(std_ERROR_MAIN_PROCESS_NAME + "Plain Imputation failed.\n")
+
+
             else:
                 # print(std_MAIN_PROCESS_NAME+"Imputation done.".format(_exonN, _overlap))
-                os.system("rm {}".format(OUT + '.err.log'))
+                f_log.close()
+
+                imputation_time = (imputation_end - imputation_start)/60
+                sys.stdout.write("Plain Imputation time: {}(min)\n".format(imputation_time))
 
 
 
@@ -384,7 +434,7 @@ class HLA_Imputation_GM(object):
 
 
 
-    def IMPUTE_HapMap_Map(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF):
+    def IMPUTE_HapMap_Map(self, _out, _MHC_QC_VCF, _REF_PHASED_VCF, _nthreads):
 
         # Imputation function for only HapMap_Map.txt
 
@@ -401,17 +451,28 @@ class HLA_Imputation_GM(object):
 
         """
 
-        command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} overlap=3000 > {}.log'.format(
-            self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map, OUT)
+        command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} overlap=3000 nthreads={} > {}.log'.format(
+            self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map, OUT, _nthreads)
         # print(command)
-        if not os.system(command):
-            if not self.__save_intermediates:
-                os.system('rm {}'.format(OUT + '.log'))
-                # os.system('rm {}'.format(_MHC_QC_VCF))
-                # os.system('rm {}'.format(_REF_PHASED_VCF)) # These 2 files
+
+        try:
+            f_log = open(OUT + '.log', 'w')
+
+            imputation_start = time()
+            subprocess.run(re.split('\s+', command), check=True, stdout=f_log, stderr=f_log)
+            imputation_end = time()
+
+        except subprocess.CalledProcessError:
+            raise CookHLAImputationError(std_ERROR_MAIN_PROCESS_NAME + "HapMapMap Imputation failed.\n")
+            # sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
+            # return -1
         else:
-            print(std_ERROR_MAIN_PROCESS_NAME + "Imputation with HapMap_Map.txt(Adaptive Genetic Map) failed.")
-            sys.exit()
+            # print(std_MAIN_PROCESS_NAME+"Imputation({} / overlap:{}) done.".format(_exonN, _overlap))
+            # os.system("rm {}".format(raw_HLA_IMPUTATION_OUT+'.err.log'))
+            f_log.close()
+
+            imputation_time = (imputation_end - imputation_start) / 60
+            sys.stdout.write("HapMapMap Imputation time: {}(min)\n".format(imputation_time))
 
 
         RUN_Bash('gzip -d -f {}.vcf.gz'.format(OUT))

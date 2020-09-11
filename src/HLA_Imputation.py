@@ -23,7 +23,7 @@ HLA_genotype_call_noprephasing = 'src/9accuracy_no.v2.csh'
 from src.CookHLAError import CookHLAImputationError, CookHLAHLATypeCallError
 
 # measureAcc_v3.5
-from measureAcc.__main__ import CookHLA_measureAcc
+from measureAcc.measureAccuracy import CookHLA_measureAcc
 
 
 
@@ -48,9 +48,9 @@ __overlap__ = [3000, 4000, 5000]
 
 class HLA_Imputation(object):
 
-    def __init__(self, idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate, _LINKAGE2BEAGLE,
-                 _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4, _answer=None, f_save_intermediates=False,
-                 _MultP=1, _given_prephased=None, f_prephasing=False, f_remove_raw_IMP_results=False):
+    def __init__(self, idx_process, MHC, _reference, _out, _hg, _nthreads, _AdaptiveGeneticMap, _Average_Erate, _LINKAGE2BEAGLE,
+                 _BEAGLE2LINKAGE, _BEAGLE2VCF, _VCF2BEAGLE, _PLINK, _BEAGLE4, _CSH, _answer=None, f_save_intermediates=False,
+                 _MultP=1, _given_prephased=None, f_prephasing=False, f_remove_raw_IMP_results=False, f_measureAcc_v2=False):
 
         ### General
         self.idx_process = idx_process
@@ -145,7 +145,7 @@ class HLA_Imputation(object):
 
                     self.dict_IMP_Result[_exonN][_overlap] = \
                         self.IMPUTE(MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf',
-                                    _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing=f_prephasing)
+                                    _overlap, _exonN, _nthreads, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing=f_prephasing)
 
             imputation_serial_end = time()
 
@@ -160,7 +160,7 @@ class HLA_Imputation(object):
 
             pool = mp.Pool(processes=_MultP if _MultP <= 9 else 9)
 
-            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing))
+            dict_Pool = {_exonN: {_overlap: pool.apply_async(self.IMPUTE, (MHC, _out, IMPUTATION_INPUT, self.dict_ExonN_Panel[_exonN] + '.phased.vcf', _overlap, _exonN, _nthreads, self.__AVER__, self.dict_ExonN_AGM[_exonN], f_prephasing))
                                   for _overlap in __overlap__}
                          for _exonN in __EXON__}
 
@@ -195,26 +195,41 @@ class HLA_Imputation(object):
 
         ### (3) CONVERT_OUT
 
-        self.HLA_IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, MHC + '.HLA_IMPUTATION_OUT', f_prephasing=f_prephasing)
+        self.HLA_IMPUTATION_OUT = self.CONVERT_OUT(self.dict_IMP_Result, MHC + '.HLA_IMPUTATION_OUT', _CSH, f_prephasing=f_prephasing)
         print(std_MAIN_PROCESS_NAME+'IMPUTATION_OUT:\n{}'.format(self.HLA_IMPUTATION_OUT))
 
 
-        ## Acquring accuracy
+        ## Acquiring accuracy
 
         if bool(_answer):
 
             print(std_MAIN_PROCESS_NAME + "Calculating accuracy of each HLA gene. (answer: '{}')".format(_answer))
 
-            measureAcc_start = time()
+            if not os.path.exists(_answer):
+                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't exist. Please check '--answer/-an' argument again.\n"
+                                                    "Skipping calculating imputation accuracy.")
+            elif os.path.getsize(_answer) == 0:
+                print(std_WARNING_MAIN_PROCESS_NAME + "Given answer file doesn't have any content. Please check '--answer/-an' argument again.\n"
+                                                    "Skipping calculating imputation accuracy.")
 
-            t = CookHLA_measureAcc(_answer, self.HLA_IMPUTATION_OUT, self.HLA_IMPUTATION_OUT)
-            self.accuracy = t.accuracy
+            else:
+                if f_measureAcc_v2:
+                    # measureAcc_v2
+                    self.accuracy = measureAccuracy(_answer, self.HLA_IMPUTATION_OUT, 'all',
+                                                        outfile=self.HLA_IMPUTATION_OUT + '.accuracy', __only4digits=True)
 
-            measureAcc_end = time()
+                else:
+                    # measureAcc_v3.5
+                    measureAcc_start = time()
 
-            measureAcc_time = (measureAcc_end - measureAcc_start)/60
-            print("\nAccuracy : {}".format(self.accuracy))
-            print("measureAccuracy time: {}(min)\n".format(measureAcc_time))
+                    t = CookHLA_measureAcc(_answer, self.HLA_IMPUTATION_OUT, self.HLA_IMPUTATION_OUT)
+                    self.accuracy = t.accuracy
+
+                    measureAcc_end = time()
+
+                    measureAcc_time = (measureAcc_end - measureAcc_start)/60
+                    print("\nAccuracy : {}".format(self.accuracy))
+                    print("measureAccuracy time: {}(min)\n".format(measureAcc_time))
 
 
 
@@ -445,7 +460,7 @@ class HLA_Imputation(object):
 
 
 
-    def IMPUTE(self, MHC, _out, _IMPUTATION_INPUT, _REF_PHASED_VCF, _overlap, _exonN, _aver_erate, _Refined_Genetic_Map, f_prephasing=False):
+    def IMPUTE(self, MHC, _out, _IMPUTATION_INPUT, _REF_PHASED_VCF, _overlap, _exonN, _nthreads, _aver_erate, _Refined_Genetic_Map, f_prephasing=False):
 
         if os.path.getsize(_IMPUTATION_INPUT) == 0:
             print(std_ERROR_MAIN_PROCESS_NAME + "Input file for imputation('{}') contains nothing. Please check it again.".format(_IMPUTATION_INPUT))
@@ -483,15 +498,15 @@ class HLA_Imputation(object):
 
 
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={}'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map)
+            command = '{} gt={} ref={} out={} impute=true lowmem=true gprobs=true ne=10000 overlap={} err={} map={} nthreads={}'.format(
+                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, aver_erate, _Refined_Genetic_Map, _nthreads)
             # print(command)
 
             try:
                 f_log = open(raw_HLA_IMPUTATION_OUT+'.log', 'w')
 
                 imputation_start = time()
-                subprocess.run(command.split(' '), check=True, stdout=f_log, stderr=f_log)
+                subprocess.run(re.split('\s+', command), check=True, stdout=f_log, stderr=f_log)
                 imputation_end = time()
 
             except subprocess.CalledProcessError:
@@ -501,6 +516,7 @@ class HLA_Imputation(object):
             else:
                 # print(std_MAIN_PROCESS_NAME+"Imputation({} / overlap:{}) done.".format(_exonN, _overlap))
                 # os.system("rm {}".format(raw_HLA_IMPUTATION_OUT+'.err.log'))
+                f_log.close()
 
                 imputation_time = (imputation_end - imputation_start)/60
                 sys.stdout.write("Imputation({} / overlap:{}) time: {}(min)\n".format(_exonN, _overlap, imputation_time))
@@ -521,18 +537,26 @@ class HLA_Imputation(object):
             """
 
 
-            command = '{} gt={} ref={} out={} impute=true lowmem=true overlap={} gprobs=true'.format(
-                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap)
+            command = '{} gt={} ref={} out={} impute=true lowmem=true overlap={} gprobs=true nthreads={}'.format(
+                self.BEAGLE4, _IMPUTATION_INPUT, _REF_PHASED_VCF, raw_HLA_IMPUTATION_OUT, _overlap, _nthreads)
             # print(command)
 
             try:
-                subprocess.run(command.split(' '), check=True, stdout=open(raw_HLA_IMPUTATION_OUT+'.log', 'w'), stderr=open(raw_HLA_IMPUTATION_OUT+'.err.log', 'w'))
+                f_log = open(raw_HLA_IMPUTATION_OUT+'.log', 'w')
+
+                imputation_start = time()
+                subprocess.run(re.split('\s+', command), check=True, stdout=f_log, stderr=f_log)
+                imputation_end = time()
+
             except subprocess.CalledProcessError:
-                sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
-                sys.exit()
+                raise CookHLAImputationError(std_ERROR_MAIN_PROCESS_NAME + "Imputation({} / overlap:{}) failed.\n".format(_exonN, _overlap))
+
             else:
                 # print(std_MAIN_PROCESS_NAME+"Imputation({} / overlap:{}) done.".format(_exonN, _overlap))
-                os.system("rm {}".format(raw_HLA_IMPUTATION_OUT+'.err.log'))
+                f_log.close()
+
+                imputation_time = (imputation_end - imputation_start)/60
+                sys.stdout.write("Imputation({} / overlap:{}) time: {}(min)\n".format(_exonN, _overlap, imputation_time))
 
 
 
@@ -542,7 +566,7 @@ class HLA_Imputation(object):
 
 
 
-    def CONVERT_OUT(self, _raw_IMP_Result, _out, f_prephasing=False):
+    def CONVERT_OUT(self, _raw_IMP_Result, _out, _CSH, f_prephasing=False):
 
 
         print("[{}] Converting out imputation result(s).".format(self.idx_process, _out))
@@ -552,9 +576,9 @@ class HLA_Imputation(object):
         to_args = ' '.join([_raw_IMP_Result[_exon][_overlap] for _exon in __EXON__ for _overlap in __overlap__])
 
         if f_prephasing:
-            command = 'tcsh {} {} {}'.format(HLA_genotype_call_prephasing, to_args, _out)
+            command = '{} {} {} {}'.format(_CSH, HLA_genotype_call_prephasing, to_args, _out)
         else:
-            command = 'tcsh {} {} {}'.format(HLA_genotype_call_noprephasing, to_args, _out)
+            command = '{} {} {} {}'.format(_CSH, HLA_genotype_call_noprephasing, to_args, _out)
         # print(command)
 
         try:

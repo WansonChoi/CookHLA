@@ -9,6 +9,9 @@ from time import time
 from src.HLA_Imputation import HLA_Imputation
 from src.HLA_Imputation_GM import HLA_Imputation_GM
 
+# Beagle 5.1
+from src.HLA_Imputation_BEAGLE5 import HLA_Imputation_BEAGLE5
+from src.HLA_Imputation_GM_BEAGLE5 import HLA_Imputation_GM_BEAGLE5
 
 ########## < Core Varialbes > ##########
 
@@ -24,8 +27,10 @@ TOLERATED_DIFF = 0.15
 
 
 def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Average_Erate=None, _java_memory='2g',
-            _MultP=1, _answer=None, __save_intermediates=False, __use_Multiple_Markers=False, _p_src="./src",
-            _p_dependency="./dependency", _given_prephased=None, f_prephasing=False, _HapMap_Map=None):
+            _MultP=1, _answer=None, __save_intermediates=False, __use_Multiple_Markers=True, _p_src="./src",
+            _p_dependency="./dependency", _given_prephased=None, f_prephasing=False, _HapMap_Map=None,
+            __overlap__=(0.5, 1, 1.5), _window=5, _ne=10000, _nthreads=1, f_measureAcc_v2=False, f_BEAGLE5=False,
+            f_save_IMPUTATION_INPUT=False):
 
 
     ### Argument exception
@@ -43,10 +48,45 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     p_src = _p_src
     p_dependency = _p_dependency
 
-    # _p_plink = os.path.join(p_dependency, "plink")
-    _p_plink = which('plink')
-    # _p_beagle4 = os.path.join(p_dependency, "beagle4.jar")
-    _p_beagle4 = which('beagle')    # replaced by the one of Anaconda(Bioconda).
+    """
+    (1) PLINK
+    (2) Beagle4.1
+    (3) Beagle5.1
+    (4) tcsh
+    (5) Perl
+    
+    => Give priority to the one in 'dependency/' folder.
+    """
+
+    if exists(join(p_dependency, "plink")):
+        _p_plink = join(p_dependency, "plink")
+    else:
+        _p_plink = which('plink')
+
+    if exists(join(p_dependency, 'beagle4.jar')):
+        _p_beagle4 = join(p_dependency, "beagle4.jar")
+    else:
+        _p_beagle4 = which('beagle')    # replaced by the one of Anaconda(Bioconda).
+
+    if f_BEAGLE5:
+        if exists(join(p_dependency, 'beagle5.jar')):
+            _p_beagle5 = join(p_dependency, 'beagle5.jar')
+        else:
+            _p_beagle5 = which('beagle')
+    else:
+        _p_beagle5 = None
+
+    if exists(join(p_dependency, 'tcsh')):
+        _p_tcsh = join(p_dependency, 'tcsh')
+    else:
+        _p_tcsh = which('tcsh')
+
+    if exists(join(p_dependency, 'perl')):
+        _p_perl = join(p_dependency, 'perl')
+    else:
+        _p_perl = which('perl')
+
+
     _p_linkage2beagle = os.path.join(p_dependency, "linkage2beagle.jar")
     _p_beagle2linkage = os.path.join(p_dependency, "beagle2linkage.jar")
     _p_beagle2vcf = os.path.join(p_dependency, "beagle2vcf.jar")
@@ -69,9 +109,27 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "PLINK(v1.9b) can't be found.\n")
         sys.exit()
 
-    if not(bool(_p_beagle4) and exists(_p_beagle4)):
-        sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Beagle4 can't be found.\n")
+
+    # Either Beagle5.1 or Beagle4.1.
+    if f_BEAGLE5:
+        if not (bool(_p_beagle5) and exists(_p_beagle5)):
+            sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Beagle5 can't be found.\n")
+            sys.exit()
+    else:
+        if not (bool(_p_beagle4) and exists(_p_beagle4)):
+            sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Beagle4 can't be found.\n")
+            sys.exit()
+
+
+    if not(bool(_p_tcsh) and exists(_p_tcsh)):
+        sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "tcsh can't be found.\n")
         sys.exit()
+
+    if not(bool(_p_perl) and exists(_p_perl)):
+        sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "Perl can't be found.\n")
+        sys.exit()
+
+
 
     if not(bool(_p_linkage2beagle) and exists(_p_linkage2beagle)):
         sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "linkage2beagle can't be found in 'dependency/' folder.\n")
@@ -133,7 +191,22 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
 
     PLINK = ' '.join([_p_plink, "--noweb", "--silent", '--allow-no-sex'])
-    BEAGLE4 = ' '.join([_p_beagle4, '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory)])
+
+    if _p_beagle4.endswith('.jar'):
+        BEAGLE4 = ' '.join(['java', '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory),
+                            '-jar {}'.format(_p_beagle4)])
+    else:
+        BEAGLE4 = ' '.join([_p_beagle4, '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory)])
+
+    if f_BEAGLE5:
+        if _p_beagle5.endswith('.jar'):
+            BEAGLE5 = ' '.join(['java', '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory),
+                                '-jar {}'.format(_p_beagle5)])
+        else:
+            BEAGLE5 = ' '.join([_p_beagle5, '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory)])
+    else:
+        BEAGLE5 = None
+
     LINKAGE2BEAGLE = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_linkage2beagle])
     BEAGLE2LINKAGE = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_beagle2linkage])
     BEAGLE2VCF = ' '.join(["java", '-Djava.io.tmpdir={}'.format(JAVATMP), "-Xmx{}".format(_java_memory), "-jar", _p_beagle2vcf])
@@ -217,6 +290,9 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
     print(std_MAIN_PROCESS_NAME + "CookHLA : Performing HLA imputation for '{}'\n"
                                   "- Java memory = {}(Mb)".format(_input, _java_memory))
+
+    if f_BEAGLE5:
+        print("- Using Beagle5.1.")
 
     if __use_Multiple_Markers:
         print("- Using Multiple Markers.")
@@ -481,24 +557,61 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
 
 
-    if __use_Multiple_Markers:
 
-        # [3] Multiple Markers
-        # [6] Multiple Markers + Adaptive Genetic Map
-        __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
-                                        LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
-                                        _answer=_answer, f_save_intermediates=__save_intermediates, _MultP=_MultP,
-                                        _given_prephased=_given_prephased, f_prephasing=f_prephasing)
+    if f_BEAGLE5:
+
+        ##### < Beagle 5.1 > #####
 
 
-    elif not __use_Multiple_Markers:
+        if __use_Multiple_Markers:
 
-        # [2] Plain (Just with Beagle 4.1)
-        # [4] Adaptive Genetic Map (HapMap)
-        # [5] Adaptive Genetic Map
-        __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg, _AdaptiveGeneticMap, _Average_Erate,
-                                           LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
-                                           _answer=_answer, f_save_intermediates=__save_intermediates, _HapMap_Map=_HapMap_Map)
+            # [3] Multiple Markers
+            # [6] Multiple Markers + Adaptive Genetic Map
+            __IMPUTE_OUT__ = \
+                HLA_Imputation_BEAGLE5(idx_process, MHC, _reference, _out, _hg, __overlap__, _window, _ne, _nthreads,
+                                       _AdaptiveGeneticMap, _Average_Erate,
+                                       LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE5, _p_tcsh,
+                                       _answer=_answer, f_save_intermediates=__save_intermediates, _MultP=_MultP,
+                                       _given_prephased=_given_prephased, f_prephasing=f_prephasing,
+                                       f_measureAcc_v2=f_measureAcc_v2)
+
+
+        elif not __use_Multiple_Markers:
+
+            # [2] Plain
+            # [4] Adaptive Genetic Map (HapMap)
+            # [5] Adaptive Genetic Map
+            __IMPUTE_OUT__ = \
+                HLA_Imputation_GM_BEAGLE5(idx_process, MHC, _reference, _out, _hg, _window, __overlap__[0], _ne, _nthreads,
+                                          _AdaptiveGeneticMap, _Average_Erate, LINKAGE2BEAGLE,
+                                          BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE5, _answer=_answer,
+                                          f_save_intermediates=__save_intermediates, _HapMap_Map=_HapMap_Map,
+                                          f_measureAcc_v2=f_measureAcc_v2)
+
+
+
+    else:
+
+        ##### < Beagle 4.1 > #####
+
+        if __use_Multiple_Markers:
+
+            # [3] Multiple Markers
+            # [6] Multiple Markers + Adaptive Genetic Map
+            __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg, _nthreads, _AdaptiveGeneticMap, _Average_Erate,
+                                            LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4, _p_tcsh,
+                                            _answer=_answer, f_save_intermediates=__save_intermediates, _MultP=_MultP,
+                                            _given_prephased=_given_prephased, f_prephasing=f_prephasing)
+
+
+        elif not __use_Multiple_Markers:
+
+            # [2] Plain (Just with Beagle 4.1)
+            # [4] Adaptive Genetic Map (HapMap)
+            # [5] Adaptive Genetic Map
+            __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg, _nthreads, _AdaptiveGeneticMap, _Average_Erate,
+                                               LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
+                                               _answer=_answer, f_save_intermediates=__save_intermediates, _HapMap_Map=_HapMap_Map)
 
 
     idx_process = __IMPUTE_OUT__.idx_process
@@ -513,17 +626,18 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         if not __save_intermediates:
             os.system(' '.join(['rm', MHC + '.QC.nopheno.ped']))
             os.system(' '.join(['rm', MHC + '.QC.dat']))
-            os.system(' '.join(['rm', MHC + '.QC.bed']))
-            os.system(' '.join(['rm', MHC + '.QC.bim']))
-            os.system(' '.join(['rm', MHC + '.QC.fam']))
-            os.system(' '.join(['rm', MHC + '.QC.vcf']))
             os.system(' '.join(['rm', MHC + '.QC.GCchange.bgl']))
             os.system(' '.join(['rm', MHC + '.QC.GCchange.markers']))
             os.system(' '.join(['rm', MHC + '.QC.log']))
             os.system(' '.join(['rm', _out + '.bgl.log']))
             os.system(' '.join(['rm -rf', JAVATMP]))
 
-
+            if not f_save_IMPUTATION_INPUT:
+                # 'IMPUTATION_INPUT' (introduced in 2020.07.07)
+                os.system(' '.join(['rm', MHC + '.QC.bed']))
+                os.system(' '.join(['rm', MHC + '.QC.bim']))
+                os.system(' '.join(['rm', MHC + '.QC.fam']))
+                os.system(' '.join(['rm', MHC + '.QC.vcf']))
 
         print("DONE!\n")
 
@@ -574,8 +688,27 @@ if __name__ == "__main__":
 
     parser.add_argument("--multiprocess", "-mp", help="\nSetting parallel multiprocessing.\n\n", type=int, choices=[2,3,4,5,6,7,8,9], nargs='?', default=1, const=3)
 
-    parser.add_argument("--java-memory", "-mem", help="\nMemory requried for beagle(ex. 12g).\n\n", default="2g")
+    parser.add_argument("--measureAcc_v2", "-macc_v2", help="\nCalculate accuracy with previous version module.\n\n", action='store_true')
 
+    parser.add_argument("--save-IMPUTATION_INPUT", "-sII", help="\nSave input files for imputation.\n\n", action='store_true')
+
+
+
+    # Beagle Both
+    parser.add_argument("--java-memory", "-mem", help="\nHeap memory size for each BEAGLE implementation (default: 2g).\n\n", default="2g")
+    parser.add_argument("--nthreads", "-nth",
+                        help="\nThe number of threads for each BEAGLE implementation (default: 1).\n\n", default=1, type=int)
+
+
+    # Beagle5.1.
+    parser.add_argument("--beagle5", "-bgl5",
+                        help="\nUse Beagle5.1 instead of Beagle4.1.\n\n", action='store_true')
+    parser.add_argument("--overlap", "-ol",
+                        help="\n3 Overlap values(cM) for Beagle 5.1 implementation.\n\n", nargs=3, default=(0.5, 1, 1.5), type=float)
+    parser.add_argument("--window", "-w",
+                        help="\nWindow value(cM) for Beagle 5.1 implementation.\n\n", default=5, type=float)
+    parser.add_argument("--effective-population-size", "-ne",
+                        help="\nEffective population size value for Beagle 5.1 implementation.\n\n", default=10000, type=int)
 
 
     ##### < for Testing > #####
@@ -604,9 +737,10 @@ if __name__ == "__main__":
 
     CookHLA_start = time()
 
-    CookHLA(args.input, args.out, args.reference, "18", args.genetic_map, args.average_erate,
-            _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer,
-            __use_Multiple_Markers=True, f_prephasing=args.prephasing)
+    CookHLA(args.input, args.out, args.reference, "18", args.genetic_map, args.average_erate, _java_memory=args.java_memory,
+            _MultP=args.multiprocess, _answer=args.answer, __use_Multiple_Markers=True, f_prephasing=args.prephasing,
+            __overlap__=args.overlap, _window=args.window, _ne=args.effective_population_size, _nthreads=args.nthreads,
+            f_measureAcc_v2=args.measureAcc_v2, f_BEAGLE5=args.beagle5, f_save_IMPUTATION_INPUT=args.save_IMPUTATION_INPUT)
 
     CookHLA_end = time()
 
