@@ -81,6 +81,11 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     else:
         _p_tcsh = which('tcsh')
 
+    if exists(join(p_dependency, 'csh')):
+        _p_csh = join(p_dependency, 'csh')
+    else:
+        _p_csh = which('csh')
+
     if exists(join(p_dependency, 'perl')):
         _p_perl = join(p_dependency, 'perl')
     else:
@@ -121,8 +126,8 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
             sys.exit()
 
 
-    if not(bool(_p_tcsh) and exists(_p_tcsh)):
-        sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "tcsh can't be found.\n")
+    if not((bool(_p_tcsh) and exists(_p_tcsh)) or (bool(_p_csh) and exists(_p_csh))):
+        sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "tcsh/csh can't be found.\n")
         sys.exit()
 
     if not(bool(_p_perl) and exists(_p_perl)):
@@ -295,7 +300,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         print("- Using Beagle5.1.")
 
     if __use_Multiple_Markers:
-        print("- Using Multiple Markers.")
+        print("- Using Local Embedding.")
 
     if __use_GeneticMap:
         print("- Using Adaptive Genetic Map.")

@@ -32,8 +32,12 @@ def ALLELES2HPED(_alleles, _out=None, _f_HLA_DRB1_1454to1401=False):
     
     if f_toExclude.any():
         df_toExclude = df_alleles[f_toExclude]
-        print("[Heads-up] Next bizarre alleles will be set to '0,0' by force.\n{}\n".format(df_toExclude))
-    
+
+        if bool(_out):
+            print("[Heads-up] Next bizarre alleles will be set to '0,0' by force in output hped('{}') file.\n{}\n".format(_out+'.hped', df_toExclude))
+        else:
+            print("[Heads-up] Next bizarre alleles will be set to '0,0' by force.\n{}\n".format(df_toExclude))
+
         if bool(_out):
             df_toExclude.to_csv(_out+'.Excluded.alleles', sep='\t', header=True, index=False)
             

@@ -24,6 +24,7 @@ from src.CookHLAError import CookHLAImputationError, CookHLAHLATypeCallError
 
 # measureAcc_v3.5
 from measureAcc.measureAccuracy import CookHLA_measureAcc
+from measureAcc.src.ALLELES2HPED import ALLELES2HPED
 
 
 
@@ -683,6 +684,10 @@ class HLA_Imputation_BEAGLE5(object):
 
 
             if exists(_out + '.alleles') and os.path.getsize(_out + '.alleles') > 0:
+
+                # Generate HPED, too. (2020. 09. 12.)
+                ALLELES2HPED(_out + '.alleles', _out)
+
                 return _out + '.alleles'
             else:
                 print(std_ERROR_MAIN_PROCESS_NAME + "Failed to perform final HLA genotype calling.")
