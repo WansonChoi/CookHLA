@@ -41,13 +41,15 @@ Next external software must be prepared in 'dependency/' folder. Users have to d
 
 - PLINK1.9b (https://www.cog-genomics.org/plink/)
 - mach1 (http://csg.sph.umich.edu/abecasis/MACH/download/)
-- beagle.27Jan18.7e1.jar (https://faculty.washington.edu/browning/beagle/b4_1.html - 'Download Beagle 4.1' section; **Rename it to 'Beagle4.jar'** and place it in 'dependency/' folder.)
-- beagle.18May20.d20.jar (http://faculty.washington.edu/browning/beagle/beagle.html - 'Download Beagle 5.1' section; **Rename it to 'Beagle5.jar'** and place it in 'dependency/' folder.) <= only if you want to use Beagle v4 instead of v5.)
+- beagle.18May20.d20.jar (http://faculty.washington.edu/browning/beagle/beagle.html - 'Download Beagle 5.1' section; **Rename it to 'Beagle5.jar'** and place it in 'dependency/' folder.)
+- beagle.27Jan18.7e1.jar (https://faculty.washington.edu/browning/beagle/b4_1.html - 'Download Beagle 4.1' section; **Rename it to 'Beagle4.jar'** and place it in 'dependency/' folder.) <= only if you want to use Beagle v4 instead of v5.
 - beagle2linkage.jar (https://faculty.washington.edu/browning/beagle_utilities/utilities.html - 'File conversion utilities' section)
 - beagle2vcf.jar (https://faculty.washington.edu/browning/beagle_utilities/utilities.html - 'File conversion utilities' section)
 - linkage2beagle.jar (https://faculty.washington.edu/browning/beagle_utilities/utilities.html - 'File conversion utilities' section)
 - vcf2beagle.jar (https://faculty.washington.edu/browning/beagle_utilities/utilities.html - 'File conversion utilities' section)
 - transpose.jar (https://faculty.washington.edu/browning/beagle_utilities/utilities.html - 'File manipulation utilities' section)
+
+
 
 <br>
 
