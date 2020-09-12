@@ -78,13 +78,16 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
     if exists(join(p_dependency, 'tcsh')):
         _p_tcsh = join(p_dependency, 'tcsh')
-    else:
+    elif exists(which('tcsh')):
         _p_tcsh = which('tcsh')
-
-    if exists(join(p_dependency, 'csh')):
-        _p_csh = join(p_dependency, 'csh')
     else:
-        _p_csh = which('csh')
+        # Find csh
+        if exists(join(p_dependency, 'csh')):
+            _p_tcsh = join(p_dependency, 'csh')
+        elif exists(which('csh')):
+            _p_tcsh = which('csh')
+        else:
+            _p_tcsh = None
 
     if exists(join(p_dependency, 'perl')):
         _p_perl = join(p_dependency, 'perl')
@@ -126,7 +129,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
             sys.exit()
 
 
-    if not((bool(_p_tcsh) and exists(_p_tcsh)) or (bool(_p_csh) and exists(_p_csh))):
+    if not(bool(_p_tcsh) and exists(_p_tcsh)):
         sys.stderr.write(std_ERROR_MAIN_PROCESS_NAME + "tcsh/csh can't be found.\n")
         sys.exit()
 
