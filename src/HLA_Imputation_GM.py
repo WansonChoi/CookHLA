@@ -451,8 +451,8 @@ class HLA_Imputation_GM(object):
 
         """
 
-        command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} overlap=3000 nthreads={} > {}.log'.format(
-            self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map, OUT, _nthreads)
+        command = '{} gt={} ref={} out={} impute=true gprobs=true lowmem=true map={} overlap=3000 nthreads={}'.format(
+            self.BEAGLE4, _MHC_QC_VCF, _REF_PHASED_VCF, OUT, self.HapMap_Map, _nthreads)
         # print(command)
 
         try:

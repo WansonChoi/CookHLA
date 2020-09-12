@@ -82,7 +82,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
         time_start_2_Plain = time()
 
         [t_HLA_Imptation_out, t_accuracy] = \
-            CookHLA(INPUT, OUT_2_Plain, REFRENCE, _answer=ANSWER, _java_memory=JAVA_MEM)
+            CookHLA(INPUT, OUT_2_Plain, REFRENCE, _answer=ANSWER, _java_memory=JAVA_MEM, __use_Multiple_Markers=False)
 
         time_end_2_Plain = time()
         print("Implementation time of _2_Plain : {}(min)".format((time_end_2_Plain - time_start_2_Plain)/60))
@@ -127,7 +127,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_4_AGM_HapMap_Map, REFRENCE, _HapMap_Map=HapMap_Map,
-                    _answer=ANSWER, _java_memory=JAVA_MEM)
+                    _answer=ANSWER, _java_memory=JAVA_MEM, __use_Multiple_Markers=False)
 
         time_end_4_HapMap_Map = time()
         print("Implementation time of _4_HapMap_Map : {}(min)".format((time_end_4_HapMap_Map - time_start_4_HapMap_Map)/60))
@@ -148,7 +148,7 @@ def CookHLA_lab(_args, _control_flags=(1,1,1,1,1)):
 
         [t_HLA_Imptation_out, t_accuracy] = \
             CookHLA(INPUT, OUT_5_AGM, REFRENCE, _AdaptiveGeneticMap=GeneticMap, _Average_Erate=AverageErate,
-                    _answer=ANSWER, _java_memory=JAVA_MEM)
+                    _answer=ANSWER, _java_memory=JAVA_MEM, __use_Multiple_Markers=False)
 
         time_end_5_AGM = time()
         print("Implementation time of _5_AGM : {}(min)".format((time_end_5_AGM - time_start_5_AGM)/60))
@@ -312,7 +312,7 @@ if __name__ == "__main__":
     # parser.add_argument("--prephasing", "-pr", help="\nUtilizing prephasing strategy.\n\n", action='store_true')
 
     parser.add_argument("--answer", "-an", help="\nAnswer file to calculate imputation accuracy.\n\n", required=True)
-    parser.add_argument("--answer2", "-an2", help="\nAnswer file to calculate imputation accuracy(Fam colum fixed).\n\n")
+    parser.add_argument("--answer2", "-an2", help="\nAnswer file to calculate imputation accuracy(Fam column fixed).\n\n")
 
     parser.add_argument("--multiprocess", "-mp", help="\nSetting parallel multiprocessing.\n\n", type=int, choices=[2,3,4,5,6,7,8,9], nargs='?', default=1, const=3)
 
