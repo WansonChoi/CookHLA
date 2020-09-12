@@ -32,7 +32,7 @@ new_HLA_vcf<-matrix(0,a,ncol(HLA_EXON1))
 new_HLA_vcf[,1:9]<-HLA_EXON1[1:a,1:9]
 
 FID<-HLA_EXON1[1,10:ncol(HLA_EXON1)]
-HLA<-matrix(0,ncol(HLA_EXON1)-9,7)
+
 for(i in (2:a))
 {
   for(j in (10:ncol(HLA_EXON1)))
@@ -55,30 +55,46 @@ for(i in (2:a))
   }
 }
 
-for(i in (10:ncol(new_HLA_vcf)))
-{
+# Normalization
+for(i in (10:ncol(HLA_EXON1))){
+  sum_col <- sum(as.numeric(new_HLA_vcf[,i]))
+  for(j in (2:a)){
+    new_HLA_vcf[j,i] <- as.numeric(new_HLA_vcf[j,i])/sum_col
+  }
+}
+
+# [,4] <- First allele, [,5] <- second allele 
+# [,6] <- First pp,     [,7] <- second pp     
+# [,8] <- Confidence                          
+
+
+HLA<-matrix(0,ncol(HLA_EXON1)-9,8)
+for(i in (10:ncol(new_HLA_vcf))){
   HLA[i-9,1] <- FID[i-9]
   HLA[i-9,2] <- FID[i-9]
   HLA[i-9,3] <- gene
   HLA[i-9,4] <- new_HLA_vcf[which(new_HLA_vcf[,i]==max(new_HLA_vcf[,i])),3][1]
   HLA[i-9,6] <- new_HLA_vcf[which(new_HLA_vcf[,i]==max(new_HLA_vcf[,i])),i][1]
   t <- 0
+  max_pp <- 0
   for(j in (2:(nrow(new_HLA_vcf))))
   {
-    if (new_HLA_vcf[j,3] != HLA[i-9,4] && new_HLA_vcf[j,i] > as.numeric(HLA[i-9,6])/2){
+    if (new_HLA_vcf[j,3] != HLA[i-9,4] && new_HLA_vcf[j,i] > as.numeric(HLA[i-9,6])/2 && max_pp < new_HLA_vcf[j,i]){
       HLA[i-9,5] <- new_HLA_vcf[j,3]
       HLA[i-9,7] <- new_HLA_vcf[j,i]
+      HLA[i-9,8] <- as.numeric(HLA[i-9,6])+as.numeric(HLA[i-9,7])
       t <- 1
-      break
+      max_pp <- new_HLA_vcf[j,i]
     }
   }
   if(t==0){
     HLA[i-9,5] <- HLA[i-9,4]
     HLA[i-9,7] <- HLA[i-9,6]
+    HLA[i-9,8] <- HLA[i-9,6]
   }
 }
-for(i in (1:nrow(HLA)))
-{
+
+for(i in (1:nrow(HLA))){
   i1 <- strsplit(HLA[i,4],"_")[[1]][3]
   i2 <- strsplit(HLA[i,5],"_")[[1]][3]
   i3 <- paste0(strsplit(i1,"")[[1]][1],strsplit(i1,"")[[1]][2])

@@ -16,8 +16,8 @@ from src.measureAccuracy import measureAccuracy
 from src.HLA_MultipleRefs import HLA_MultipleRefs
 
 # HLA genotype calling
-HLA_genotype_call_prephasing = 'src/9accuracy_pre.v2.csh'
-HLA_genotype_call_noprephasing = 'src/9accuracy_no.v2.csh'
+HLA_genotype_call_prephasing = 'src/9accuracy_pre.v2.csh' # Practically deprecated (2020.09.12.)
+HLA_genotype_call_noprephasing = 'src/9accuracy_no_CI.v2.csh' # Updated to print confident score (2020.09.12.)
 
 # Defined Error
 from src.CookHLAError import CookHLAImputationError, CookHLAHLATypeCallError
@@ -576,8 +576,10 @@ class HLA_Imputation(object):
         to_args = ' '.join([_raw_IMP_Result[_exon][_overlap] for _exon in __EXON__ for _overlap in __overlap__])
 
         if f_prephasing:
+            # Practically deprecated (2020.09.12.)
             command = '{} {} {} {}'.format(_CSH, HLA_genotype_call_prephasing, to_args, _out)
         else:
+            # Updated to print confident score (2020.09.12.)
             command = '{} {} {} {}'.format(_CSH, HLA_genotype_call_noprephasing, to_args, _out)
         # print(command)
 
