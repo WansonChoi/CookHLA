@@ -227,13 +227,13 @@ The below are publicly available SNP2HLA-formatted reference panels, which are d
 
 Here we provide the 1000 Genomes data reference panels of five super populations: AFR, AMR, EAS, EUR, and SAS (https://www.internationalgenome.org/category/population/),
 
-We obtained both the SNP data and HLA data from 1000 Genomes website. The website denotes that the HLA was inferred from the NGS data using PolyPheMe software, as described in (Citation: Abi-Rached L, Gouret P, Yeh JH, et al. Immune diversity sheds light on missing variation in worldwide genetic diversity panels. PLoS One. 2018;13(10):e0206512. Published 2018 Oct 26. doi:10.1371/journal.pone.0206512). We then built SNP2HLA-formatted panels. We restricted the SNPs to Immunochip SNPs to reduce computational burden of HLA imputation. There panels are in '1000G_REF/' folder.
+We obtained both the SNP data and HLA data from 1000 Genomes website. The website denotes that the HLA was inferred from the NGS data using PolyPheMe software, as described in (Citation: Abi-Rached L, Gouret P, Yeh JH, et al. Immune diversity sheds light on missing variation in worldwide genetic diversity panels. PLoS One. 2018;13(10):e0206512. Published 2018 Oct 26. doi:10.1371/journal.pone.0206512). We then built SNP2HLA-formatted panels. We restricted the SNPs to Immunochip SNPs to reduce computational burden of HLA imputation. These panels are in '1000G_REF/' folder.
 
 1.	'1000G_REF/1000G_REF.AFR.chr6.hg18.29mb-34mb.inT1DGC.{bed,bim,fam,FRQ.frq,bgl.phased,markers}’ (N=661)
-2.	'1000G_REF/1000G_REF.AMR.chr6.hg18.29mb-34mb.inT1DGC. {bed,bim,fam,FRQ.frq,bgl.phased,markers}’ (N=347)
-3.	'1000G_REF/1000G_REF.EAS.chr6.hg18.29mb-34mb.inT1DGC. {bed,bim,fam,FRQ.frq,bgl.phased,markers}’ (N=504)
-4.	'1000G_REF/1000G_REF.EUR.chr6.hg18.29mb-34mb.inT1DGC. {bed,bim,fam,FRQ.frq,bgl.phased,markers}’ (N=503)
-5.	'1000G_REF/1000G_REF.SAS.chr6.hg18.29mb-34mb.inT1DGC. {bed,bim,fam,FRQ.frq,bgl.phased,markers}’ (N=489)
+2.	'1000G_REF/1000G_REF.AMR.chr6.hg18.29mb-34mb.inT1DGC.{bed,bim,fam,FRQ.frq,bgl.phased,markers}’ (N=347)
+3.	'1000G_REF/1000G_REF.EAS.chr6.hg18.29mb-34mb.inT1DGC.{bed,bim,fam,FRQ.frq,bgl.phased,markers}’ (N=504)
+4.	'1000G_REF/1000G_REF.EUR.chr6.hg18.29mb-34mb.inT1DGC.{bed,bim,fam,FRQ.frq,bgl.phased,markers}’ (N=503)
+5.	'1000G_REF/1000G_REF.SAS.chr6.hg18.29mb-34mb.inT1DGC.{bed,bim,fam,FRQ.frq,bgl.phased,markers}’ (N=489)
 
 
 <br>
