@@ -690,7 +690,7 @@ if __name__ == "__main__":
     parser.add_argument("--average-erate", "-ae", help="\nAverate error rate file.\n\n")
     # parser.add_argument("--use-multiple-markers", "-ml", help="\nUsing multiple markers.\n\n", action='store_true') => now default
 
-    parser.add_argument("--prephasing", "-pr", help="\nUtilizing prephasing strategy.\n\n", action='store_true')
+    # parser.add_argument("--prephasing", "-pr", help="\nUtilizing prephasing strategy.\n\n", action='store_true')
 
     parser.add_argument("--answer", "-an", help="\nAnswer file to calculate imputation accuracy.\n\n")
 
@@ -708,9 +708,12 @@ if __name__ == "__main__":
                         help="\nThe number of threads for each BEAGLE implementation (default: 1).\n\n", default=1, type=int)
 
 
+    parser.add_argument("--beagle4", "-bgl4",
+                        help="\nUse Beagle4.1 instead of Beagle5.1.\n\n", action='store_true')
+
     # Beagle5.1.
-    parser.add_argument("--beagle5", "-bgl5",
-                        help="\nUse Beagle5.1 instead of Beagle4.1.\n\n", action='store_true')
+    # parser.add_argument("--beagle5", "-bgl5",
+    #                     help="\nUse Beagle5.1 instead of Beagle4.1.\n\n", action='store_true') => Now Beagle5 is default. (2020.09.23.)
     parser.add_argument("--overlap", "-ol",
                         help="\n3 Overlap values(cM) for Beagle 5.1 implementation.\n\n", nargs=3, default=(0.5, 1, 1.5), type=float)
     parser.add_argument("--window", "-w",
@@ -746,9 +749,9 @@ if __name__ == "__main__":
     CookHLA_start = time()
 
     CookHLA(args.input, args.out, args.reference, "18", args.genetic_map, args.average_erate, _java_memory=args.java_memory,
-            _MultP=args.multiprocess, _answer=args.answer, __use_Multiple_Markers=True, f_prephasing=args.prephasing,
+            _MultP=args.multiprocess, _answer=args.answer, __use_Multiple_Markers=True, f_prephasing=False,
             __overlap__=args.overlap, _window=args.window, _ne=args.effective_population_size, _nthreads=args.nthreads,
-            f_measureAcc_v2=args.measureAcc_v2, f_BEAGLE5=args.beagle5, f_save_IMPUTATION_INPUT=args.save_IMPUTATION_INPUT)
+            f_measureAcc_v2=args.measureAcc_v2, f_BEAGLE5=(not args.beagle4), f_save_IMPUTATION_INPUT=args.save_IMPUTATION_INPUT)
 
     CookHLA_end = time()
 
