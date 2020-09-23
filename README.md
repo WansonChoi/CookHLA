@@ -208,7 +208,7 @@ Below are publicly available SNP2HLA-formatted reference panels, which can be us
     - Citation: Jia X, Han B, Onengut-Gumuscu S, et al. Imputing amino acid polymorphisms in human leukocyte antigens. PLoS One. 2013;8(6):e64683. Published 2013 Jun 6. doi:10.1371/journal.pone.0064683
 
 
-2. HAN Chinese panel (East Asian, N=9,773)
+2. HAN Chinese panel (East Asian, N=10,689)
 
     - Webpage Link: http://gigadb.org/dataset/100156
     - Citation: Zhou F, Cao H, Zuo X, et al. Deep sequencing of the MHC region in the Chinese population contributes to studies of complex disease. Nat Genet. 2016;48(7):740-746. doi:10.1038/ng.3576
