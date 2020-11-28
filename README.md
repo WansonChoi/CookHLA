@@ -1,4 +1,4 @@
-# CookHLA(v1.0)
+# CookHLA(v1.0.0) ![zenodo-DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4294712.svg)
 
 ## (1) Introduction
 
