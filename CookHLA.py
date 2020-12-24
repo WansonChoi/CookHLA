@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
 
 import os, sys, re
-from os.path import join, exists
+from os.path import join, exists, dirname, basename
 from shutil import which
 import argparse, textwrap
 from time import time
@@ -12,6 +12,8 @@ from src.HLA_Imputation_GM import HLA_Imputation_GM
 # Beagle 5.1
 from src.HLA_Imputation_BEAGLE5 import HLA_Imputation_BEAGLE5
 from src.HLA_Imputation_GM_BEAGLE5 import HLA_Imputation_GM_BEAGLE5
+
+from src.checkInput import getSampleNumbers, fixLabel
 
 ########## < Core Varialbes > ##########
 
@@ -284,6 +286,14 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
 
 
+    ## Small Sample mode.
+    N_sample = getSampleNumbers(_input+'.fam')
+    f_SmallSampleMode = not (N_sample >= 100)
+
+
+    ## Make one more copy of the input and fix the labels
+    _input = fixLabel(_input, _reference, join(dirname(_out), basename(_input)+'.COPY'), PLINK)
+
 
     ###### < Control Flags > ######
 
@@ -317,6 +327,8 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     if f_prephasing:
         print("- Prephasing.")
 
+    if f_SmallSampleMode:
+        print("- Small Sample mode. (because # of samples < 100)")
 
 
 
@@ -326,242 +338,492 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     idx_process = 1
 
 
-    if EXTRACT_MHC:
+    if f_SmallSampleMode:
 
-        print("[{}] Extracting SNPs from the MHC.".format(idx_process))
+        if EXTRACT_MHC:
 
-        command = ' '.join([PLINK, '--bfile', _input, '--chr 6', '--from-mb 29 --to-mb 34', '--maf 0.025', '--make-bed', '--out', MHC])
-        # print(command)
-        os.system(command)
+            print("[{}] Extracting SNPs from the MHC.".format(idx_process))
 
-        """
-        Input : `_input` (from argument)
-        Output : `MHC` (SNPs in the MHC region)
-        """
+            # command = ' '.join([PLINK, '--bfile', _input, '--chr 6', '--from-mb 29 --to-mb 34', '--maf 0.025', '--make-bed', '--out', MHC])
+            command = ' '.join([PLINK, '--bfile', _input, '--chr 6', '--from-mb 29 --to-mb 34', '--make-bed', '--out', MHC]) # '--maf 0.025' is not used due to 'Small Sample mode'.
+            # print(command)
+            os.system(command)
 
-        idx_process += 1
+            idx_process += 1
 
-    if FLIP:
 
-        print("[{}] Performing SNP quality control.".format(idx_process))
+        if FLIP:
 
-        ### Identifying non-A/T non-C/G SNPs to flip
-        command = ' '.join(['echo "SNP 	POS	A1	A2"', '>', _out+'.tmp1'])
-        # print(command)
-        os.system(command)
+            print("[{}] Performing SNP quality control.".format(idx_process))
 
-        command = ' '.join(['cut -f2,4-', MHC+'.bim', '>>', _out+'.tmp1']) # Cutting out columns of `_input`
-        # print(command)
-        os.system(command)
+            ### Identifying non-A/T non-C/G SNPs to flip
+            command = ' '.join(['echo "SNP 	POS	A1	A2"', '>', _out+'.tmp1'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join(['echo "SNP 	POSR	A1R	A2R"', '>', _out+'.tmp2'])
-        # print(command)
-        os.system(command)
+            command = ' '.join(['cut -f2,4-', MHC+'.bim', '>>', _out+'.tmp1']) # Cutting out columns of `_input`
+            # print(command)
+            os.system(command)
 
-        command = ' '.join(['cut -f2,4-', _reference+'.bim', '>>', _out+'.tmp2']) # Cutting out columns of `_reference`
-        # print(command)
-        os.system(command)
+            command = ' '.join(['echo "SNP 	POSR	A1R	A2R"', '>', _out+'.tmp2'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join([MERGE, _out+'.tmp2', _out+'.tmp1', 'SNP', '|', 'grep -v -w NA', '>', _out+'.SNPS.alleles'])
-        # print(command)
-        os.system(command)
+            command = ' '.join(['cut -f2,4-', _reference+'.bim', '>>', _out+'.tmp2']) # Cutting out columns of `_reference`
+            # print(command)
+            os.system(command)
 
-        if not __save_intermediates:
-            os.system(' '.join(['rm', _out+'.tmp1']))
+            command = ' '.join([MERGE, _out+'.tmp2', _out+'.tmp1', 'SNP', '|', 'grep -v -w NA', '>', _out+'.SNPS.alleles'])
+            # print(command)
+            os.system(command)
 
+            if not __save_intermediates:
+                os.system(' '.join(['rm', _out+'.tmp1']))
 
-        command = ' '.join(["awk '{if ($3 != $6 && $3 != $7){print $1}}'", _out+'.SNPS.alleles', '>', _out+'.SNPS.toflip1']) # Acquiring suspected SNPs to flip.
-        # print(command)
-        os.system(command)
 
-        command = ' '.join([PLINK, '--bfile', MHC, '--flip', _out+'.SNPS.toflip1', '--make-bed', '--out', MHC+'.FLP']) ### Flipping those suspected SNPs.
-        # print(command)
-        os.system(command)
+            command = ' '.join(["awk '{if ($3 != $6 && $3 != $7){print $1}}'", _out+'.SNPS.alleles', '>', _out+'.SNPS.toflip1']) # Acquiring suspected SNPs to flip.
+            # print(command)
+            os.system(command)
 
-        if not __save_intermediates:
-            os.system(' '.join(['rm', MHC+'.bed']))
-            os.system(' '.join(['rm', MHC+'.bim']))
-            os.system(' '.join(['rm', MHC+'.log']))
-            if __use_Multiple_Markers:
-                os.system(' '.join(['rm', MHC+'.fam'])) # MHC+'.fam' will be used in 'CONVERT_OUT' when not using multiple markers.
-            os.system(' '.join(['rm', _out+'.SNPS.alleles']))
-            os.system(' '.join(['rm', _out+'.SNPS.toflip1']))
+            command = ' '.join([PLINK, '--bfile', MHC, '--flip', _out+'.SNPS.toflip1', '--make-bed', '--out', MHC+'.FLP']) ### Flipping those suspected SNPs.
+            # print(command)
+            os.system(command)
 
-        # So far : `MHC+.FLP`
+            if not __save_intermediates:
+                os.system(' '.join(['rm', MHC+'.bed']))
+                os.system(' '.join(['rm', MHC+'.bim']))
+                os.system(' '.join(['rm', MHC+'.log']))
+                if __use_Multiple_Markers:
+                    os.system(' '.join(['rm', MHC+'.fam'])) # MHC+'.fam' will be used in 'CONVERT_OUT' when not using multiple markers.
+                os.system(' '.join(['rm', _out+'.SNPS.alleles']))
+                os.system(' '.join(['rm', _out+'.SNPS.toflip1']))
 
+            # So far : `MHC+.FLP`
 
 
-        ### Calculating allele frequencies
-        command = ' '.join([PLINK, '--bfile', MHC+'.FLP', '--freq', '--out', MHC+'.FLP.FRQ'])
-        # print(command)
-        os.system(command)
 
-        command = ' '.join(["sed 's/A1/A1I/g'", MHC+'.FLP.FRQ.frq', '|', "sed 's/A2/A2I/g'", '|', "sed 's/MAF/MAF_I/g'", '>', _out+'.tmp'])
-        # print(command)
-        os.system(command)
+            ### Calculating allele frequencies
+            command = ' '.join([PLINK, '--bfile', MHC+'.FLP', '--freq', '--out', MHC+'.FLP.FRQ'])
+            # print(command)
+            os.system(command)
 
+            command = ' '.join(["sed 's/A1/A1I/g'", MHC+'.FLP.FRQ.frq', '|', "sed 's/A2/A2I/g'", '|', "sed 's/MAF/MAF_I/g'", '>', _out+'.tmp'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join(['mv', _out+'.tmp', MHC+'.FLP.FRQ'])
-        # print(command)
-        os.system(command)
 
-        command = ' '.join([MERGE, _reference+'.FRQ.frq', MHC+'.FLP.FRQ.frq', 'SNP', '|', 'grep -v -w NA', '>', _out+'.SNPS.frq'])
-        # print(command)
-        os.system(command)
+            command = ' '.join(['mv', _out+'.tmp', MHC+'.FLP.FRQ'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join(["sed 's/ /\t/g'", _out+'.SNPS.frq', '|', 'awk \'{if ($3 != $8){print $2 "\t" $3 "\t" $4 "\t" $5 "\t" $9 "\t" $8 "\t" 1-$10 "\t*"}else{print $2 "\t" $3 "\t" $4 "\t" $5 "\t" $8 "\t" $9 "\t" $10 "\t."}}\'',
-                            '>', _out+'.SNPS.frq.parsed'])
-        # print(command)
-        os.system(command)
+            command = ' '.join([MERGE, _reference+'.FRQ.frq', MHC+'.FLP.FRQ.frq', 'SNP', '|', 'grep -v -w NA', '>', _out+'.SNPS.frq'])
+            # print(command)
+            os.system(command)
 
-        if not __save_intermediates:
-            os.system(' '.join(['rm', _out+'.SNPS.frq']))
-            os.system(' '.join(['rm', MHC+'.FLP.FRQ.frq']))
-            os.system(' '.join(['rm', MHC+'.FLP.FRQ', MHC+'.FLP.FRQ.log']))
+            command = ' '.join(["sed 's/ /\t/g'", _out+'.SNPS.frq', '|', 'awk \'{if ($3 != $8){print $2 "\t" $3 "\t" $4 "\t" $5 "\t" $9 "\t" $8 "\t" 1-$10 "\t*"}else{print $2 "\t" $3 "\t" $4 "\t" $5 "\t" $8 "\t" $9 "\t" $10 "\t."}}\'',
+                                '>', _out+'.SNPS.frq.parsed'])
+            # print(command)
+            os.system(command)
 
+            if not __save_intermediates:
+                os.system(' '.join(['rm', _out+'.SNPS.frq']))
+                os.system(' '.join(['rm', MHC+'.FLP.FRQ.frq']))
+                os.system(' '.join(['rm', MHC+'.FLP.FRQ', MHC+'.FLP.FRQ.log']))
 
 
-        ### Finding A/T and C/G SNPs
-        command = ' '.join(['awk \'{if (($2 == "A" && $3 == "T") || ($2 == "T" && $3 == "A") || ($2 == "C" && $3 == "G") || ($2 == "G" && $3 == "C")){if ($4 > $7){diff=$4 - $7; if ($4 > 1-$7){corrected=$4-(1-$7)}else{corrected=(1-$7)-$4}}else{diff=$7-$4;if($7 > (1-$4)){corrected=$7-(1-$4)}else{corrected=(1-$4)-$7}};print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5 "\t" $6 "\t" $7 "\t" $8 "\t" diff "\t" corrected}}\'',
-                            _out+'.SNPS.frq.parsed', '>', _out+'.SNPS.ATCG.frq']) # 'ATCG' literally means markers with only A, T, C, G are extracted.
-        # print(command)
-        os.system(command)
 
+            ### Finding A/T and C/G SNPs (1sample; AF is needed)
+            # command = ' '.join(['awk \'{if (($2 == "A" && $3 == "T") || ($2 == "T" && $3 == "A") || ($2 == "C" && $3 == "G") || ($2 == "G" && $3 == "C")){if ($4 > $7){diff=$4 - $7; if ($4 > 1-$7){corrected=$4-(1-$7)}else{corrected=(1-$7)-$4}}else{diff=$7-$4;if($7 > (1-$4)){corrected=$7-(1-$4)}else{corrected=(1-$4)-$7}};print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5 "\t" $6 "\t" $7 "\t" $8 "\t" diff "\t" corrected}}\'',
+            #                     _out+'.SNPS.frq.parsed', '>', _out+'.SNPS.ATCG.frq']) # 'ATCG' literally means markers with only A, T, C, G are extracted.
+            # # print(command)
+            # os.system(command)
+            #
+            #
+            #
+            # ### Identifying A/T and C/G SNPs to flip or remove
+            # command = ' '.join(["awk '{if ($10 < $9 && $10 < .15){print $1}}'", _out+'.SNPS.ATCG.frq', '>', _out+'.SNPS.toflip2'])
+            # # print(command)
+            # os.system(command)
+            #
+            # command = ' '.join(["awk '{if ($4 > 0.4){print $1}}'", _out+'.SNPS.ATCG.frq', '>', _out+'.SNPS.toremove'])
+            # # print(command)
+            # os.system(command)
+            #
+            # if not __save_intermediates:
+            #     os.system(' '.join(['rm', _out+'.SNPS.ATCG.frq']))
 
 
-        ### Identifying A/T and C/G SNPs to flip or remove
-        command = ' '.join(["awk '{if ($10 < $9 && $10 < .15){print $1}}'", _out+'.SNPS.ATCG.frq', '>', _out+'.SNPS.toflip2'])
-        # print(command)
-        os.system(command)
 
-        command = ' '.join(["awk '{if ($4 > 0.4){print $1}}'", _out+'.SNPS.ATCG.frq', '>', _out+'.SNPS.toremove'])
-        # print(command)
-        os.system(command)
+            ### Removing A/T and C/G SNPs (1sample)
+            command = ' '.join(['awk \'{if (($2 == "A" && $3 == "T") || ($2 == "T" && $3 == "A") || ($2 == "C" && $3 == "G") || ($2 == "G" && $3 == "C")){print $1}}\'',
+                                _out + '.SNPS.frq.parsed', '>',
+                                _out + '.SNPS.toremove'])  # 'ATCG' literally means markers with only A, T, C, G are extracted.
+            # print(command)
+            os.system(command)
 
-        if not __save_intermediates:
-            os.system(' '.join(['rm', _out+'.SNPS.ATCG.frq']))
+            ### Identifying non A/T and non C/G SNPs to remove (1sample; AF is needed)
+            # command = ' '.join(['awk \'{if (!(($2 == "A" && $3 == "T") || ($2 == "T" && $3 == "A") || ($2 == "C" && $3 == "G") || ($2 == "G" && $3 == "C"))){if ($4 > $7){diff=$4 - $7;}else{diff=$7-$4}; if (diff > \'%s\'){print $1}}}\'' % TOLERATED_DIFF,
+            #                     _out+'.SNPS.frq.parsed', '>>', _out+'.SNPS.toremove'])
+            # # print(command)
+            # os.system(command)
 
+            command = ' '.join(['awk \'{if (($2 != "A" && $2 != "C" && $2 != "G" && $2 != "T") || ($3 != "A" && $3 != "C" && $3 != "G" && $3 != "T")){print $1}}\'', _out+'.SNPS.frq.parsed', '>>', _out+'.SNPS.toremove'])
+            # print(command)
+            os.system(command)
 
+            command = ' '.join(['awk \'{if (($2 == $5 && $3 != $6) || ($3 == $6 && $2 != $5)){print $1}}\'', _out+'.SNPS.frq.parsed', '>>', _out+'.SNPS.toremove'])
+            # print(command)
+            os.system(command)
 
-        ### Identifying non A/T and non C/G SNPs to remove
-        command = ' '.join(['awk \'{if (!(($2 == "A" && $3 == "T") || ($2 == "T" && $3 == "A") || ($2 == "C" && $3 == "G") || ($2 == "G" && $3 == "C"))){if ($4 > $7){diff=$4 - $7;}else{diff=$7-$4}; if (diff > \'%s\'){print $1}}}\'' % TOLERATED_DIFF,
-                            _out+'.SNPS.frq.parsed', '>>', _out+'.SNPS.toremove'])
-        # print(command)
-        os.system(command)
+            if not __save_intermediates:
+                os.system(' '.join(['rm', _out+'.SNPS.frq.parsed']))
 
-        command = ' '.join(['awk \'{if (($2 != "A" && $2 != "C" && $2 != "G" && $2 != "T") || ($3 != "A" && $3 != "C" && $3 != "G" && $3 != "T")){print $1}}\'', _out+'.SNPS.frq.parsed', '>>', _out+'.SNPS.toremove'])
-        # print(command)
-        os.system(command)
 
-        command = ' '.join(['awk \'{if (($2 == $5 && $3 != $6) || ($3 == $6 && $2 != $5)){print $1}}\'', _out+'.SNPS.frq.parsed', '>>', _out+'.SNPS.toremove'])
-        # print(command)
-        os.system(command)
 
-        if not __save_intermediates:
-            os.system(' '.join(['rm', _out+'.SNPS.frq.parsed']))
 
+            ### Making QCd SNP file
+            # command = ' '.join([PLINK, '--bfile', MHC+'.FLP', '--geno 0.2', '--exclude', _out+'.SNPS.toremove', '--flip', _out+'.SNPS.toflip2', '--make-bed', '--out', MHC+'.QC'])
+            command = ' '.join([PLINK, '--bfile', MHC+'.FLP', '--geno 0.2', '--exclude', _out+'.SNPS.toremove', '--make-bed', '--out', MHC+'.QC']) # (1sample)
+            # print(command)
+            os.system(command)
 
-        ### Making QCd SNP file
-        command = ' '.join([PLINK, '--bfile', MHC+'.FLP', '--geno 0.2', '--exclude', _out+'.SNPS.toremove', '--flip', _out+'.SNPS.toflip2', '--make-bed', '--out', MHC+'.QC'])
-        # print(command)
-        os.system(command)
+            if not __save_intermediates:
+                os.system(' '.join(['rm', _out+'.SNPS.toremove']))
+                # os.system(' '.join(['rm', _out+'.SNPS.toflip2'])) # (1sample)
+                os.system(' '.join(['rm', MHC+'.FLP.bed']))
+                os.system(' '.join(['rm', MHC+'.FLP.bim']))
+                os.system(' '.join(['rm', MHC+'.FLP.fam']))
+                os.system(' '.join(['rm', MHC+'.FLP.log']))
 
-        if not __save_intermediates:
-            os.system(' '.join(['rm', _out+'.SNPS.toremove']))
-            os.system(' '.join(['rm', _out+'.SNPS.toflip2']))
-            os.system(' '.join(['rm', MHC+'.FLP.bed']))
-            os.system(' '.join(['rm', MHC+'.FLP.bim']))
-            os.system(' '.join(['rm', MHC+'.FLP.fam']))
-            os.system(' '.join(['rm', MHC+'.FLP.log']))
+            command = ' '.join([PLINK, '--bfile', MHC+'.QC', '--freq', '--out', MHC+'.QC.FRQ'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join([PLINK, '--bfile', MHC+'.QC', '--freq', '--out', MHC+'.QC.FRQ'])
-        # print(command)
-        os.system(command)
 
+            command = ' '.join(["sed 's/A1/A1I/g'", MHC+'.QC.FRQ.frq', '|', "sed 's/A2/A2I/g'", '|', "sed 's/MAF/MAF_I/g'", '>', _out+'.tmp'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join(["sed 's/A1/A1I/g'", MHC+'.QC.FRQ.frq', '|', "sed 's/A2/A2I/g'", '|', "sed 's/MAF/MAF_I/g'", '>', _out+'.tmp'])
-        # print(command)
-        os.system(command)
+            command = ' '.join(['mv', _out+'.tmp', MHC+'.QC.FRQ.frq'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join(['mv', _out+'.tmp', MHC+'.QC.FRQ.frq'])
-        # print(command)
-        os.system(command)
+            command = ' '.join([MERGE, _reference+'.FRQ.frq', MHC+'.QC.FRQ.frq', 'SNP', '|', 'grep -v -w NA', '>', _out+'.SNPS.QC.frq'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join([MERGE, _reference+'.FRQ.frq', MHC+'.QC.FRQ.frq', 'SNP', '|', 'grep -v -w NA', '>', _out+'.SNPS.QC.frq'])
-        # print(command)
-        os.system(command)
+            if not __save_intermediates:
+                os.system(' '.join(['rm', MHC+'.QC.FRQ.frq']))
+                os.system(' '.join(['rm', MHC+'.QC.FRQ.log']))
 
-        if not __save_intermediates:
-            os.system(' '.join(['rm', MHC+'.QC.FRQ.frq']))
-            os.system(' '.join(['rm', MHC+'.QC.FRQ.log']))
 
 
+            command = ' '.join(['cut -f2', _out+'.SNPS.QC.frq', '|', "awk '{if (NR > 1){print $1}}'", '>', _out+'.SNPS.toinclude'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join(['cut -f2', _out+'.SNPS.QC.frq', '|', "awk '{if (NR > 1){print $1}}'", '>', _out+'.SNPS.toinclude'])
-        # print(command)
-        os.system(command)
+            if not __save_intermediates:
+                os.system(' '.join(['rm', _out+'.SNPS.QC.frq']))
 
-        if not __save_intermediates:
-            os.system(' '.join(['rm', _out+'.SNPS.QC.frq']))
+            command = ' '.join(['echo "SNP 	POS	A1	A2"', '>', _out+'.tmp1'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join(['echo "SNP 	POS	A1	A2"', '>', _out+'.tmp1'])
-        # print(command)
-        os.system(command)
+            command = ' '.join(['cut -f2,4-', MHC+'.QC.bim' ,'>>', _out+'.tmp1'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join(['cut -f2,4-', MHC+'.QC.bim' ,'>>', _out+'.tmp1'])
-        # print(command)
-        os.system(command)
 
+            command = ' '.join([MERGE, _out+'.tmp2', _out+'.tmp1', 'SNP', '|', 'awk \'{if (NR > 1){if ($5 != "NA"){pos=$5}else{pos=$2}; print "6\t" $1 "\t0\t" pos "\t" $3 "\t" $4}}\'',
+                                '>', MHC+'.QC.bim'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join([MERGE, _out+'.tmp2', _out+'.tmp1', 'SNP', '|', 'awk \'{if (NR > 1){if ($5 != "NA"){pos=$5}else{pos=$2}; print "6\t" $1 "\t0\t" pos "\t" $3 "\t" $4}}\'',
-                            '>', MHC+'.QC.bim'])
-        # print(command)
-        os.system(command)
+            if not __save_intermediates:
+                os.system(' '.join(['rm', _out+'.tmp1']))
+                os.system(' '.join(['rm', _out+'.tmp2']))
 
-        if not __save_intermediates:
-            os.system(' '.join(['rm', _out+'.tmp1']))
-            os.system(' '.join(['rm', _out+'.tmp2']))
 
 
+            # Recoding QC'd file as ped
+            command = ' '.join([PLINK, '--bfile', MHC+'.QC', '--extract', _out+'.SNPS.toinclude', '--make-bed', '--out', MHC+'.QC.reorder'])
+            # print(command)
+            os.system(command)
 
-        # Recoding QC'd file as ped
-        command = ' '.join([PLINK, '--bfile', MHC+'.QC', '--extract', _out+'.SNPS.toinclude', '--make-bed', '--out', MHC+'.QC.reorder'])
-        # print(command)
-        os.system(command)
+            command = ' '.join([PLINK, '--bfile', MHC+'.QC.reorder', '--recode', '--out', MHC+'.QC'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join([PLINK, '--bfile', MHC+'.QC.reorder', '--recode', '--out', MHC+'.QC'])
-        # print(command)
-        os.system(command)
+            if not __save_intermediates:
+                # os.system(' '.join(['rm', MHC+'.QC.{bed,bim,fam,log}']))
+                os.system(' '.join(['rm', MHC+'.QC.reorder.bed']))
+                os.system(' '.join(['rm', MHC+'.QC.reorder.bim']))
+                os.system(' '.join(['rm', MHC+'.QC.reorder.fam']))
+                os.system(' '.join(['rm', MHC+'.QC.reorder.log']))
+                os.system(' '.join(['rm', _out+'.SNPS.toinclude']))
 
-        if not __save_intermediates:
-            # os.system(' '.join(['rm', MHC+'.QC.{bed,bim,fam,log}']))
-            os.system(' '.join(['rm', MHC+'.QC.reorder.bed']))
-            os.system(' '.join(['rm', MHC+'.QC.reorder.bim']))
-            os.system(' '.join(['rm', MHC+'.QC.reorder.fam']))
-            os.system(' '.join(['rm', MHC+'.QC.reorder.log']))
-            os.system(' '.join(['rm', _out+'.SNPS.toinclude']))
 
 
+            # Making SNP files (pre-beagle files)
+            command = ' '.join(['awk \'{print "M " $2}\'', MHC+'.QC.map', '>', MHC+'.QC.dat'])
+            # print(command)
+            os.system(command)
 
-        # Making SNP files (pre-beagle files)
-        command = ' '.join(['awk \'{print "M " $2}\'', MHC+'.QC.map', '>', MHC+'.QC.dat'])
-        # print(command)
-        os.system(command)
+            # command = ' '.join(['cut -f2', MHC+'.QC.map', '>', MHC+'.snps'])
+            # print(command)
+            # os.system(command)
 
-        # command = ' '.join(['cut -f2', MHC+'.QC.map', '>', MHC+'.snps'])
-        # print(command)
-        # os.system(command)
+            command = ' '.join(["cut -d ' ' -f1-5,7-", MHC+'.QC.ped', '>', MHC+'.QC.nopheno.ped'])
+            # print(command)
+            os.system(command)
 
-        command = ' '.join(["cut -d ' ' -f1-5,7-", MHC+'.QC.ped', '>', MHC+'.QC.nopheno.ped'])
-        # print(command)
-        os.system(command)
+            if not __save_intermediates:
+                os.system(' '.join(['rm', MHC+'.QC.ped']))
+                os.system(' '.join(['rm', MHC+'.QC.map']))
 
-        if not __save_intermediates:
-            os.system(' '.join(['rm', MHC+'.QC.ped']))
-            os.system(' '.join(['rm', MHC+'.QC.map']))
 
+            idx_process += 1
 
-        idx_process += 1
+
+
+    else:
+
+        if EXTRACT_MHC:
+
+            print("[{}] Extracting SNPs from the MHC.".format(idx_process))
+
+            command = ' '.join([PLINK, '--bfile', _input, '--chr 6', '--from-mb 29 --to-mb 34', '--maf 0.025', '--make-bed', '--out', MHC])
+            # print(command)
+            os.system(command)
+
+            """
+            Input : `_input` (from argument)
+            Output : `MHC` (SNPs in the MHC region)
+            """
+
+            idx_process += 1
+
+        if FLIP:
+
+            print("[{}] Performing SNP quality control.".format(idx_process))
+
+            ### Identifying non-A/T non-C/G SNPs to flip
+            command = ' '.join(['echo "SNP 	POS	A1	A2"', '>', _out+'.tmp1'])
+            # print(command)
+            os.system(command)
+
+            command = ' '.join(['cut -f2,4-', MHC+'.bim', '>>', _out+'.tmp1']) # Cutting out columns of `_input`
+            # print(command)
+            os.system(command)
+
+            command = ' '.join(['echo "SNP 	POSR	A1R	A2R"', '>', _out+'.tmp2'])
+            # print(command)
+            os.system(command)
+
+            command = ' '.join(['cut -f2,4-', _reference+'.bim', '>>', _out+'.tmp2']) # Cutting out columns of `_reference`
+            # print(command)
+            os.system(command)
+
+            command = ' '.join([MERGE, _out+'.tmp2', _out+'.tmp1', 'SNP', '|', 'grep -v -w NA', '>', _out+'.SNPS.alleles'])
+            # print(command)
+            os.system(command)
+
+            if not __save_intermediates:
+                os.system(' '.join(['rm', _out+'.tmp1']))
+
+
+            command = ' '.join(["awk '{if ($3 != $6 && $3 != $7){print $1}}'", _out+'.SNPS.alleles', '>', _out+'.SNPS.toflip1']) # Acquiring suspected SNPs to flip.
+            # print(command)
+            os.system(command)
+
+            command = ' '.join([PLINK, '--bfile', MHC, '--flip', _out+'.SNPS.toflip1', '--make-bed', '--out', MHC+'.FLP']) ### Flipping those suspected SNPs.
+            # print(command)
+            os.system(command)
+
+            if not __save_intermediates:
+                os.system(' '.join(['rm', MHC+'.bed']))
+                os.system(' '.join(['rm', MHC+'.bim']))
+                os.system(' '.join(['rm', MHC+'.log']))
+                if __use_Multiple_Markers:
+                    os.system(' '.join(['rm', MHC+'.fam'])) # MHC+'.fam' will be used in 'CONVERT_OUT' when not using multiple markers.
+                os.system(' '.join(['rm', _out+'.SNPS.alleles']))
+                os.system(' '.join(['rm', _out+'.SNPS.toflip1']))
+
+            # So far : `MHC+.FLP`
+
+
+
+            ### Calculating allele frequencies
+            command = ' '.join([PLINK, '--bfile', MHC+'.FLP', '--freq', '--out', MHC+'.FLP.FRQ'])
+            # print(command)
+            os.system(command)
+
+            command = ' '.join(["sed 's/A1/A1I/g'", MHC+'.FLP.FRQ.frq', '|', "sed 's/A2/A2I/g'", '|', "sed 's/MAF/MAF_I/g'", '>', _out+'.tmp'])
+            # print(command)
+            os.system(command)
+
+
+            command = ' '.join(['mv', _out+'.tmp', MHC+'.FLP.FRQ'])
+            # print(command)
+            os.system(command)
+
+            command = ' '.join([MERGE, _reference+'.FRQ.frq', MHC+'.FLP.FRQ.frq', 'SNP', '|', 'grep -v -w NA', '>', _out+'.SNPS.frq'])
+            # print(command)
+            os.system(command)
+
+            command = ' '.join(["sed 's/ /\t/g'", _out+'.SNPS.frq', '|', 'awk \'{if ($3 != $8){print $2 "\t" $3 "\t" $4 "\t" $5 "\t" $9 "\t" $8 "\t" 1-$10 "\t*"}else{print $2 "\t" $3 "\t" $4 "\t" $5 "\t" $8 "\t" $9 "\t" $10 "\t."}}\'',
+                                '>', _out+'.SNPS.frq.parsed'])
+            # print(command)
+            os.system(command)
+
+            if not __save_intermediates:
+                os.system(' '.join(['rm', _out+'.SNPS.frq']))
+                os.system(' '.join(['rm', MHC+'.FLP.FRQ.frq']))
+                os.system(' '.join(['rm', MHC+'.FLP.FRQ', MHC+'.FLP.FRQ.log']))
+
+
+
+            ### Finding A/T and C/G SNPs
+            command = ' '.join(['awk \'{if (($2 == "A" && $3 == "T") || ($2 == "T" && $3 == "A") || ($2 == "C" && $3 == "G") || ($2 == "G" && $3 == "C")){if ($4 > $7){diff=$4 - $7; if ($4 > 1-$7){corrected=$4-(1-$7)}else{corrected=(1-$7)-$4}}else{diff=$7-$4;if($7 > (1-$4)){corrected=$7-(1-$4)}else{corrected=(1-$4)-$7}};print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5 "\t" $6 "\t" $7 "\t" $8 "\t" diff "\t" corrected}}\'',
+                                _out+'.SNPS.frq.parsed', '>', _out+'.SNPS.ATCG.frq']) # 'ATCG' literally means markers with only A, T, C, G are extracted.
+            # print(command)
+            os.system(command)
+
+
+
+            ### Identifying A/T and C/G SNPs to flip or remove
+            command = ' '.join(["awk '{if ($10 < $9 && $10 < .15){print $1}}'", _out+'.SNPS.ATCG.frq', '>', _out+'.SNPS.toflip2'])
+            # print(command)
+            os.system(command)
+
+            command = ' '.join(["awk '{if ($4 > 0.4){print $1}}'", _out+'.SNPS.ATCG.frq', '>', _out+'.SNPS.toremove'])
+            # print(command)
+            os.system(command)
+
+            if not __save_intermediates:
+                os.system(' '.join(['rm', _out+'.SNPS.ATCG.frq']))
+
+
+
+            ### Identifying non A/T and non C/G SNPs to remove
+            command = ' '.join(['awk \'{if (!(($2 == "A" && $3 == "T") || ($2 == "T" && $3 == "A") || ($2 == "C" && $3 == "G") || ($2 == "G" && $3 == "C"))){if ($4 > $7){diff=$4 - $7;}else{diff=$7-$4}; if (diff > \'%s\'){print $1}}}\'' % TOLERATED_DIFF,
+                                _out+'.SNPS.frq.parsed', '>>', _out+'.SNPS.toremove'])
+            # print(command)
+            os.system(command)
+
+            command = ' '.join(['awk \'{if (($2 != "A" && $2 != "C" && $2 != "G" && $2 != "T") || ($3 != "A" && $3 != "C" && $3 != "G" && $3 != "T")){print $1}}\'', _out+'.SNPS.frq.parsed', '>>', _out+'.SNPS.toremove'])
+            # print(command)
+            os.system(command)
+
+            command = ' '.join(['awk \'{if (($2 == $5 && $3 != $6) || ($3 == $6 && $2 != $5)){print $1}}\'', _out+'.SNPS.frq.parsed', '>>', _out+'.SNPS.toremove'])
+            # print(command)
+            os.system(command)
+
+            if not __save_intermediates:
+                os.system(' '.join(['rm', _out+'.SNPS.frq.parsed']))
+
+
+            ### Making QCd SNP file
+            command = ' '.join([PLINK, '--bfile', MHC+'.FLP', '--geno 0.2', '--exclude', _out+'.SNPS.toremove', '--flip', _out+'.SNPS.toflip2', '--make-bed', '--out', MHC+'.QC'])
+            # print(command)
+            os.system(command)
+
+            if not __save_intermediates:
+                os.system(' '.join(['rm', _out+'.SNPS.toremove']))
+                os.system(' '.join(['rm', _out+'.SNPS.toflip2']))
+                os.system(' '.join(['rm', MHC+'.FLP.bed']))
+                os.system(' '.join(['rm', MHC+'.FLP.bim']))
+                os.system(' '.join(['rm', MHC+'.FLP.fam']))
+                os.system(' '.join(['rm', MHC+'.FLP.log']))
+
+            command = ' '.join([PLINK, '--bfile', MHC+'.QC', '--freq', '--out', MHC+'.QC.FRQ'])
+            # print(command)
+            os.system(command)
+
+
+            command = ' '.join(["sed 's/A1/A1I/g'", MHC+'.QC.FRQ.frq', '|', "sed 's/A2/A2I/g'", '|', "sed 's/MAF/MAF_I/g'", '>', _out+'.tmp'])
+            # print(command)
+            os.system(command)
+
+            command = ' '.join(['mv', _out+'.tmp', MHC+'.QC.FRQ.frq'])
+            # print(command)
+            os.system(command)
+
+            command = ' '.join([MERGE, _reference+'.FRQ.frq', MHC+'.QC.FRQ.frq', 'SNP', '|', 'grep -v -w NA', '>', _out+'.SNPS.QC.frq'])
+            # print(command)
+            os.system(command)
+
+            if not __save_intermediates:
+                os.system(' '.join(['rm', MHC+'.QC.FRQ.frq']))
+                os.system(' '.join(['rm', MHC+'.QC.FRQ.log']))
+
+
+
+            command = ' '.join(['cut -f2', _out+'.SNPS.QC.frq', '|', "awk '{if (NR > 1){print $1}}'", '>', _out+'.SNPS.toinclude'])
+            # print(command)
+            os.system(command)
+
+            if not __save_intermediates:
+                os.system(' '.join(['rm', _out+'.SNPS.QC.frq']))
+
+            command = ' '.join(['echo "SNP 	POS	A1	A2"', '>', _out+'.tmp1'])
+            # print(command)
+            os.system(command)
+
+            command = ' '.join(['cut -f2,4-', MHC+'.QC.bim' ,'>>', _out+'.tmp1'])
+            # print(command)
+            os.system(command)
+
+
+            command = ' '.join([MERGE, _out+'.tmp2', _out+'.tmp1', 'SNP', '|', 'awk \'{if (NR > 1){if ($5 != "NA"){pos=$5}else{pos=$2}; print "6\t" $1 "\t0\t" pos "\t" $3 "\t" $4}}\'',
+                                '>', MHC+'.QC.bim'])
+            # print(command)
+            os.system(command)
+
+            if not __save_intermediates:
+                os.system(' '.join(['rm', _out+'.tmp1']))
+                os.system(' '.join(['rm', _out+'.tmp2']))
+
+
+
+            # Recoding QC'd file as ped
+            command = ' '.join([PLINK, '--bfile', MHC+'.QC', '--extract', _out+'.SNPS.toinclude', '--make-bed', '--out', MHC+'.QC.reorder'])
+            # print(command)
+            os.system(command)
+
+            command = ' '.join([PLINK, '--bfile', MHC+'.QC.reorder', '--recode', '--out', MHC+'.QC'])
+            # print(command)
+            os.system(command)
+
+            if not __save_intermediates:
+                # os.system(' '.join(['rm', MHC+'.QC.{bed,bim,fam,log}']))
+                os.system(' '.join(['rm', MHC+'.QC.reorder.bed']))
+                os.system(' '.join(['rm', MHC+'.QC.reorder.bim']))
+                os.system(' '.join(['rm', MHC+'.QC.reorder.fam']))
+                os.system(' '.join(['rm', MHC+'.QC.reorder.log']))
+                os.system(' '.join(['rm', _out+'.SNPS.toinclude']))
+
+
+
+            # Making SNP files (pre-beagle files)
+            command = ' '.join(['awk \'{print "M " $2}\'', MHC+'.QC.map', '>', MHC+'.QC.dat'])
+            # print(command)
+            os.system(command)
+
+            # command = ' '.join(['cut -f2', MHC+'.QC.map', '>', MHC+'.snps'])
+            # print(command)
+            # os.system(command)
+
+            command = ' '.join(["cut -d ' ' -f1-5,7-", MHC+'.QC.ped', '>', MHC+'.QC.nopheno.ped'])
+            # print(command)
+            os.system(command)
+
+            if not __save_intermediates:
+                os.system(' '.join(['rm', MHC+'.QC.ped']))
+                os.system(' '.join(['rm', MHC+'.QC.map']))
+
+
+            idx_process += 1
 
 
 
