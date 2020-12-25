@@ -15,6 +15,8 @@ from src.HLA_Imputation_GM_BEAGLE5 import HLA_Imputation_GM_BEAGLE5
 
 from src.checkInput import getSampleNumbers, fixLabel
 
+from MakeGeneticMap.MakeGeneticMap import MakeGeneticMap
+
 ########## < Core Varialbes > ##########
 
 std_MAIN_PROCESS_NAME = "\n[%s]: " % (os.path.basename(__file__))
@@ -263,7 +265,14 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
     elif not (_Average_Erate or _AdaptiveGeneticMap):
 
-        __use_GeneticMap = False     # No using Adaptive Genetic Map.
+        # Both '_AdaptiveGeneticMap' and '_Average_Erate' are not given.
+        print(std_MAIN_PROCESS_NAME + "AGM not given. A new one will be generated with the Target('{}') and Reference('{}').".format(_input, _reference))
+
+        [_AdaptiveGeneticMap, _Average_Erate] = MakeGeneticMap(_input, _reference, join(OUTPUT_dir, 'AGM.{}+{}'.format(basename(_input), basename(_reference))))
+
+        print(("Newly generated AGM :\n{}\n{}".format(_AdaptiveGeneticMap, _Average_Erate)))
+
+        __use_GeneticMap = True
 
     else:
         print(std_ERROR_MAIN_PROCESS_NAME + "Either arguments '--genetic-map(-gm)' or '--average-erate(-ae)' wasn't given.\n"
@@ -288,7 +297,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
     ## Small Sample mode.
     N_sample = getSampleNumbers(_input+'.fam')
-    f_SmallSampleMode = not (N_sample >= 100)
+    f_SmallSampleMode = N_sample < 100
 
 
     ## Make one more copy of the input and fix the labels

@@ -7,6 +7,8 @@ from shutil import which
 from src.RUN_Bash import RUN_Bash
 from MakeGeneticMap.Panel_subset import Panel_Subset
 
+from src.checkInput import getSampleNumbers
+
 std_MAIN_PROCESS_NAME = "\n[%s]: " % (os.path.basename(__file__))
 std_ERROR_MAIN_PROCESS_NAME = "\n[%s::ERROR]: " % (os.path.basename(__file__))
 std_WARNING_MAIN_PROCESS_NAME = "\n[%s::WARNING]: " % (os.path.basename(__file__))
@@ -18,6 +20,16 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 def MakeGeneticMap(_input, _reference, _out,
                    _p_src="./MakeGeneticMap", _p_dependency="./dependency",
                    __save_intermediates=False):
+
+
+    # Sample N check
+    N_sample_target = getSampleNumbers(_input+'.fam')
+    f_SmallSampleMode =  N_sample_target < 100
+
+    N_sample_reference = getSampleNumbers(_reference+'.fam')
+    if f_SmallSampleMode and (N_sample_reference < 200):
+        print(std_ERROR_MAIN_PROCESS_NAME + "If Target data has less than 100 samples, Reference panel must have more than equal 200 samples.")
+        sys.exit()
 
 
     _p_plink = which("plink")
@@ -62,60 +74,130 @@ def MakeGeneticMap(_input, _reference, _out,
     Cleanup = 1
 
 
+    if f_SmallSampleMode:
 
-    if RANDOM:
+        # Only 'RANDOM' and 'SUBSET_BGL' two blocks become different
+        print(std_MAIN_PROCESS_NAME + "Generating AGM with Small Samples.")
 
-        RUN_Bash('awk \'{print $1" "$2" ""0"" ""0"" "$5" "$6}\' %s > %s' % (_input+'.fam', OUTPUT_INPUT+'.trick.fam'))
-        RUN_Bash('awk \'{print $1" "$2" ""0"" ""0"" "$5" "$6}\' %s > %s' % (_reference+'.fam', OUTPUT_REF+'.trick.fam'))
+        if RANDOM:
 
-        RUN_Bash(RANDOMIZE_FAM + ' {} {}'.format(OUTPUT_INPUT+'.trick.fam', OUTPUT_INPUT+'.rearranged.fam'))
-        RUN_Bash(RANDOMIZE_FAM + ' {} {}'.format(OUTPUT_REF+'.trick.fam', OUTPUT_REF+'.rearranged.fam'))
+            # RUN_Bash('awk \'{print $1" "$2" ""0"" ""0"" "$5" "$6}\' %s > %s' % (_input+'.fam', OUTPUT_INPUT+'.trick.fam'))
+            RUN_Bash('awk \'{print $1" "$2" ""0"" ""0"" "$5" "$6}\' %s > %s' % (_reference+'.fam', OUTPUT_REF+'.trick.fam'))    # Only the reference fam file will be randomized.
 
-        RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.trick.fam'))
-        RUN_Bash('rm {}'.format(OUTPUT_REF+'.trick.fam'))
+            # RUN_Bash(RANDOMIZE_FAM + ' {} {}'.format(OUTPUT_INPUT+'.trick.fam', OUTPUT_INPUT+'.rearranged.fam'))
+            RUN_Bash(RANDOMIZE_FAM + ' {} {}'.format(OUTPUT_REF+'.trick.fam', OUTPUT_REF+'.rearranged.fam'))
 
-
-    if SUBSET_BGL:
-
-        RUN_Bash('head -100 %s | awk \'{print $1" "$2}\' > %s' % (OUTPUT_INPUT+'.rearranged.fam', OUTPUT_INPUT+'.subset.samples'))
-        RUN_Bash('head -100 %s | awk \'{print $1" "$2}\' > %s' % (OUTPUT_REF+'.rearranged.fam', OUTPUT_REF+'.subset.samples'))
-
-        RUN_Bash(PLINK + ' --bfile {} --keep {} --recode --out {}'.format(_input, OUTPUT_INPUT+'.subset.samples', OUTPUT_INPUT+'.subset'))
-        RUN_Bash(PLINK + ' --bfile {} --keep {} --make-bed --out {}'.format(_input, OUTPUT_INPUT+'.subset.samples', OUTPUT_INPUT+'.subset'))
-
-        RUN_Bash("cut -d ' ' -f1-5,7- {} > {}".format(OUTPUT_INPUT+'.subset.ped', OUTPUT_INPUT+'.subset.nopheno.ped'))
-        RUN_Bash('awk \'{print "M " $2}\' %s > %s' % (OUTPUT_INPUT+'.subset.map', OUTPUT_INPUT+'.subset.dat'))
+            # RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.trick.fam'))
+            RUN_Bash('rm {}'.format(OUTPUT_REF+'.trick.fam'))
 
 
-        RUN_Bash(LINKAGE2BEAGLE + ' pedigree={} data={} beagle={} standard=true > {}'.format(
-            OUTPUT_INPUT+'.subset.nopheno.ped', OUTPUT_INPUT+'.subset.dat',
-            OUTPUT_INPUT + '.subset.bgl.phased', OUTPUT_INPUT+'.subset.bgl.phased.log'
-        ))
+        if SUBSET_BGL:
 
+            # RUN_Bash('head -100 %s | awk \'{print $1" "$2}\' > %s' % (OUTPUT_INPUT+'.rearranged.fam', OUTPUT_INPUT+'.subset.samples'))
+            RUN_Bash('head -200 %s | tail -n 100 | awk \'{print $1" "$2}\' > %s' % (OUTPUT_REF+'.rearranged.fam', OUTPUT_INPUT+'.subset.samples'))
+            RUN_Bash('head -100 %s | awk \'{print $1" "$2}\' > %s' % (OUTPUT_REF+'.rearranged.fam', OUTPUT_REF+'.subset.samples'))
 
-        RUN_Bash('awk \'{print $2" "$4" "$5" "$6}\' %s > %s' % (OUTPUT_INPUT+'.subset.bim', OUTPUT_INPUT+'.subset.markers'))
+            # RUN_Bash(PLINK + ' --bfile {} --keep {} --recode --out {}'.format(_input, OUTPUT_INPUT+'.subset.samples', OUTPUT_INPUT+'.subset'))
+            # RUN_Bash(PLINK + ' --bfile {} --keep {} --make-bed --out {}'.format(_input, OUTPUT_INPUT+'.subset.samples', OUTPUT_INPUT+'.subset'))
 
-
-        Panel_Subset(_reference, OUTPUT_REF+'.subset.samples', 'all', OUTPUT_REF+'.subset')
-
-        RUN_Bash(BGL2GC_TRICK_BGL + ' {} {} {} {}'.format(
-                 OUTPUT_INPUT + '.subset.bgl.phased', OUTPUT_INPUT+'.subset.markers',
-                 OUTPUT_INPUT + '.subset.GCchange.bgl.phased', OUTPUT_INPUT + '.subset.GCchange.markers'))
-
-        RUN_Bash(BGL2GC_TRICK_BGL + ' {} {} {} {}'.format(
-            OUTPUT_REF + '.subset.bgl.phased', OUTPUT_REF+'.subset.markers',
-            OUTPUT_REF + '.subset.GCchange.bgl.phased', OUTPUT_REF + '.subset.GCchange.markers'))
+            RUN_Bash(PLINK + ' --bfile {} --keep {} --recode --out {}'.format(_reference, OUTPUT_INPUT+'.subset.samples', OUTPUT_INPUT+'.subset'))
+            RUN_Bash(PLINK + ' --bfile {} --keep {} --make-bed --out {}'.format(_reference, OUTPUT_INPUT+'.subset.samples', OUTPUT_INPUT+'.subset'))
 
 
 
-        RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.rearranged.fam'))
-        RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.subset.samples'))
-        RUN_Bash('rm {}'.format(OUTPUT_REF+'.rearranged.fam'))
-        RUN_Bash('rm {}'.format(OUTPUT_REF+'.subset.samples'))
-        RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.subset.bgl.phased'))
-        RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.subset.markers'))
-        RUN_Bash('rm {}'.format(OUTPUT_REF+'.subset.bgl.phased'))
-        RUN_Bash('rm {}'.format(OUTPUT_REF+'.subset.markers'))
+
+
+            RUN_Bash("cut -d ' ' -f1-5,7- {} > {}".format(OUTPUT_INPUT+'.subset.ped', OUTPUT_INPUT+'.subset.nopheno.ped'))
+            RUN_Bash('awk \'{print "M " $2}\' %s > %s' % (OUTPUT_INPUT+'.subset.map', OUTPUT_INPUT+'.subset.dat'))
+
+
+            RUN_Bash(LINKAGE2BEAGLE + ' pedigree={} data={} beagle={} standard=true > {}'.format(
+                OUTPUT_INPUT+'.subset.nopheno.ped', OUTPUT_INPUT+'.subset.dat',
+                OUTPUT_INPUT + '.subset.bgl.phased', OUTPUT_INPUT+'.subset.bgl.phased.log'
+            ))
+
+
+            RUN_Bash('awk \'{print $2" "$4" "$5" "$6}\' %s > %s' % (OUTPUT_INPUT+'.subset.bim', OUTPUT_INPUT+'.subset.markers'))
+
+
+            Panel_Subset(_reference, OUTPUT_REF+'.subset.samples', 'all', OUTPUT_REF+'.subset')
+
+            RUN_Bash(BGL2GC_TRICK_BGL + ' {} {} {} {}'.format(
+                     OUTPUT_INPUT + '.subset.bgl.phased', OUTPUT_INPUT+'.subset.markers',
+                     OUTPUT_INPUT + '.subset.GCchange.bgl.phased', OUTPUT_INPUT + '.subset.GCchange.markers'))
+
+            RUN_Bash(BGL2GC_TRICK_BGL + ' {} {} {} {}'.format(
+                OUTPUT_REF + '.subset.bgl.phased', OUTPUT_REF+'.subset.markers',
+                OUTPUT_REF + '.subset.GCchange.bgl.phased', OUTPUT_REF + '.subset.GCchange.markers'))
+
+
+
+            # RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.rearranged.fam')) # Small Sample
+            RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.subset.samples'))
+            RUN_Bash('rm {}'.format(OUTPUT_REF+'.rearranged.fam'))
+            RUN_Bash('rm {}'.format(OUTPUT_REF+'.subset.samples'))
+            RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.subset.bgl.phased'))
+            RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.subset.markers'))
+            RUN_Bash('rm {}'.format(OUTPUT_REF+'.subset.bgl.phased'))
+            RUN_Bash('rm {}'.format(OUTPUT_REF+'.subset.markers'))
+
+
+    else:
+
+
+        if RANDOM:
+
+            RUN_Bash('awk \'{print $1" "$2" ""0"" ""0"" "$5" "$6}\' %s > %s' % (_input+'.fam', OUTPUT_INPUT+'.trick.fam'))
+            RUN_Bash('awk \'{print $1" "$2" ""0"" ""0"" "$5" "$6}\' %s > %s' % (_reference+'.fam', OUTPUT_REF+'.trick.fam'))
+
+            RUN_Bash(RANDOMIZE_FAM + ' {} {}'.format(OUTPUT_INPUT+'.trick.fam', OUTPUT_INPUT+'.rearranged.fam'))
+            RUN_Bash(RANDOMIZE_FAM + ' {} {}'.format(OUTPUT_REF+'.trick.fam', OUTPUT_REF+'.rearranged.fam'))
+
+            RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.trick.fam'))
+            RUN_Bash('rm {}'.format(OUTPUT_REF+'.trick.fam'))
+
+
+        if SUBSET_BGL:
+
+            RUN_Bash('head -100 %s | awk \'{print $1" "$2}\' > %s' % (OUTPUT_INPUT+'.rearranged.fam', OUTPUT_INPUT+'.subset.samples'))
+            RUN_Bash('head -100 %s | awk \'{print $1" "$2}\' > %s' % (OUTPUT_REF+'.rearranged.fam', OUTPUT_REF+'.subset.samples'))
+
+            RUN_Bash(PLINK + ' --bfile {} --keep {} --recode --out {}'.format(_input, OUTPUT_INPUT+'.subset.samples', OUTPUT_INPUT+'.subset'))
+            RUN_Bash(PLINK + ' --bfile {} --keep {} --make-bed --out {}'.format(_input, OUTPUT_INPUT+'.subset.samples', OUTPUT_INPUT+'.subset'))
+
+            RUN_Bash("cut -d ' ' -f1-5,7- {} > {}".format(OUTPUT_INPUT+'.subset.ped', OUTPUT_INPUT+'.subset.nopheno.ped'))
+            RUN_Bash('awk \'{print "M " $2}\' %s > %s' % (OUTPUT_INPUT+'.subset.map', OUTPUT_INPUT+'.subset.dat'))
+
+
+            RUN_Bash(LINKAGE2BEAGLE + ' pedigree={} data={} beagle={} standard=true > {}'.format(
+                OUTPUT_INPUT+'.subset.nopheno.ped', OUTPUT_INPUT+'.subset.dat',
+                OUTPUT_INPUT + '.subset.bgl.phased', OUTPUT_INPUT+'.subset.bgl.phased.log'
+            ))
+
+
+            RUN_Bash('awk \'{print $2" "$4" "$5" "$6}\' %s > %s' % (OUTPUT_INPUT+'.subset.bim', OUTPUT_INPUT+'.subset.markers'))
+
+
+            Panel_Subset(_reference, OUTPUT_REF+'.subset.samples', 'all', OUTPUT_REF+'.subset')
+
+            RUN_Bash(BGL2GC_TRICK_BGL + ' {} {} {} {}'.format(
+                     OUTPUT_INPUT + '.subset.bgl.phased', OUTPUT_INPUT+'.subset.markers',
+                     OUTPUT_INPUT + '.subset.GCchange.bgl.phased', OUTPUT_INPUT + '.subset.GCchange.markers'))
+
+            RUN_Bash(BGL2GC_TRICK_BGL + ' {} {} {} {}'.format(
+                OUTPUT_REF + '.subset.bgl.phased', OUTPUT_REF+'.subset.markers',
+                OUTPUT_REF + '.subset.GCchange.bgl.phased', OUTPUT_REF + '.subset.GCchange.markers'))
+
+
+
+            RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.rearranged.fam'))
+            RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.subset.samples'))
+            RUN_Bash('rm {}'.format(OUTPUT_REF+'.rearranged.fam'))
+            RUN_Bash('rm {}'.format(OUTPUT_REF+'.subset.samples'))
+            RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.subset.bgl.phased'))
+            RUN_Bash('rm {}'.format(OUTPUT_INPUT+'.subset.markers'))
+            RUN_Bash('rm {}'.format(OUTPUT_REF+'.subset.bgl.phased'))
+            RUN_Bash('rm {}'.format(OUTPUT_REF+'.subset.markers'))
 
 
 
@@ -203,9 +285,9 @@ def MakeGeneticMap(_input, _reference, _out,
 
 
     if Flag_OUTPUT:
-        return _out
+        return (_out+'.mach_step.avg.clpsB', _out+'.aver.erate')
     else:
-        return -1
+        return (-1, -1)
 
 
 
