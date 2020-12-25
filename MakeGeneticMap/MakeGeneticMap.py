@@ -43,9 +43,9 @@ def MakeGeneticMap(_input, _reference, _out,
     LINKAGE2BEAGLE = 'java -jar {}'.format(_p_linkage2beagle)
     RANDOMIZE_FAM = 'Rscript {}/STEP0_randomize_the_sample_about_fam_03_06_2017-COOK-V1.R'.format(_p_src)
     BGL2GC_TRICK_BGL = 'Rscript {}/bgl2GC_trick_bgl-v1.1COOK-02222017.R'.format(_p_src)
-    BGL2BED = os.path.join(_p_src, 'Panel-BGL2BED.sh')
-    STEP4_buildMap = os.path.join(_p_src, 'STEP4-buildMap.R')
-    STEP5_collapseHLA = os.path.join(_p_src, 'STEP5-collapseHLA.R')
+    BGL2BED = "bash {}/Panel-BGL2BED.sh".format(_p_src)
+    STEP4_buildMap = "Rscript {}/STEP4-buildMap.R".format(_p_src)
+    STEP5_collapseHLA = "Rscript {}/STEP5-collapseHLA.R".format(_p_src)
 
 
     # Intermediate path.
