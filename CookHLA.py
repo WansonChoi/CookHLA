@@ -13,7 +13,7 @@ from src.HLA_Imputation_GM import HLA_Imputation_GM
 from src.HLA_Imputation_BEAGLE5 import HLA_Imputation_BEAGLE5
 from src.HLA_Imputation_GM_BEAGLE5 import HLA_Imputation_GM_BEAGLE5
 
-from src.checkInput import getSampleNumbers, fixLabel
+from src.checkInput import getSampleNumbers, FixInput
 
 from MakeGeneticMap.MakeGeneticMap import MakeGeneticMap
 
@@ -301,7 +301,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
 
     ## Make one more copy of the input and fix the labels
-    _input = fixLabel(_input, _reference, join(dirname(_out), basename(_input)+'.COPY'), PLINK)
+    _input = FixInput(_input, _reference, join(dirname(_out), basename(_input) + '.COPY'), PLINK)
 
 
     ###### < Control Flags > ######
