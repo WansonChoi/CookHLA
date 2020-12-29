@@ -53,13 +53,16 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     p_dependency = _p_dependency
 
     """
-    (1) PLINK (X) - Give priority to the one of virtual environment.
-    (2) Beagle4.1
-    (3) Beagle5.1
-    (4) tcsh
-    (5) Perl
+    => Give priority to the one in Anaconda yml virtual environment.    
+    (1) PLINK
+    (2) tcsh
+    (3) Perl
+
+
+    => Give priority to the one in 'dependency/' folder.    
+    (1) Beagle4.1
+    (2) Beagle5.1
     
-    => Give priority to the one in 'dependency/' folder.
     """
 
     if exists(join(p_dependency, "plink")):
@@ -81,22 +84,22 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         _p_beagle5 = None
 
     if exists(join(p_dependency, 'tcsh')):
-        _p_tcsh = join(p_dependency, 'tcsh')
-    elif exists(which('tcsh')):
         _p_tcsh = which('tcsh')
+    elif exists(which('tcsh')):
+        _p_tcsh = join(p_dependency, 'tcsh')
     else:
         # Find csh
         if exists(join(p_dependency, 'csh')):
-            _p_tcsh = join(p_dependency, 'csh')
-        elif exists(which('csh')):
             _p_tcsh = which('csh')
+        elif exists(which('csh')):
+            _p_tcsh = join(p_dependency, 'csh')
         else:
             _p_tcsh = None
 
     if exists(join(p_dependency, 'perl')):
-        _p_perl = join(p_dependency, 'perl')
-    else:
         _p_perl = which('perl')
+    else:
+        _p_perl = join(p_dependency, 'perl')
 
 
     _p_linkage2beagle = os.path.join(p_dependency, "linkage2beagle.jar")
