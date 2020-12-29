@@ -8,6 +8,17 @@
 import os, sys, re
 import pandas as pd
 
+std_MAIN_PROCESS_NAME = "\n[%s]: " % (os.path.basename(__file__))
+std_ERROR_MAIN_PROCESS_NAME = "\n[%s::ERROR]: " % (os.path.basename(__file__))
+std_WARNING_MAIN_PROCESS_NAME = "\n[%s::WARNING]: " % (os.path.basename(__file__))
+
+
+Ambiguous = ({'A', 'T'}, {'G', 'C'})
+dict_Complement = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'}
+
+
+p_MKref = re.compile(r'^(AA_|HLA_|SNP_)')
+
 
 def getSampleNumbers(_fam):
 
@@ -15,8 +26,6 @@ def getSampleNumbers(_fam):
         return len(list(f_fam))
 
 
-Ambiguous = ({'A', 'T'}, {'G', 'C'})
-dict_Complement = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'}
 
 
 def UpdateInput(_bim_input, _bim_reference, _out):
@@ -25,13 +34,21 @@ def UpdateInput(_bim_input, _bim_reference, _out):
     #     print("bim_input:\n{}\n".format(df_bim_input))
 
     df_bim_reference = pd.read_csv(_bim_reference, sep='\s+', header=None, dtype=str, names=['Chr', 'Label', 'GD', 'BP', 'a1', 'a2'])
-    #     print("bim_reference:\n{}\n".format(df_bim_reference))
+    f_MKref = df_bim_reference['Label'].str.match(p_MKref)
+    df_bim_reference = df_bim_reference[~f_MKref]
+    # print("bim_reference:\n{}\n".format(df_bim_reference))
 
+    ## Merge based on BP (hg18)
     df_merge0 = df_bim_input[['Label', 'BP', 'a1', 'a2']].merge(df_bim_reference[['Label', 'BP', 'a1', 'a2']], on='BP') \
         .drop_duplicates('BP')
     # print("df_merge0:\n{}\n".format(df_merge0))
     #     df_merge0.to_csv(_out+'.merged', sep='\t', header=True, index=False)
 
+
+    if df_merge0.shape[0] == 0:
+        print(std_ERROR_MAIN_PROCESS_NAME + "Target('{}') and Reference('{}') don't have any markers matched by Base Position. Please check their Human Genome(hg) version again."
+              .format(_bim_input, _bim_reference))
+        sys.exit()
 
 
     ### Main 0 - Extract
@@ -123,6 +140,9 @@ def FixInput(_input, _reference, _out, _PLINK):
     BP information is assumed to be given properly.
 
     """
+
+    # Liftdown target(input) HG to hg 18.
+
 
     [t_extract, t_update_name, t_update_alleles] = UpdateInput(_input+'.bim', _reference+'.bim', _out+'.fix')
 
