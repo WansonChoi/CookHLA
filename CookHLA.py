@@ -65,7 +65,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     
     """
 
-    if exists(join(p_dependency, "plink")):
+    if exists(which('plink')):
         _p_plink = which('plink')
     else:
         _p_plink = join(p_dependency, "plink")
@@ -83,20 +83,20 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     else:
         _p_beagle5 = None
 
-    if exists(join(p_dependency, 'tcsh')):
+    if exists(which('tcsh')):
         _p_tcsh = which('tcsh')
-    elif exists(which('tcsh')):
+    elif exists(join(p_dependency, 'tcsh')):
         _p_tcsh = join(p_dependency, 'tcsh')
     else:
         # Find csh
-        if exists(join(p_dependency, 'csh')):
+        if exists(which('csh')):
             _p_tcsh = which('csh')
-        elif exists(which('csh')):
+        elif exists(join(p_dependency, 'csh')):
             _p_tcsh = join(p_dependency, 'csh')
         else:
             _p_tcsh = None
 
-    if exists(join(p_dependency, 'perl')):
+    if exists(which('perl')):
         _p_perl = which('perl')
     else:
         _p_perl = join(p_dependency, 'perl')
