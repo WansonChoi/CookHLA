@@ -53,7 +53,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     p_dependency = _p_dependency
 
     """
-    (1) PLINK
+    (1) PLINK (X) - Give priority to the one of virtual environment.
     (2) Beagle4.1
     (3) Beagle5.1
     (4) tcsh
@@ -63,9 +63,9 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
     """
 
     if exists(join(p_dependency, "plink")):
-        _p_plink = join(p_dependency, "plink")
-    else:
         _p_plink = which('plink')
+    else:
+        _p_plink = join(p_dependency, "plink")
 
     if exists(join(p_dependency, 'beagle4.jar')):
         _p_beagle4 = join(p_dependency, "beagle4.jar")
