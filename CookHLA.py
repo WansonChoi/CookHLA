@@ -30,9 +30,9 @@ TOLERATED_DIFF = 0.15
 
 
 
-def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Average_Erate=None, _java_memory='2g',
-            _MultP=1, _answer=None, __save_intermediates=False, __use_Multiple_Markers=True, _p_src="./src",
-            _p_dependency="./dependency", _given_prephased=None, f_prephasing=False, _HapMap_Map=None,
+def CookHLA(_input, _hg_input, _out, _reference, _hg_reference='18', _AdaptiveGeneticMap=None, _Average_Erate=None,
+            _java_memory='2g', _MultP=1, _answer=None, __save_intermediates=False, __use_Multiple_Markers=True,
+            _p_src="./src", _p_dependency="./dependency", _given_prephased=None, f_prephasing=False, _HapMap_Map=None,
             __overlap__=(0.5, 1, 1.5), _window=5, _ne=10000, _nthreads=1, f_measureAcc_v2=False, f_BEAGLE5=False,
             f_save_IMPUTATION_INPUT=False):
 
@@ -304,7 +304,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
 
     ## Make one more copy of the input and fix the labels
-    _input = FixInput(_input, _reference, join(dirname(_out), basename(_input) + '.COPY'), PLINK)
+    _input = FixInput(_input, _hg_input, _reference, join(dirname(_out), basename(_input) + '.COPY'), PLINK)
 
 
     ###### < Control Flags > ######
@@ -340,7 +340,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
         print("- Prephasing.")
 
     if f_SmallSampleMode:
-        print("- Small Sample mode. (because # of samples < 100)")
+        print("- Small Sample mode. (because # of target samples < 100)")
 
 
 
@@ -850,7 +850,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
             # [3] Multiple Markers
             # [6] Multiple Markers + Adaptive Genetic Map
             __IMPUTE_OUT__ = \
-                HLA_Imputation_BEAGLE5(idx_process, MHC, _reference, _out, _hg, __overlap__, _window, _ne, _nthreads,
+                HLA_Imputation_BEAGLE5(idx_process, MHC, _reference, _out, _hg_reference, __overlap__, _window, _ne, _nthreads,
                                        _AdaptiveGeneticMap, _Average_Erate,
                                        LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE5, _p_tcsh,
                                        _answer=_answer, f_save_intermediates=__save_intermediates, _MultP=_MultP,
@@ -864,7 +864,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
             # [4] Adaptive Genetic Map (HapMap)
             # [5] Adaptive Genetic Map
             __IMPUTE_OUT__ = \
-                HLA_Imputation_GM_BEAGLE5(idx_process, MHC, _reference, _out, _hg, _window, __overlap__[0], _ne, _nthreads,
+                HLA_Imputation_GM_BEAGLE5(idx_process, MHC, _reference, _out, _hg_reference, _window, __overlap__[0], _ne, _nthreads,
                                           _AdaptiveGeneticMap, _Average_Erate, LINKAGE2BEAGLE,
                                           BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE5, _answer=_answer,
                                           f_save_intermediates=__save_intermediates, _HapMap_Map=_HapMap_Map,
@@ -880,7 +880,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
 
             # [3] Multiple Markers
             # [6] Multiple Markers + Adaptive Genetic Map
-            __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg, _nthreads, _AdaptiveGeneticMap, _Average_Erate,
+            __IMPUTE_OUT__ = HLA_Imputation(idx_process, MHC, _reference, _out, _hg_reference, _nthreads, _AdaptiveGeneticMap, _Average_Erate,
                                             LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4, _p_tcsh,
                                             _answer=_answer, f_save_intermediates=__save_intermediates, _MultP=_MultP,
                                             _given_prephased=_given_prephased, f_prephasing=f_prephasing)
@@ -891,7 +891,7 @@ def CookHLA(_input, _out, _reference, _hg='18', _AdaptiveGeneticMap=None, _Avera
             # [2] Plain (Just with Beagle 4.1)
             # [4] Adaptive Genetic Map (HapMap)
             # [5] Adaptive Genetic Map
-            __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg, _nthreads, _AdaptiveGeneticMap, _Average_Erate,
+            __IMPUTE_OUT__ = HLA_Imputation_GM(idx_process, MHC, _reference, _out, _hg_reference, _nthreads, _AdaptiveGeneticMap, _Average_Erate,
                                                LINKAGE2BEAGLE, BEAGLE2LINKAGE, BEAGLE2VCF, VCF2BEAGLE, PLINK, BEAGLE4,
                                                _answer=_answer, f_save_intermediates=__save_intermediates, _HapMap_Map=_HapMap_Map)
 
@@ -957,6 +957,8 @@ if __name__ == "__main__":
     parser.add_argument("-h", "--help", help="Show this help message and exit\n\n", action='help')
 
     parser.add_argument("--input", "-i", help="\nCommon prefix of Target Input files.\n\n", required=True)
+    parser.add_argument("--human-genome", "-hg", help="\nHuman Genome version(ex. 18, 19, 38) of TARGET(INPUT) data, Not Reference.\n\n",
+                        choices=["18", "19", "38"], metavar="HG", required=True)
     parser.add_argument("--reference", "-ref", help="\nPrefix of Reference files.\n\n", required=True)
     parser.add_argument("--out", "-o", help="\nOutput file name prefix\n\n", required=True)
 
@@ -1022,10 +1024,11 @@ if __name__ == "__main__":
 
     CookHLA_start = time()
 
-    CookHLA(args.input, args.out, args.reference, "18", args.genetic_map, args.average_erate, _java_memory=args.java_memory,
-            _MultP=args.multiprocess, _answer=args.answer, __use_Multiple_Markers=True, f_prephasing=False,
-            __overlap__=args.overlap, _window=args.window, _ne=args.effective_population_size, _nthreads=args.nthreads,
-            f_measureAcc_v2=args.measureAcc_v2, f_BEAGLE5=(not args.beagle4), f_save_IMPUTATION_INPUT=args.save_IMPUTATION_INPUT)
+    CookHLA(args.input, args.human_genome, args.out, args.reference, "18", args.genetic_map, args.average_erate,
+            _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer, __use_Multiple_Markers=True,
+            f_prephasing=False, __overlap__=args.overlap, _window=args.window, _ne=args.effective_population_size,
+            _nthreads=args.nthreads, f_measureAcc_v2=args.measureAcc_v2, f_BEAGLE5=(not args.beagle4),
+            f_save_IMPUTATION_INPUT=args.save_IMPUTATION_INPUT)
 
     CookHLA_end = time()
 
