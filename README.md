@@ -71,6 +71,7 @@ The following requirements must be installed in your system.
 - R>=3.6.x
 - Java
 - csh(or tcsh)
+- pyliftover=0.4
 
 
 There are two ways to install these required software packages. 
@@ -113,7 +114,7 @@ CookHLA can be run in this virtual environment.
 
 - CookHLA takes unphased SNP file as input. The input file must be in PLINK binary file format (PREFIX.bed, PREFIX.bim, PREFIX.fam). You only need to specify the PREFIX in the input argument (without file extensions).
 - CookHLA uses only SNPs in chr6:29-34Mb. Thus, you can portably prepare only those SNPs in that region as input file.   
-- (**Heads-Up**): Currently, CookHLA **ONLY SUPPORTS hg18** similar to SNP2HLA. This is very important, since CookHLA uses base position instead of rsID to match SNPs to reference panel. The reason we are still using the old coordinate is because many existing SNP2HLA-formatted reference panels are in hg18. Although being suboptimal, the best way currently is to down-liftover your SNPs to hg18, obtain the imputation results, and up-liftover to your present coordinate for further analysis.
+<!-- - (**Heads-Up**): Currently, CookHLA **ONLY SUPPORTS hg18** similar to SNP2HLA. This is very important, since CookHLA uses base position instead of rsID to match SNPs to reference panel. The reason we are still using the old coordinate is because many existing SNP2HLA-formatted reference panels are in hg18. Although being suboptimal, the best way currently is to down-liftover your SNPs to hg18, obtain the imputation results, and up-liftover to your present coordinate for further analysis. -->
 
 
 
@@ -138,7 +139,8 @@ Or, if you want to build a reference panel yourself, you can use the **MakeRefer
 
 ```
 $ python CookHLA.py \
-    -i example/1958BC \
+    -i example/1958BC.hg19 \
+    -hg 19 \
     -o MyHLAImputation/1958BC+HM_CEU_REF \
     -ref example/HM_CEU_REF \
     -gm example/AGM.1958BC+HM_CEU_REF.mach_step.avg.clpsB \
@@ -149,11 +151,12 @@ $ python CookHLA.py \
 ```
 
 - -i: Input file (Prefix of the PLINK binary formatted SNP file.)
+- -hg: Human Genome version(ex. 18, 19 or 38) of INPUT data, Not Reference.
 - -o: Output file.
 - -ref: Reference panel (Prefix of the SNP2HLA-formatted panel)
 - -gm, -ae: Adaptive genetic map information (See the next section for how to generate these)
 - -mem: memory assigned per core. 
-- -mp (optional): number of cores to be used for multi-processing. (default=1)
+- -mp (optional): the number of cores to be used for multi-processing. (default=1)
 
 
 
