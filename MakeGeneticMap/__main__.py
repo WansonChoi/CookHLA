@@ -14,7 +14,7 @@ class CookHLA_MakeGeneticMap(object):
 
     """
 
-    def __init__(self, _input, _reference, _out):
+    def __init__(self, _input, _hg_input, _reference, _out):
 
         ## Exception Handling here
 
@@ -24,7 +24,7 @@ class CookHLA_MakeGeneticMap(object):
 
 
 
-        self.GeneticMap = MakeGeneticMap(_input, _reference, _out)
+        self.GeneticMap = MakeGeneticMap(_input, _hg_input, _reference, _out)
 
 
 
@@ -66,6 +66,8 @@ if __name__ == '__main__':
     parser.add_argument("-h", "--help", help="Show this help message and exit\n\n", action='help')
 
     parser.add_argument("--input", "-i", help="\nCommon prefix of input files.\n\n", required=True)
+    parser.add_argument("--human-genome", "-hg", help="\nHuman Genome version(ex. 18, 19, 38) of TARGET(INPUT) data, Not Reference.\n\n",
+                        choices=["18", "19", "38"], metavar="HG", required=True)
     parser.add_argument("--reference", "-ref", help="\nPrefix of Reference files.\n\n", required=True)
     parser.add_argument("--out", "-o", help="\nOutput file name prefix\n\n", required=True)
 
@@ -85,4 +87,4 @@ if __name__ == '__main__':
 
 
 
-    CookHLA_MakeGeneticMap(args.input, args.reference, args.out)
+    CookHLA_MakeGeneticMap(args.input, args.human_genome, args.reference, args.out)

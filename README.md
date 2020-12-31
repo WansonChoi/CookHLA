@@ -151,7 +151,7 @@ $ python CookHLA.py \
 ```
 
 - -i: Input file (Prefix of the PLINK binary formatted SNP file.)
-- -hg: Human Genome version(ex. 18, 19 or 38) of INPUT data, Not Reference.
+- -hg: Human Genome version(ex. 18, 19 or 38) of the INPUT data, Not Reference.
 - -o: Output file.
 - -ref: Reference panel (Prefix of the SNP2HLA-formatted panel)
 - -gm, -ae: Adaptive genetic map information (See the next section for how to generate these)
@@ -172,9 +172,10 @@ To increase accuracy, CookHLA adaptively learns genetic map from data. To genera
 
 ```
 $ python -m MakeGeneticMap \
-    -i example/1958BC \
-    -ref example/HM_CEU_REF \
-    -o MyAGM/1958BC+HM_CEU_REF
+    -i example/1958BC.hg19 \
+    -hg 19 \
+    -ref 1000G_REF/1000G_REF.EUR.chr6.hg18.29mb-34mb.inT1DGC \
+    -o MyAGM/1958BC+1000G_REF.EUR
 ```
 
 This will generate (1) '\*.aver.erate' and (2) '\*.mach_step.avg.clpsB' files, which can be passed into '-ae' and '-gm' arguments of CookHLA respectively.

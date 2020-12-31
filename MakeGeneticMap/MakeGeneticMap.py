@@ -1,13 +1,13 @@
 #-*- coding: utf-8 -*-
 
 import os, sys, re
-from os.path import join
+from os.path import join, dirname, basename
 from shutil import which
 
 from src.RUN_Bash import RUN_Bash
 from MakeGeneticMap.Panel_subset import Panel_Subset
 
-from src.checkInput import getSampleNumbers
+from src.checkInput import getSampleNumbers, FixInput
 
 std_MAIN_PROCESS_NAME = "\n[%s]: " % (os.path.basename(__file__))
 std_ERROR_MAIN_PROCESS_NAME = "\n[%s::ERROR]: " % (os.path.basename(__file__))
@@ -17,7 +17,7 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 
 
 
-def MakeGeneticMap(_input, _reference, _out,
+def MakeGeneticMap(_input, _hg_input, _reference, _out,
                    _p_src="./MakeGeneticMap", _p_dependency="./dependency",
                    __save_intermediates=False):
 
@@ -28,7 +28,7 @@ def MakeGeneticMap(_input, _reference, _out,
 
     N_sample_reference = getSampleNumbers(_reference+'.fam')
     if f_SmallSampleMode and (N_sample_reference < 200):
-        print(std_ERROR_MAIN_PROCESS_NAME + "If Target data has less than 100 samples, Reference panel must have more than equal 200 samples.")
+        print(std_ERROR_MAIN_PROCESS_NAME + "If Target data has less than 100 samples, Reference panel must have at least 200 samples.")
         sys.exit()
 
 
@@ -43,7 +43,7 @@ def MakeGeneticMap(_input, _reference, _out,
     LINKAGE2BEAGLE = 'java -jar {}'.format(_p_linkage2beagle)
     RANDOMIZE_FAM = 'Rscript {}/STEP0_randomize_the_sample_about_fam_03_06_2017-COOK-V1.R'.format(_p_src)
     BGL2GC_TRICK_BGL = 'Rscript {}/bgl2GC_trick_bgl-v1.1COOK-02222017.R'.format(_p_src)
-    BGL2BED = "bash {}/Panel-BGL2BED.sh".format(_p_src)
+    BGL2BED = "{}/Panel-BGL2BED.sh".format(_p_src)
     STEP4_buildMap = "Rscript {}/STEP4-buildMap.R".format(_p_src)
     STEP5_collapseHLA = "Rscript {}/STEP5-collapseHLA.R".format(_p_src)
 
@@ -143,6 +143,9 @@ def MakeGeneticMap(_input, _reference, _out,
 
 
     else:
+
+        # Auto Liftdown
+        _input = FixInput(_input, _hg_input, _reference, join(dirname(_out), basename(_input) + '.COPY'), PLINK)
 
 
         if RANDOM:
