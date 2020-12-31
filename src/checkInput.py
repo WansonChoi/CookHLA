@@ -7,6 +7,7 @@
 
 import os, sys, re
 import pandas as pd
+from pyliftover import LiftOver
 
 std_MAIN_PROCESS_NAME = "\n[%s]: " % (os.path.basename(__file__))
 std_ERROR_MAIN_PROCESS_NAME = "\n[%s::ERROR]: " % (os.path.basename(__file__))
@@ -17,7 +18,7 @@ Ambiguous = ({'A', 'T'}, {'G', 'C'})
 dict_Complement = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'}
 
 
-p_MKref = re.compile(r'^(AA_|HLA_|SNP_)')
+p_MKref = re.compile(r'^(AA_|HLA_|SNP_|INS_)') # To exclude 'MakeReference' markers.
 
 
 def getSampleNumbers(_fam):
@@ -25,6 +26,34 @@ def getSampleNumbers(_fam):
     with open(_fam, 'r') as f_fam:
         return len(list(f_fam))
 
+
+
+def LiftDown_hg18(_bim, _hg, _out):
+
+    HG_input = 'hg{}'.format(_hg)
+    # print("HG: {}".format(HG_input))
+
+    df_bim = pd.read_csv(_bim, sep='\s+', header=None, dtype=str, names=['Chr', 'Label', 'GD', 'BP', 'a1', 'a2'])
+    # print("df_bim:\n{}\n".format(df_bim))
+
+    lo = LiftOver(HG_input, 'hg18')  # Liftdown to hg18
+    sr_BP_hg18 = df_bim['BP'].map(
+        lambda x: lo.convert_coordinate('chr6', int(x))[0][1] if bool(lo.convert_coordinate('chr6', int(x))) else None)
+
+    df_bim['BP'] = sr_BP_hg18
+
+    # Remove makrers that failed the Liftdown.
+    if sr_BP_hg18.isna().any():
+        print(std_WARNING_MAIN_PROCESS_NAME + "Next markers of Target('{}') are failed to Liftdown to hg18. These markers will be excluded."
+              .format(_bim))
+        print(df_bim[sr_BP_hg18.isna()])
+        df_bim.dropna(subset=['BP'], inplace=True)
+
+    # print("df_bim_hg18:\n{}\n".format(df_bim))
+    df_bim.to_csv(_out, sep='\t', header=False, index=False)
+
+
+    return _out
 
 
 
@@ -134,27 +163,52 @@ def UpdateInput(_bim_input, _bim_reference, _out):
     return (_out + '.extract', _out + '.update_name', _out + '.update_alleles')
 
 
-def FixInput(_input, _reference, _out, _PLINK):
+def FixInput(_input, _hg_input, _reference, _out, _PLINK):
 
     """
     BP information is assumed to be given properly.
+    BP of the reference panel will be assumed to be hg 18.
 
     """
 
-    # Liftdown target(input) HG to hg 18.
+    if _hg_input != "18":
+        # Liftdown target(input) HG to hg 18.
+
+        INPUT_BIM_hg18 = LiftDown_hg18(_input+'.bim', _hg_input, _out+'.bim.LiftDown_hg18')
+
+        [t_extract, t_update_name, t_update_alleles] = UpdateInput(INPUT_BIM_hg18, _reference+'.bim', _out+'.fix')
+
+        _out = _out+'.LiftDown_hg18'
+
+        command = ' '.join(
+            [_PLINK, '--make-bed',
+             '--bed', _input+'.bed',
+             '--bim', INPUT_BIM_hg18,
+             '--fam', _input+'.fam',
+             '--extract {}'.format(t_extract),
+             '--update-name {}'.format(t_update_name),
+             '--update-alleles {}'.format(t_update_alleles),
+             '--out', _out])
+        # print(command)
+        os.system(command)
+
+        os.system('rm {}'.format(INPUT_BIM_hg18))
 
 
-    [t_extract, t_update_name, t_update_alleles] = UpdateInput(_input+'.bim', _reference+'.bim', _out+'.fix')
 
-    command = ' '.join(
-        [_PLINK, '--make-bed',
-                '--bfile', _input,
-                '--extract {}'.format(t_extract),
-                '--update-name {}'.format(t_update_name),
-                '--update-alleles {}'.format(t_update_alleles),
-                '--out', _out])
-    print(command)
-    os.system(command)
+    else:
+
+        [t_extract, t_update_name, t_update_alleles] = UpdateInput(_input+'.bim', _reference+'.bim', _out+'.fix')
+
+        command = ' '.join(
+            [_PLINK, '--make-bed',
+                    '--bfile', _input,
+                    '--extract {}'.format(t_extract),
+                    '--update-name {}'.format(t_update_name),
+                    '--update-alleles {}'.format(t_update_alleles),
+                    '--out', _out])
+        # print(command)
+        os.system(command)
 
 
     os.system('rm {}'.format(t_extract))

@@ -10,11 +10,12 @@ dependencies:
   - _r-mutex=1.0.1
   - binutils_impl_linux-64=2.33.1
   - binutils_linux-64=2.33.1
+  - blas=1.0
   - bwidget=1.9.14
   - bzip2=1.0.8
-  - ca-certificates=2020.6.20
+  - ca-certificates=2020.12.5
   - cairo=1.14.12
-  - certifi=2020.6.20
+  - certifi=2020.12.5
   - curl=7.64.0
   - fontconfig=2.13.1
   - freetype=2.10.0
@@ -47,13 +48,17 @@ dependencies:
   - libstdcxx-ng=9.2.0
   - libtiff=4.1.0
   - libuuid=2.32.1
+  - libwebp-base=1.1.0
   - libxcb=1.13
   - libxml2=2.9.9
   - lz4-c=1.8.3
   - make=4.2.1
   - ncurses=6.1
+  - nomkl=3.0
   - numpy=1.17.3
+  - numpy-base=1.17.3
   - openblas=0.3.6
+  - openblas-devel=0.3.6
   - openjdk=8.0.152
   - openssl=1.0.2u
   - pandas=0.25.3
@@ -64,6 +69,7 @@ dependencies:
   - pixman=0.34.0
   - plink=1.90b6.12
   - pthread-stubs=0.4
+  - pyliftover=0.4
   - python=3.6.5
   - python-dateutil=2.8.1
   - python_abi=3.6
@@ -108,4 +114,3 @@ dependencies:
   - xz=5.2.4
   - zlib=1.2.11
   - zstd=1.4.4
-
