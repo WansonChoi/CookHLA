@@ -1,9 +1,12 @@
 #-*- coding: utf-8 -*-
 
 import os, sys, re
+from os.path import join, dirname, basename
 import argparse, textwrap
+from shutil import which
 
 from MakeGeneticMap.MakeGeneticMap import MakeGeneticMap
+from src.checkInput import FixInput
 
 
 
@@ -16,9 +19,18 @@ class CookHLA_MakeGeneticMap(object):
 
     def __init__(self, _input, _hg_input, _reference, _out):
 
+
+        _p_plink = which("plink")
+        PLINK = "{} --noweb --silent --allow-no-sex".format(_p_plink)
+
+
+
         ## Exception Handling here
 
         # (1) _input
+        # Auto Liftdown
+        _input = FixInput(_input, _hg_input, _reference, join(dirname(_out), basename(_input) + '.COPY'), PLINK)
+
 
         # (2) _reference
 

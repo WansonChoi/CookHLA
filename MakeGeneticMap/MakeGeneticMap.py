@@ -7,7 +7,7 @@ from shutil import which
 from src.RUN_Bash import RUN_Bash
 from MakeGeneticMap.Panel_subset import Panel_Subset
 
-from src.checkInput import getSampleNumbers, FixInput
+from src.checkInput import getSampleNumbers
 
 std_MAIN_PROCESS_NAME = "\n[%s]: " % (os.path.basename(__file__))
 std_ERROR_MAIN_PROCESS_NAME = "\n[%s::ERROR]: " % (os.path.basename(__file__))
@@ -143,9 +143,6 @@ def MakeGeneticMap(_input, _hg_input, _reference, _out,
 
 
     else:
-
-        # Auto Liftdown
-        _input = FixInput(_input, _hg_input, _reference, join(dirname(_out), basename(_input) + '.COPY'), PLINK)
 
 
         if RANDOM:
