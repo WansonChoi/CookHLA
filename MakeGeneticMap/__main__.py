@@ -36,7 +36,7 @@ class CookHLA_MakeGeneticMap(object):
 
 
 
-        self.GeneticMap = MakeGeneticMap(_input, _hg_input, _reference, _out)
+        self.GeneticMap = MakeGeneticMap(_input, _reference, _out)
 
 
 

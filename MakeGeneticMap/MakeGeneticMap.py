@@ -17,7 +17,7 @@ HLA_names = ["A", "B", "C", "DPA1", "DPB1", "DQA1", "DQB1", "DRB1"]
 
 
 
-def MakeGeneticMap(_input, _hg_input, _reference, _out,
+def MakeGeneticMap(_input, _reference, _out,
                    _p_src="./MakeGeneticMap", _p_dependency="./dependency",
                    __save_intermediates=False):
 

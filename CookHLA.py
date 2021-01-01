@@ -234,6 +234,17 @@ def CookHLA(_input, _hg_input, _out, _reference, _hg_reference='18', _AdaptiveGe
 
 
 
+    ## Small Sample mode.
+    N_sample = getSampleNumbers(_input+'.fam')
+    f_SmallSampleMode = N_sample < 100
+
+
+    ## Make one more copy of the input and fix the labels
+    _input = FixInput(_input, _hg_input, _reference, join(dirname(_out), basename(_input) + '.COPY'), PLINK)
+
+
+
+
     ###### < Adaptive Genetic Map checking > ######
 
     __use_GeneticMap = False # Check whether Adaptive Genetic Map is available.
@@ -298,13 +309,6 @@ def CookHLA(_input, _hg_input, _out, _reference, _hg_reference='18', _AdaptiveGe
 
 
 
-    ## Small Sample mode.
-    N_sample = getSampleNumbers(_input+'.fam')
-    f_SmallSampleMode = N_sample < 100
-
-
-    ## Make one more copy of the input and fix the labels
-    _input = FixInput(_input, _hg_input, _reference, join(dirname(_out), basename(_input) + '.COPY'), PLINK)
 
 
     ###### < Control Flags > ######
