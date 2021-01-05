@@ -112,7 +112,9 @@ CookHLA can be run in this virtual environment.
 
 ## (3) Preparing Input files
 
-1. Target Genotype file
+<br>
+
+1. **Target Genotype file**
 
     CookHLA takes unphased SNP file as input. The input file must be in PLINK binary file format (PREFIX.bed, PREFIX.bim, PREFIX.fam). You only need to specify the PREFIX in the input argument (without file extensions).
     
@@ -125,7 +127,7 @@ CookHLA can be run in this virtual environment.
 <br>
 
 
-2. Reference panel
+2. **Reference panel**
 
     CookHLA requires a phased reference panel. CookHLA uses the same reference panel format as SNP2HLA. For many existing SNP2HLA-formatted panels for various populations, see section (6) below.
 
@@ -137,7 +139,7 @@ CookHLA can be run in this virtual environment.
 <br>
 
 
-3. Adaptive Genetic Map
+3. **Adaptive Genetic Map**
 
     To increase accuracy, CookHLA adaptively learns genetic map from data. To generate an Adaptive genetic map, you have to use **'MakeGeneticMap' module** in the CookHLA project folder. 
     
@@ -202,7 +204,7 @@ $ python CookHLA.py \
 - -mp (optional): the number of cores to be used for multi-processing. (default=1)
 
 
-
+<br>
 
 If you skip both '-gm' and '-ae' arguments, the above 'MakeGeneticMap' module will be implemented automatically prior to the imputation to generate a new AGM.
 
