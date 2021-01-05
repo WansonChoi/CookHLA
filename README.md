@@ -110,19 +110,62 @@ CookHLA can be run in this virtual environment.
 
 
 
-## (3) Preparing input file
+## (3) Preparing Input files
 
-- CookHLA takes unphased SNP file as input. The input file must be in PLINK binary file format (PREFIX.bed, PREFIX.bim, PREFIX.fam). You only need to specify the PREFIX in the input argument (without file extensions).
-- CookHLA uses only SNPs in chr6:29-34Mb. Thus, you can portably prepare only those SNPs in that region as input file.   
-<!-- - (**Heads-Up**): Currently, CookHLA **ONLY SUPPORTS hg18** similar to SNP2HLA. This is very important, since CookHLA uses base position instead of rsID to match SNPs to reference panel. The reason we are still using the old coordinate is because many existing SNP2HLA-formatted reference panels are in hg18. Although being suboptimal, the best way currently is to down-liftover your SNPs to hg18, obtain the imputation results, and up-liftover to your present coordinate for further analysis. -->
+1. Target Genotype file
 
+    CookHLA takes unphased SNP file as input. The input file must be in PLINK binary file format (PREFIX.bed, PREFIX.bim, PREFIX.fam). You only need to specify the PREFIX in the input argument (without file extensions).
+    
+    CookHLA uses only SNPs in chr6:29-34Mb. Thus, you can portably prepare only those SNPs in that region as input file.
+
+    <!-- - (**Heads-Up**): Currently, CookHLA **ONLY SUPPORTS hg18** similar to SNP2HLA. This is very important, since CookHLA uses base position instead of rsID to match SNPs to reference panel. The reason we are still using the old coordinate is because many existing SNP2HLA-formatted reference panels are in hg18. Although being suboptimal, the best way currently is to down-liftover your SNPs to hg18, obtain the imputation results, and up-liftover to your present coordinate for further analysis. -->
+
+    CookHLA generates and uses a new copy of the input target data where markers are subsetted to those of the reference panel based on the base position information. Also, Since most SNP2HLA-formatted reference panels are distributed in hg18, the Human Genome version of the copied target data will be lifted-down to hg18 automatically if its version is not hg18.
+
+<br>
+
+
+2. Reference panel
+
+    CookHLA requires a phased reference panel. CookHLA uses the same reference panel format as SNP2HLA. For many existing SNP2HLA-formatted panels for various populations, see section (6) below.
+
+    Or, if you want to build a reference panel yourself, you can use the **MakeReference** software that comes with SNP2HLA. The official webpage of SNP2HLA is "http://software.broadinstitute.org/mpg/snp2hla/" and the manual of **MakeReference** can be found at "http://software.broadinstitute.org/mpg/snp2hla/makereference_manual.html".
+
+    Since most SNP2HLA-formatted reference panels are distributed in hg18, the human genome version of a reference panel will be assuemed to be hg18.
+
+
+<br>
+
+
+3. Adaptive Genetic Map
+
+    To increase accuracy, CookHLA adaptively learns genetic map from data. To generate an Adaptive genetic map, you have to use **'MakeGeneticMap' module** in the CookHLA project folder. 
+    
+
+    ```
+    $ python -m MakeGeneticMap \
+        -i example/1958BC.hg19 \
+        -hg 19 \
+        -ref 1000G_REF/1000G_REF.EUR.chr6.hg18.29mb-34mb.inT1DGC \
+        -o MyAGM/1958BC+1000G_REF.EUR
+    ```
+
+    This will generate (1) '\*.aver.erate' and (2) '\*.mach_step.avg.clpsB' files, which can be passed into '-ae' and '-gm' arguments of CookHLA respectively.
+
+    <!-- If MakeGeneticMap gives error, one possibility is that the number of SNPs in the input data is too large, particularly compared to the reference panel. In that case, you can restrict the SNPs to the overlapping SNPs with the reference first and try. (Non-overlapping SNPs are not informative for imputation anyways.) -->
+
+
+
+    Once generated, you can reuse the generated AGM restricted to the imputation of the target and reference panel that were used to generate the AGM.
+
+    The 'MakeGeneticMap' module requires at least 100 samples from the target and reference panel for each(total 200 samples). If the target data has less than 100 samples, then 200 samples from the reference panel will be used alternatively. If both the target and reference panel have less than 100 samples, then the module will fail.
 
 
 <br>
 <br>
 
 
-## (4) Preparing a reference panel
+<!-- ## (4) Preparing a reference panel
 
 CookHLA requires a phased reference panel. CookHLA uses the same reference panel format as SNP2HLA. For many existing SNP2HLA-formatted panels for various populations, see section (8) below.
 
@@ -130,10 +173,10 @@ Or, if you want to build a reference panel yourself, you can use the **MakeRefer
 
 
 <br>
-<br>
+<br> -->
 
 
-## (5) Running imputation
+## (4) Running imputation
 
 **Usage example**:
 
@@ -160,13 +203,19 @@ $ python CookHLA.py \
 
 
 
+
+If you skip both '-gm' and '-ae' arguments, the above 'MakeGeneticMap' module will be implemented automatically prior to the imputation to generate a new AGM.
+
+
+
+
 <br>
 <br>
 
 
 
 
-## (6) How to generate an Adaptive Genetic Map
+<!-- ## (6) How to generate an Adaptive Genetic Map
 
 To increase accuracy, CookHLA adaptively learns genetic map from data. To generate an Adaptive genetic map, you have to use **'MakeGeneticMap' module** in the CookHLA project folder.
 
@@ -184,10 +233,10 @@ If MakeGeneticMap gives error, one possibility is that the number of SNPs in the
 
 
 <br>
-<br>
+<br> -->
 
 
-## (7) Output files and downstream analysis
+## (5) Output files and downstream analysis
 
 In the output, '\*.alleles' file contains the imputed HLA types of the target genotype. ‘\*.hped’ file is a PLINK PED-like format of HLA allele information.
 
@@ -202,7 +251,7 @@ Citation: Choi W, Luo Y, Raychaudhuri S, Han B. HATK: HLA Analysis Toolkit [publ
 
 
 
-## (8) Publicly available Reference panels
+## (6) Publicly available Reference panels
 
 Below are publicly available SNP2HLA-formatted reference panels, which can be used for CookHLA.
 
@@ -251,14 +300,14 @@ To make these panels, we obtained both the SNP and HLA data from 1000 Genomes we
 <br>
 
 
-## (9) Citation
+## (7) Citation
 
 S. Cook, W. Choi, H. Lim, Y. Luo, K. Kim, X. Jia, S. Raychaudhuri and B. Han, CookHLA: Accurate Imputation of Human Leukocyte Antigens. **Under Review**.
 
 <br>
 <br>
 
-## (10) License
+## (8) License
 
 The CookHLA Software is freely available for non-commercial academic research use. For other usage, one must contact Buhm Han (BH) at buhm.han@snu.ac.kr (patent pending). WE (Seungho Cook, Wanson Choi, Hyunjoon Lim and BH) MAKE NO REPRESENTATIONS OR WARRANTIES WHATSOEVER, EITHER EXPRESS OR IMPLIED, WITH RESPECT TO THE CODE PROVIDED HERE UNDER. IMPLIED WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE WITH RESPECT TO CODE ARE EXPRESSLY DISCLAIMED. THE CODE IS FURNISHED "AS IS" AND "WITH ALL FAULTS" AND DOWNLOADING OR USING THE CODE IS UNDERTAKEN AT YOUR OWN RISK. TO THE FULLEST EXTENT ALLOWED BY APPLICABLE LAW, IN NO EVENT SHALL WE BE LIABLE, WHETHER IN CONTRACT, TORT, WARRANTY, OR UNDER ANY STATUTE OR ON ANY OTHER BASIS FOR SPECIAL, INCIDENTAL, INDIRECT, PUNITIVE, MULTIPLE OR CONSEQUENTIAL DAMAGES SUSTAINED BY YOU OR ANY OTHER PERSON OR ENTITY ON ACCOUNT OF USE OR POSSESSION OF THE CODE, WHETHER OR NOT FORESEEABLE AND WHETHER OR NOT WE HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES, INCLUDING WITHOUT LIMITATION DAMAGES ARISING FROM OR RELATED TO LOSS OF USE, LOSS OF DATA, DOWNTIME, OR FOR LOSS OF REVENUE, PROFITS, GOODWILL, BUSINESS OR OTHER FINANCIAL LOSS.
 
