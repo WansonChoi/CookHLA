@@ -8,7 +8,9 @@ snps=erate[,1]
 n=length(snps)
 avgrate=as.numeric(erate[,2])
 lastrate=as.numeric(erate[,3])
-cat(mean(avgrate), "\n")
+
+write.table(as.matrix(c(mean(avgrate))), args[6], quote=F, row.names=F, col.names=F)
+#cat(mean(avgrate), "\n")  # (2020. 01. 09.) Redirection has been deprecated.
 
 rec=as.matrix(read.table(args[2],header=T))
 avgrec=as.numeric(rec[,2])

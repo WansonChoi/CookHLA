@@ -232,7 +232,8 @@ def MakeGeneticMap(_input, _reference, _out,
 
     if BUILDING_MAP:
 
-        RUN_Bash(STEP4_buildMap+' {} {} {} {} {} > {}'.format(
+        # RUN_Bash(STEP4_buildMap+' {} {} {} {} {} > {}'.format(
+        RUN_Bash(STEP4_buildMap+' {} {} {} {} {} {}'.format(
             _out+'.mach_step.erate', _out+'.mach_step.rec',
             OUTPUT_REF+'.subset.GCchange.markers', _out+'.mach_step.gmap.avg', _out+'.mach_step.gmap.last',
             _out+'.aver.erate'
