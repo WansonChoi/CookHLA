@@ -30,30 +30,44 @@ def Make_EXON234_Panel(infile, outfile, BEAGLE2LINKAGE, PLINK, __save_intermedia
 
     ### STEP1_Collect_SNP_HLA_DATA
 
-    # In STEP1, New *.markers file will be used just next step.
-    command = "grep rs {} > {}".format(infile + ".markers", outfile+".STEP1_SNP.markers")
-    # print(command)
-    os.system(command)
+    # # In STEP1, New *.markers file will be used just next step.
+    # command = "grep rs {} > {}".format(infile + ".markers", outfile+".STEP1_SNP.markers")
+    # # print(command)
+    # os.system(command)
+    #
+    # command = "grep \'HLA_[A-Z]_[0-9][0-9][0-9][0-9]\' {} > {}".format(infile + ".markers", outfile+".STEP1_class1_4dit.markers")
+    # # print(command)
+    # os.system(command)
+    #
+    # command = "grep \'HLA_[A-Z][A-Z][A-Z][0-9]_[0-9][0-9][0-9][0-9]\' {} > {}".format(infile + ".markers", outfile+".STEP1_class2_4dit.markers")
+    # # print(command)
+    # os.system(command)
+    #
+    # command = 'cat {} {} {} > {}'.format(outfile+".STEP1_SNP.markers", outfile+".STEP1_class1_4dit.markers",
+    #                                      outfile+".STEP1_class2_4dit.markers", outfile+".STEP1_SNP_4dit.markers")
+    # # print(command)
+    # os.system(command)
+    #
+    #
+    # # Remove
+    # if not __save_intermediates:
+    #     os.system('rm {}'.format(outfile+".STEP1_SNP.markers"))
+    #     os.system('rm {}'.format(outfile+".STEP1_class1_4dit.markers"))
+    #     os.system('rm {}'.format(outfile+".STEP1_class2_4dit.markers"))
 
-    command = "grep \'HLA_[A-Z]_[0-9][0-9][0-9][0-9]\' {} > {}".format(infile + ".markers", outfile+".STEP1_class1_4dit.markers")
-    # print(command)
-    os.system(command)
 
-    command = "grep \'HLA_[A-Z][A-Z][A-Z][0-9]_[0-9][0-9][0-9][0-9]\' {} > {}".format(infile + ".markers", outfile+".STEP1_class2_4dit.markers")
-    # print(command)
-    os.system(command)
+    p_MkRef_ToExclude = re.compile(r'^(AA_|SNP_|INS_|HLA_\w+_\d{2}$)')
 
-    command = 'cat {} {} {} > {}'.format(outfile+".STEP1_SNP.markers", outfile+".STEP1_class1_4dit.markers",
-                                         outfile+".STEP1_class2_4dit.markers", outfile+".STEP1_SNP_4dit.markers")
-    # print(command)
-    os.system(command)
+    with open(infile + ".markers", 'r') as f_in_markers, open(outfile+".STEP1_SNP_4dit.markers", 'w') as f_out_markers:
+        for line in f_in_markers:
+            l = line.split()
 
+            m = p_MkRef_ToExclude.match(l[0])
 
-    # Remove
-    if not __save_intermediates:
-        os.system('rm {}'.format(outfile+".STEP1_SNP.markers"))
-        os.system('rm {}'.format(outfile+".STEP1_class1_4dit.markers"))
-        os.system('rm {}'.format(outfile+".STEP1_class2_4dit.markers"))
+            if not m:
+                # To save
+                f_out_markers.write(line)
+
 
 
 
