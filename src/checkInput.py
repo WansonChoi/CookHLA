@@ -36,18 +36,54 @@ def LiftDown_hg18(_bim, _hg, _out):
     df_bim = pd.read_csv(_bim, sep='\s+', header=None, dtype=str, names=['Chr', 'Label', 'GD', 'BP', 'a1', 'a2'])
     # print("df_bim:\n{}\n".format(df_bim))
 
-    lo = LiftOver(HG_input, 'hg18')  # Liftdown to hg18
-    sr_BP_hg18 = df_bim['BP'].map(
-        lambda x: lo.convert_coordinate('chr6', int(x))[0][1] if bool(lo.convert_coordinate('chr6', int(x))) else None)
 
-    df_bim['BP'] = sr_BP_hg18
+    ### Main Liftover ###
 
-    # Remove makrers that failed the Liftdown.
-    if sr_BP_hg18.isna().any():
-        print(std_WARNING_MAIN_PROCESS_NAME + "Next markers of Target('{}') are failed to Liftdown to hg18. These markers will be excluded."
+    if HG_input == 'hg38':
+
+        """
+        'hg38' -> 'hg19' -> 'hg18' is needed.
+        The Liftover tool (by UCSC Genomics Institute) doesn't provide 'hg38' to 'hg18'.
+        
+        """
+
+        lo_hg38_to_hg19 = LiftOver(HG_input, 'hg19')
+        lo_hg19_to_hg18 = LiftOver('hg19', 'hg18')
+
+        sr_hg19 = df_bim['BP'] \
+            .astype(int) \
+            .map(lambda x: lo_hg38_to_hg19.convert_coordinate('chr6', x)) \
+            .map(lambda x: x[0][1] if len(x) > 0 else -1)
+        # print("(hg19):\n{}\n".format(sr_hg19))
+
+        sr_hg18 = sr_hg19 \
+            .map(lambda x: lo_hg19_to_hg18.convert_coordinate('chr6', x)) \
+            .map(lambda x: x[0][1] if len(x) > 0 else -1)
+        # print("(hg18):\n{}\n".format(sr_hg18))
+
+
+    else:
+
+        lo = LiftOver(HG_input, 'hg18')  # Liftdown to hg18
+
+        sr_hg18 = df_bim['BP'] \
+            .astype(int) \
+            .map(lambda x: lo.convert_coordinate('chr6', x)) \
+            .map(lambda x: x[0][1] if len(x) > 0 else -1)
+
+
+    df_bim['BP'] = sr_hg18 # Setting new BPs (Liftdown)
+
+
+
+    ### Makrers that failed the Liftdown. ###
+
+    f_failed = sr_hg18 == -1
+
+    if f_failed.any():
+        print(std_WARNING_MAIN_PROCESS_NAME + "Next markers of Target('{}') failed to Liftdown to hg18. These markers will be excluded."
               .format(_bim))
-        print(df_bim[sr_BP_hg18.isna()])
-        df_bim.dropna(subset=['BP'], inplace=True)
+        print(df_bim[f_failed])
 
     # print("df_bim_hg18:\n{}\n".format(df_bim))
     df_bim.to_csv(_out, sep='\t', header=False, index=False)
