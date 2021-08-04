@@ -46,7 +46,9 @@ def Make_EXON234_AGM(_GM, _REF_exon234_markers, _out):
     # print(df_merged.head(50))
     # df_merged.to_csv(_out+'.onlyRS.merged.txt', sep='\t', header=True, index=True)
 
-    df_merged2 = pd.DataFrame(GEN_Trim_Columns(df_merged), columns=['Chr', 'ID', 'GD', 'BP']).sort_values('BP')
+    df_merged2 = pd.DataFrame(GEN_Trim_Columns(df_merged), columns=['Chr', 'ID', 'GD', 'BP'])
+    df_merged2['BP'] = df_merged2['BP'].astype(int)
+    df_merged2.sort_values('BP', inplace=True)
     # print(df_merged2.head())
     # df_merged2.to_csv(_out+'.onlyRS.merged2.txt', sep='\t', header=True, index=True)
 
