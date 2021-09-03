@@ -220,19 +220,62 @@ def FixInput(_input, _hg_input, _reference, _out, _PLINK):
 
         _out = _out+'.LiftDown_hg18'
 
+
+
+        # (1) Subset target markers to reference markers based on BP.
+
         command = ' '.join(
             [_PLINK, '--make-bed',
              '--bed', _input+'.bed',
              '--bim', INPUT_BIM_hg18,
              '--fam', _input+'.fam',
              '--extract {}'.format(t_extract),
+             '--out', _out+'.subset'])
+        # print(command)
+
+        try:
+            subprocess.run(command.split(), check=True, stdout=subprocess.DEVNULL)
+
+        except subprocess.CalledProcessError:
+            raise CookHLAInputPreparationError(
+                std_ERROR_MAIN_PROCESS_NAME +
+                "Subsetting target markers to reference markers based on BP failed. "
+                "Please check the PLINK log file('{}').".format(_out+'.subset.log')
+            )
+
+
+
+        # (2) Replace a target marker label with the matched reference marker label.
+        command = ' '.join(
+            [_PLINK, '--make-bed',
+             '--bfile', _out + '.subset',
              '--update-name {}'.format(t_update_name),
              '--update-alleles {}'.format(t_update_alleles),
              '--out', _out])
         # print(command)
-        os.system(command)
 
-        os.system('rm {}'.format(INPUT_BIM_hg18))
+        try:
+            subprocess.run(command.split(), check=True, stdout=subprocess.DEVNULL)
+
+        except subprocess.CalledProcessError:
+            raise CookHLAInputPreparationError(
+                std_ERROR_MAIN_PROCESS_NAME +
+                "Replacing a target marker label with the matched reference marker label failed. "
+                "Please check the PLINK log file('{}').".format(_out + '.log')
+            )
+        else:
+            os.system('rm {}'.format(INPUT_BIM_hg18)) # Liftover
+
+
+            os.system('rm {}'.format(t_extract))
+            os.system('rm {}'.format(_out+'.subset.bed'))
+            os.system('rm {}'.format(_out+'.subset.bim'))
+            os.system('rm {}'.format(_out+'.subset.fam'))
+            os.system('rm {}'.format(_out+'.subset.log'))
+
+            os.system('rm {}'.format(t_update_name))
+            os.system('rm {}'.format(t_update_alleles))
+
 
 
 
