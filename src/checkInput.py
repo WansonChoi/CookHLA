@@ -6,8 +6,12 @@
 """
 
 import os, sys, re
+import subprocess
+
 import pandas as pd
 from pyliftover import LiftOver
+
+from src.CookHLAError import CookHLAInputPreparationError
 
 std_MAIN_PROCESS_NAME = "\n[%s]: " % (os.path.basename(__file__))
 std_ERROR_MAIN_PROCESS_NAME = "\n[%s::ERROR]: " % (os.path.basename(__file__))
@@ -117,7 +121,7 @@ def UpdateInput(_bim_input, _bim_reference, _out):
 
 
     ### Main 0 - Extract
-    sr_extract = df_merge0['Label_y']
+    sr_extract = df_merge0['Label_x']
     # print("sr_extract:\n{}\n".format(sr_extract))
     sr_extract.to_csv(_out + '.extract', header=False, index=False)
 
@@ -208,8 +212,8 @@ def FixInput(_input, _hg_input, _reference, _out, _PLINK):
     """
 
     if _hg_input != "18":
-        # Liftdown target(input) HG to hg 18.
 
+        # Liftdown target(input) HG to hg 18.
         INPUT_BIM_hg18 = LiftDown_hg18(_input+'.bim', _hg_input, _out+'.bim.LiftDown_hg18')
 
         [t_extract, t_update_name, t_update_alleles] = UpdateInput(INPUT_BIM_hg18, _reference+'.bim', _out+'.fix')
@@ -234,22 +238,62 @@ def FixInput(_input, _hg_input, _reference, _out, _PLINK):
 
     else:
 
+        # No liftover
+
         [t_extract, t_update_name, t_update_alleles] = UpdateInput(_input+'.bim', _reference+'.bim', _out+'.fix')
+
+
+
+        # (1) Subset target markers to reference markers based on BP.
 
         command = ' '.join(
             [_PLINK, '--make-bed',
                     '--bfile', _input,
                     '--extract {}'.format(t_extract),
+                    '--out', _out+'.subset'])
+        # print(command)
+
+        try:
+            subprocess.run(command.split(), check=True, stdout=subprocess.DEVNULL)
+
+        except subprocess.CalledProcessError:
+            raise CookHLAInputPreparationError(
+                std_ERROR_MAIN_PROCESS_NAME +
+                "Subsetting target markers to reference markers based on BP failed. "
+                "Please check the PLINK log file('{}').".format(_out+'.subset.log')
+            )
+
+
+
+        # (2) Replace a target marker label with the matched reference marker label.
+
+        command = ' '.join(
+            [_PLINK, '--make-bed',
+                    '--bfile', _out+'.subset',
                     '--update-name {}'.format(t_update_name),
                     '--update-alleles {}'.format(t_update_alleles),
                     '--out', _out])
         # print(command)
-        os.system(command)
 
+        try:
+            subprocess.run(command.split(), check=True, stdout=subprocess.DEVNULL)
 
-    os.system('rm {}'.format(t_extract))
-    os.system('rm {}'.format(t_update_name))
-    os.system('rm {}'.format(t_update_alleles))
+        except subprocess.CalledProcessError:
+            raise CookHLAInputPreparationError(
+                std_ERROR_MAIN_PROCESS_NAME +
+                "Replacing a target marker label with the matched reference marker label failed. "
+                "Please check the PLINK log file('{}').".format(_out + '.log')
+            )
+        else:
+            os.system('rm {}'.format(t_extract))
+            os.system('rm {}'.format(_out+'.subset.bed'))
+            os.system('rm {}'.format(_out+'.subset.bim'))
+            os.system('rm {}'.format(_out+'.subset.fam'))
+            os.system('rm {}'.format(_out+'.subset.log'))
+
+            os.system('rm {}'.format(t_update_name))
+            os.system('rm {}'.format(t_update_alleles))
+
 
 
     return _out
