@@ -242,7 +242,18 @@ If MakeGeneticMap gives error, one possibility is that the number of SNPs in the
 
 ## (5) Output files and downstream analysis
 
-In the output, '\*.alleles' file contains the imputed HLA types of the target genotype. ‘\*.hped’ file is a PLINK PED-like format of HLA allele information.
+In the output, '\*.alleles' file contains the imputed HLA types of the target genotype. '\*.hped' file is a PLINK PED-like format of HLA allele information. Each column in the '\*.alleles' file represents
+
+1. Family ID(FID)
+2. Individual ID(IID)
+3. HLA gene
+4. a pair of the imputed 2-digit(1-field) allele1 and allele 2
+5. a pair of the imputed 4-digit(2-field) allele1 and allele 2
+6. The posterior probability of the imputed allele 1
+7. The posterior probability of the imputed allele 2
+8. Confidence score.
+
+The last confidence score is defined as the posterior probability of the allele for a homozygous call and the sum of the posterior probabilities of the two alleles for a heterozygous call. (Please refer to the "Call rate and accuracy" section in p6 of the CookHLA paper.)
 
 Unlike SNP2HLA, CookHLA does not directly give binary markers of the amino acid residues at every position. However, you can simply feed hped file to **HATK**(https://github.com/WansonChoi/HATK) and generate the binary markers of amino acids. HATK also provides simple association test and visualization procedure.
 
