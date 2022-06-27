@@ -242,7 +242,7 @@ If MakeGeneticMap gives error, one possibility is that the number of SNPs in the
 
 In the output, '\*.alleles' file contains the imputed HLA types of the target genotype. ‘\*.hped’ file is a PLINK PED-like format of HLA allele information.
 
-Unlike SNP2HLA, CookHLA does not directly give binary markers of the amino acid residues at every position. However, you can simply feed hped file to **HATK** (https://github.com/WansonChoi/HATK) and generate the binary markers of amino acids. HATK also provides simple association test and visualization procedure.
+Unlike SNP2HLA, CookHLA does not directly give binary markers of the amino acid residues at every position. However, you can simply feed hped file to **HATK**(https://github.com/WansonChoi/HATK) and generate the binary markers of amino acids. HATK also provides simple association test and visualization procedure.
 
 Citation: Choi W, Luo Y, Raychaudhuri S, Han B. HATK: HLA Analysis Toolkit [published online ahead of print, 2020 Jul 31]. Bioinformatics. 2020;btaa684. doi:10.1093/bioinformatics/btaa684
 
@@ -304,7 +304,7 @@ To make these panels, we obtained both the SNP and HLA data from 1000 Genomes we
 
 ## (7) Citation
 
-S. Cook, W. Choi, H. Lim, Y. Luo, K. Kim, X. Jia, S. Raychaudhuri and B. Han, CookHLA: Accurate Imputation of Human Leukocyte Antigens. **Under Review**.
+S. Cook, W. Choi, H. Lim, Y. Luo, K. Kim, X. Jia, S. Raychaudhuri and B. Han, CookHLA: Accurate Imputation of Human Leukocyte Antigens. (https://www.nature.com/articles/s41467-021-21541-5)
 
 <br>
 <br>
