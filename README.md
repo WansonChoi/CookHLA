@@ -1,4 +1,4 @@
-# CookHLA(v1.0.0) ![zenodo-DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4294712.svg)
+# CookHLA(v1.0.1) ![zenodo-DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4294712.svg)
 
 ## (1) Introduction
 
@@ -123,6 +123,8 @@ CookHLA can be run in this virtual environment.
     <!-- - (**Heads-Up**): Currently, CookHLA **ONLY SUPPORTS hg18** similar to SNP2HLA. This is very important, since CookHLA uses base position instead of rsID to match SNPs to reference panel. The reason we are still using the old coordinate is because many existing SNP2HLA-formatted reference panels are in hg18. Although being suboptimal, the best way currently is to down-liftover your SNPs to hg18, obtain the imputation results, and up-liftover to your present coordinate for further analysis. -->
 
     CookHLA generates and uses a new copy of the input target data where markers are subsetted to those of the reference panel based on the base position information. Also, Since most SNP2HLA-formatted reference panels are distributed in hg18, the Human Genome version of the copied target data will be lifted-down to hg18 automatically if its version is not hg18.
+
+    As of version 1.0.1 (2022.06.), CookHLA removes ambiguous SNPs (i.e. {A, T} or {G, C}) by default in the input subsetted above. Previously, CookHLA tried to save the ambiguous SNPs by default based on the allele frequency information between target and reference panel. Now, If a user wants to save the ambiguous SNPs, add '--save-Ambiguous-SNP' flag.
 
 <br>
 
