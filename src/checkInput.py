@@ -3,22 +3,25 @@
 """
 2020. 12. 24.
 
+(2022.06.22.)
+A module to exclude ambiguous SNP was introduced.
 """
 
 import os, sys, re
-import subprocess
+from os.path import dirname, basename, join, exists
+import subprocess as sbp
 
 import pandas as pd
 from pyliftover import LiftOver
 
 from src.CookHLAError import CookHLAInputPreparationError
 
-std_MAIN_PROCESS_NAME = "\n[%s]: " % (os.path.basename(__file__))
-std_ERROR_MAIN_PROCESS_NAME = "\n[%s::ERROR]: " % (os.path.basename(__file__))
-std_WARNING_MAIN_PROCESS_NAME = "\n[%s::WARNING]: " % (os.path.basename(__file__))
+std_MAIN = "\n[%s]: " % basename(__file__)
+std_ERROR = "\n[%s::ERROR]: " % basename(__file__)
+std_WARNING = "\n[%s::WARNING]: " % basename(__file__)
 
 
-Ambiguous = ({'A', 'T'}, {'G', 'C'})
+Ambiguous_SNP = ({'A', 'T'}, {'G', 'C'})
 dict_Complement = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'}
 
 
@@ -85,7 +88,7 @@ def LiftDown_hg18(_bim, _hg, _out):
     f_failed = sr_hg18 == -1
 
     if f_failed.any():
-        print(std_WARNING_MAIN_PROCESS_NAME + "Next markers of Target('{}') failed to Liftdown to hg18. These markers will be excluded."
+        print(std_WARNING + "Next markers of Target('{}') failed to Liftdown to hg18. These markers will be excluded."
               .format(_bim))
         print(df_bim[f_failed])
 
@@ -115,7 +118,7 @@ def UpdateInput(_bim_input, _bim_reference, _out):
 
 
     if df_merge0.shape[0] == 0:
-        print(std_ERROR_MAIN_PROCESS_NAME + "Target('{}') and Reference('{}') don't have any markers matched by Base Position. Please check their Human Genome(hg) version again."
+        print(std_ERROR + "Target('{}') and Reference('{}') don't have any markers matched by Base Position. Please check their Human Genome(hg) version again."
               .format(_bim_input, _bim_reference))
         sys.exit()
 
@@ -203,7 +206,8 @@ def UpdateInput(_bim_input, _bim_reference, _out):
     return (_out + '.extract', _out + '.update_name', _out + '.update_alleles')
 
 
-def FixInput(_input, _hg_input, _reference, _out, _PLINK):
+
+def FixInput(_input, _hg_input, _reference, _out, _PLINK, _f_save_intermediates=False):
 
     """
     BP information is assumed to be given properly.
@@ -234,14 +238,20 @@ def FixInput(_input, _hg_input, _reference, _out, _PLINK):
         # print(command)
 
         try:
-            subprocess.run(command.split(), check=True, stdout=subprocess.DEVNULL)
+            sbp.run(command.split(), check=True, stdout=sbp.DEVNULL)
 
-        except subprocess.CalledProcessError:
+        except sbp.CalledProcessError:
             raise CookHLAInputPreparationError(
-                std_ERROR_MAIN_PROCESS_NAME +
+                std_ERROR +
                 "Subsetting target markers to reference markers based on BP failed. "
                 "Please check the PLINK log file('{}').".format(_out+'.subset.log')
             )
+
+        else:
+            if exists(_out+'.subset' + '.nosex'): os.remove(_out+'.subset' + '.nosex')
+
+            if not _f_save_intermediates:
+                if exists(_out+'.subset' + '.log'): os.remove(_out+'.subset' + '.log')
 
 
 
@@ -255,26 +265,29 @@ def FixInput(_input, _hg_input, _reference, _out, _PLINK):
         # print(command)
 
         try:
-            subprocess.run(command.split(), check=True, stdout=subprocess.DEVNULL)
+            sbp.run(command.split(), check=True, stdout=sbp.DEVNULL)
 
-        except subprocess.CalledProcessError:
+        except sbp.CalledProcessError:
             raise CookHLAInputPreparationError(
-                std_ERROR_MAIN_PROCESS_NAME +
+                std_ERROR +
                 "Replacing a target marker label with the matched reference marker label failed. "
                 "Please check the PLINK log file('{}').".format(_out + '.log')
             )
         else:
-            os.system('rm {}'.format(INPUT_BIM_hg18)) # Liftover
+            if exists(_out+'.nosex'): os.remove(_out+'.nosex')
 
+            if not _f_save_intermediates:
+                if exists(_out+'.log'): os.remove(_out+'.log')
 
-            os.system('rm {}'.format(t_extract))
-            os.system('rm {}'.format(_out+'.subset.bed'))
-            os.system('rm {}'.format(_out+'.subset.bim'))
-            os.system('rm {}'.format(_out+'.subset.fam'))
-            os.system('rm {}'.format(_out+'.subset.log'))
+                os.system('rm {}'.format(INPUT_BIM_hg18)) # Liftover
 
-            os.system('rm {}'.format(t_update_name))
-            os.system('rm {}'.format(t_update_alleles))
+                os.system('rm {}'.format(t_extract))
+                os.system('rm {}'.format(_out+'.subset.bed'))
+                os.system('rm {}'.format(_out+'.subset.bim'))
+                os.system('rm {}'.format(_out+'.subset.fam'))
+
+                os.system('rm {}'.format(t_update_name))
+                os.system('rm {}'.format(t_update_alleles))
 
 
 
@@ -297,16 +310,20 @@ def FixInput(_input, _hg_input, _reference, _out, _PLINK):
         # print(command)
 
         try:
-            subprocess.run(command.split(), check=True, stdout=subprocess.DEVNULL)
+            sbp.run(command.split(), check=True, stdout=sbp.DEVNULL)
 
-        except subprocess.CalledProcessError:
+        except sbp.CalledProcessError:
             raise CookHLAInputPreparationError(
-                std_ERROR_MAIN_PROCESS_NAME +
+                std_ERROR +
                 "Subsetting target markers to reference markers based on BP failed. "
                 "Please check the PLINK log file('{}').".format(_out+'.subset.log')
             )
 
+        else:
+            if exists(_out + '.subset' + '.nosex'): os.remove(_out + '.subset' + '.nosex')
 
+            if not _f_save_intermediates:
+                if exists(_out + '.subset' + '.log'): os.remove(_out + '.subset' + '.log')
 
         # (2) Replace a target marker label with the matched reference marker label.
 
@@ -317,26 +334,96 @@ def FixInput(_input, _hg_input, _reference, _out, _PLINK):
                     '--update-alleles {}'.format(t_update_alleles),
                     '--out', _out])
         # print(command)
+        # (2022.06.22.) omitted '--keep-allele-order' intentionally.
 
         try:
-            subprocess.run(command.split(), check=True, stdout=subprocess.DEVNULL)
+            sbp.run(command.split(), check=True, stdout=sbp.DEVNULL)
 
-        except subprocess.CalledProcessError:
+        except sbp.CalledProcessError:
             raise CookHLAInputPreparationError(
-                std_ERROR_MAIN_PROCESS_NAME +
+                std_ERROR +
                 "Replacing a target marker label with the matched reference marker label failed. "
                 "Please check the PLINK log file('{}').".format(_out + '.log')
             )
         else:
-            os.system('rm {}'.format(t_extract))
-            os.system('rm {}'.format(_out+'.subset.bed'))
-            os.system('rm {}'.format(_out+'.subset.bim'))
-            os.system('rm {}'.format(_out+'.subset.fam'))
-            os.system('rm {}'.format(_out+'.subset.log'))
+            if exists(_out + '.nosex'): os.remove(_out + '.nosex')
 
-            os.system('rm {}'.format(t_update_name))
-            os.system('rm {}'.format(t_update_alleles))
+            if not _f_save_intermediates:
+                if exists(_out + '.log'): os.remove(_out + '.log')
 
+                os.system('rm {}'.format(t_extract))
+                os.system('rm {}'.format(_out+'.subset.bed'))
+                os.system('rm {}'.format(_out+'.subset.bim'))
+                os.system('rm {}'.format(_out+'.subset.fam'))
+
+                os.system('rm {}'.format(t_update_name))
+                os.system('rm {}'.format(t_update_alleles))
 
 
     return _out
+
+
+
+def get_Ambiguous_SNP_list(_bfile, _out):
+
+    df_bim = pd.read_csv(_bfile+'.bim', sep='\s+', header=None, dtype=str, names=['Chr', 'Label', 'GD', 'BP', 'al1', 'al2'])
+    # print(df_bim)
+
+    f_ambiguous = df_bim[['al1', 'al2']] \
+                    .apply(lambda x: set(x), axis=1) \
+                    .map(lambda x : x in Ambiguous_SNP)
+    # print(f_ambiguous)
+
+    df_ambiguous = df_bim[f_ambiguous]
+    # print("df_ambiguous:\n{}\n".format(df_ambiguous))
+
+    df_ambiguous['Label'].to_csv(_out, header=False, index=False)
+    return _out
+
+
+
+def exclude_Ambiguous_SNP(_bfile, _out, _PLINK, _f_save_intermediates=False):
+
+    ToExclude = get_Ambiguous_SNP_list(_bfile, join(dirname(_out), basename(_bfile)+'.bim.ambig.ToExclude'))
+
+    cmd = "{PLINK} --make-bed --bfile {bfile} --exclude {exclude} --out {out} --keep-allele-order" \
+        .format(PLINK=_PLINK, bfile=_bfile, exclude=ToExclude, out=_out)
+    # print(cmd)
+
+    # PLINK execution
+    try:
+        sbp.run(cmd.split(), check=True, stdout=sbp.DEVNULL, stderr=sbp.DEVNULL)
+
+    except sbp.CalledProcessError:
+        # print(std_ERROR_MAIN_PROCESS_NAME +
+        #       "Next PLINK execution failed. ('{}')".format(cmd) +
+        #     (" Please refer to its log('{}') file.".format(_out + '.log') if exists(_out + '.log') else ""))
+        # return -1
+
+        raise CookHLAInputPreparationError(
+            std_ERROR +
+                  "Next PLINK execution failed. ('{}')".format(cmd) +
+            (" Please refer to its log('{}') file.".format(_out + '.log') if exists(_out + '.log') else "")
+        )
+
+    else:
+        if exists(_out+'.nosex'): os.remove(_out+'.nosex')
+
+        if not _f_save_intermediates:
+            if exists(_out+'.log'): os.remove(_out + '.log')
+            if exists(ToExclude): os.remove(ToExclude)
+
+        return _out
+
+
+
+
+if __name__ == '__main__':
+
+    _bfile = "/home/wansonchoi/sf_VirtualBox_Share/CookHLA/tests/20220622_FixInput+CookQC/1000G.SNP.EUR.chr6.hg18.29mb-34mb.inT1DGC"
+    _out = "/home/wansonchoi/sf_VirtualBox_Share/CookHLA/tests/20220622_FixInput+CookQC/1000G.SNP.EUR.chr6.hg18.29mb-34mb.inT1DGC.NoAmbig2"
+    _PLINK = "/home/wansonchoi/miniconda3/bin/plink"
+
+    # get_Ambiguous_SNP_list(_bfile, _out)
+    r = exclude_Ambiguous_SNP(_bfile, _out, _PLINK, _f_save_intermediates=False)
+    print("NoAmbig: ", r)

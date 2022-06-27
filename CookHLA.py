@@ -13,7 +13,7 @@ from src.HLA_Imputation_GM import HLA_Imputation_GM
 from src.HLA_Imputation_BEAGLE5 import HLA_Imputation_BEAGLE5
 from src.HLA_Imputation_GM_BEAGLE5 import HLA_Imputation_GM_BEAGLE5
 
-from src.checkInput import getSampleNumbers, FixInput
+from src.checkInput import getSampleNumbers, FixInput, exclude_Ambiguous_SNP
 
 from MakeGeneticMap.MakeGeneticMap import MakeGeneticMap
 
@@ -34,7 +34,7 @@ def CookHLA(_input, _hg_input, _out, _reference, _hg_reference='18', _AdaptiveGe
             _java_memory='2g', _MultP=1, _answer=None, __save_intermediates=False, __use_Multiple_Markers=True,
             _p_src="./src", _p_dependency="./dependency", _given_prephased=None, f_prephasing=False, _HapMap_Map=None,
             __overlap__=(0.5, 1, 1.5), _window=5, _ne=10000, _nthreads=1, f_measureAcc_v2=False, f_BEAGLE5=False,
-            f_save_IMPUTATION_INPUT=False):
+            f_save_IMPUTATION_INPUT=False, _f_save_ambig_SNP=False):
 
 
     ### Argument exception
@@ -240,7 +240,20 @@ def CookHLA(_input, _hg_input, _out, _reference, _hg_reference='18', _AdaptiveGe
 
 
     ## Make one more copy of the input and fix the labels
-    _input = FixInput(_input, _hg_input, _reference, join(dirname(_out), basename(_input) + '.COPY'), PLINK)
+    _input = FixInput(_input, _hg_input, _reference, join(dirname(_out), basename(_input) + '.COPY'), PLINK,
+                      _f_save_intermediates=__save_intermediates)
+
+    if not _f_save_ambig_SNP:
+        # Remove ambiguous SNPs a priori if not going to save ambiguous SNPs with AF info.
+        _input_NoAmbig = exclude_Ambiguous_SNP(_input, join(dirname(_out), basename(_input)+'.NoAmbig'), PLINK,
+                                               _f_save_intermediates=__save_intermediates)
+
+        if not __save_intermediates:
+            os.remove(_input+'.bed')
+            os.remove(_input+'.bim')
+            os.remove(_input+'.fam')
+
+        _input = _input_NoAmbig
 
 
 
@@ -978,7 +991,13 @@ if __name__ == "__main__":
 
     parser.add_argument("--measureAcc_v2", "-macc_v2", help="\nCalculate accuracy with previous version module.\n\n", action='store_true')
 
-    parser.add_argument("--save-IMPUTATION_INPUT", "-sII", help="\nSave input files for imputation.\n\n", action='store_true')
+    # Utility Flags
+    parser.add_argument("--save-IMPUTATION_INPUT", help="\nSave input files for imputation.\n\n", action='store_true')
+
+    parser.add_argument("--save-Ambiguous-SNP",
+                        help="\nSave ambiguous SNPs(i.e. {'A', 'T'} or {'G', 'C'}) in Target Input('--input') "
+                             "based on Allele Frequency information from Reference panel('--reference').\n\n",
+                        action='store_true')
 
 
 
@@ -1029,10 +1048,9 @@ if __name__ == "__main__":
     CookHLA_start = time()
 
     CookHLA(args.input, args.human_genome, args.out, args.reference, "18", args.genetic_map, args.average_erate,
-            _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer, __use_Multiple_Markers=True,
-            f_prephasing=False, __overlap__=args.overlap, _window=args.window, _ne=args.effective_population_size,
-            _nthreads=args.nthreads, f_measureAcc_v2=args.measureAcc_v2, f_BEAGLE5=(not args.beagle4),
-            f_save_IMPUTATION_INPUT=args.save_IMPUTATION_INPUT)
+            _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer, __overlap__=args.overlap,
+            _window=args.window, _ne=args.effective_population_size, _nthreads=args.nthreads,
+            _f_save_ambig_SNP=args.save_Ambiguous_SNP)
 
     CookHLA_end = time()
 
