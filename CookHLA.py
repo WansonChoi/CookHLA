@@ -1048,9 +1048,17 @@ if __name__ == "__main__":
     CookHLA_start = time()
 
     CookHLA(args.input, args.human_genome, args.out, args.reference, "18", args.genetic_map, args.average_erate,
-            _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer, __overlap__=args.overlap,
-            _window=args.window, _ne=args.effective_population_size, _nthreads=args.nthreads,
+            _java_memory=args.java_memory, _MultP=args.multiprocess, _answer=args.answer,
+            __overlap__=args.overlap, _window=args.window, _ne=args.effective_population_size,
+            _nthreads=args.nthreads, f_measureAcc_v2=args.measureAcc_v2, f_BEAGLE5=(not args.beagle4),
+            f_save_IMPUTATION_INPUT=args.save_IMPUTATION_INPUT,
             _f_save_ambig_SNP=args.save_Ambiguous_SNP)
+
+    """
+    Next arguments won't be set here.
+    - '__use_Multiple_Markers=True'
+    - 'f_prephasing=False'
+    """
 
     CookHLA_end = time()
 
